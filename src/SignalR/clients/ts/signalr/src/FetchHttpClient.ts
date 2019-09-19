@@ -54,7 +54,7 @@ export class FetchHttpClient extends HttpClient {
         let response: Response;
         try {
             response = await fetch(request.url!, {
-                body: request.content!,
+                body: request.content,
                 cache: "no-cache",
                 credentials: "include",
                 headers: {
