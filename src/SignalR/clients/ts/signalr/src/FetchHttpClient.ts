@@ -102,6 +102,10 @@ export class FetchHttpClient extends HttpClient {
             payload,
         );
     }
+
+    get supportsStreaming(): boolean {
+        return true;
+    }
 }
 
 function deserializeContent(response: Response, responseType?: XMLHttpRequestResponseType): Promise<string | ArrayBuffer> {

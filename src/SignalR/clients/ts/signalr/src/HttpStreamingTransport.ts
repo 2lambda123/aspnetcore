@@ -4,6 +4,7 @@
 import { HttpClient, HttpResponse } from "./HttpClient";
 import { ILogger, LogLevel } from "./ILogger";
 import { ITransport, TransferFormat } from "./ITransport";
+import { getDataDetail } from "./Utils";
 
 // Not exported from 'index', this type is internal.
 /** @private */
@@ -11,12 +12,11 @@ export class HttpStreamingTransport implements ITransport {
     private readonly httpClient: HttpClient;
     // @ts-ignore
     private readonly accessTokenFactory: (() => string | Promise<string>) | undefined;
-    // @ts-ignore
     private readonly logger: ILogger;
-    // @ts-ignore
     private readonly logMessageContent: boolean;
     private streamPromise: Promise<any>;
     private url: string = "";
+    private reader: ReadableStreamReader | null;
 
     public onreceive: ((data: string | ArrayBuffer) => void) | null;
     public onclose: ((error?: Error) => void) | null;
@@ -32,45 +32,79 @@ export class HttpStreamingTransport implements ITransport {
 
         this.onreceive = null;
         this.onclose = null;
+        this.reader = null;
         this.streamPromise = Promise.resolve();
     }
 
     // @ts-ignore
     public async connect(url: string, transferFormat: TransferFormat): Promise<void> {
         this.url = url;
-        const response = await this.httpClient.get(url, { stream: true });
-        // @ts-ignore
+
+        const token = await this.getAccessToken();
+        const headers: { [key: string]: string } = {};
+        this.updateHeaderToken(headers, token);
+
+        const response = await this.httpClient.get(url, { stream: true, headers });
+
         this.streamPromise = this.stream(response);
     }
 
     private async stream(response: HttpResponse): Promise<void> {
         if (response.content instanceof ReadableStream) {
-            const reader = response.content!.getReader();
+            this.reader = response.content!.getReader();
             let first = false;
             while (true) {
-                // @ts-ignore
-                const result = await reader.read();
+                const result = await this.reader.read();
+                if (result.done) {
+                    break;
+                }
+
                 if (!first) {
                     first = true;
                     continue;
                 }
-                this.logger.log(LogLevel.Information, result.value);
+
+                this.logger.log(LogLevel.Trace, `(HttpStreaming transport) data received. ${getDataDetail(result.value, this.logMessageContent)}.`);
                 if (this.onreceive) {
-                    this.onreceive(new TextDecoder("utf-8").decode((result.value as Uint8Array).buffer));
-                }
-                if (result.done) {
-                    break;
+                    this.onreceive((result.value as Uint8Array).buffer);
                 }
             }
         }
     }
 
-    // @ts-ignore
     public async send(data: any): Promise<void> {
         await this.httpClient.post(this.url, { content: data });
     }
 
     public async stop(): Promise<void> {
+        if (this.reader) {
+            await this.reader.cancel();
+        }
         await this.streamPromise;
+
+        if (this.onclose) {
+            this.onclose();
+        }
+    }
+
+    private async getAccessToken(): Promise<string | null> {
+        if (this.accessTokenFactory) {
+            return await this.accessTokenFactory();
+        }
+
+        return null;
+    }
+
+    private updateHeaderToken(headers: { [key: string]: string }, token: string | null) {
+        if (token) {
+            // tslint:disable-next-line:no-string-literal
+            headers["Authorization"] = `Bearer ${token}`;
+            return;
+        }
+        // tslint:disable-next-line:no-string-literal
+        if (headers["Authorization"]) {
+            // tslint:disable-next-line:no-string-literal
+            delete headers["Authorization"];
+        }
     }
 }

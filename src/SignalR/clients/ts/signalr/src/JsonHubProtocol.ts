@@ -22,13 +22,17 @@ export class JsonHubProtocol implements IHubProtocol {
 
     /** Creates an array of {@link @microsoft/signalr.HubMessage} objects from the specified serialized representation.
      *
-     * @param {string} input A string containing the serialized representation.
+     * @param {string | ArrayBuffer} input A string containing the serialized representation.
      * @param {ILogger} logger A logger that will be used to log messages that occur during parsing.
      */
-    public parseMessages(input: string, logger: ILogger): HubMessage[] {
+    public parseMessages(input: string | ArrayBuffer, logger: ILogger): HubMessage[] {
         // The interface does allow "ArrayBuffer" to be passed in, but this implementation does not. So let's throw a useful error.
+        // if (typeof input !== "string") {
+        //     throw new Error("Invalid input for JSON hub protocol. Expected a string.");
+        // }
+
         if (typeof input !== "string") {
-            throw new Error("Invalid input for JSON hub protocol. Expected a string.");
+            input = new TextDecoder("utf-8").decode(input);
         }
 
         if (!input) {

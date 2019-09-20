@@ -47,6 +47,6 @@ export class DefaultHttpClient extends HttpClient {
     }
 
     get supportsStreaming(): boolean {
-        return this.httpClient instanceof FetchHttpClient;
+        return this.httpClient.supportsStreaming;
     }
 }
