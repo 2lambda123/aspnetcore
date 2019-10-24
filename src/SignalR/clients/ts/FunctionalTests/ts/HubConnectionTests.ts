@@ -983,7 +983,7 @@ describe("hubConnection", () => {
         }
     });
 
-    it("transport falls back from WebSockets to SSE or LongPolling", async (done) => {
+    it("transport falls back from WebSockets to another transport", async (done) => {
         // Skip test on Node as there will always be a WebSockets implementation on Node
         if (typeof window === "undefined") {
             done();
@@ -1004,9 +1004,9 @@ describe("hubConnection", () => {
         try {
             await hubConnection.start();
 
-            // Make sure that we connect with SSE or LongPolling after Websockets fail
+            // Make sure that we connect with another transport after Websockets fail
             const transportName = await hubConnection.invoke("GetActiveTransportName");
-            expect(transportName === "ServerSentEvents" || transportName === "LongPolling").toBe(true);
+            expect(transportName === "ServerSentEvents" || transportName === "LongPolling" || transportName === "HttpStreaming").toBe(true);
             await hubConnection.stop();
         } catch (e) {
             fail(e);
