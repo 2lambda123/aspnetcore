@@ -45,6 +45,9 @@ export class Platform {
 /** @private */
 export function getDataDetail(data: any, includeContent: boolean): string {
     let detail = "";
+    if (data instanceof Uint8Array) {
+        data = data.buffer;
+    }
     if (isArrayBuffer(data)) {
         detail = `Binary data of length ${data.byteLength}`;
         if (includeContent) {

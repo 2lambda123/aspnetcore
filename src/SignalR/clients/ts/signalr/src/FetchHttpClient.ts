@@ -80,7 +80,7 @@ export class FetchHttpClient extends HttpClient {
             if (timeoutId) {
                 clearTimeout(timeoutId);
             }
-            if (request.abortSignal) {
+            if (request.abortSignal && !request.stream) {
                 request.abortSignal.onabort = null;
             }
         }

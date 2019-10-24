@@ -74,6 +74,7 @@ export function getHttpTransportTypes(): HttpTransportType[] {
             transportTypes.push(HttpTransportType.ServerSentEvents);
         }
     }
+    transportTypes.push(HttpTransportType.HttpStreaming);
     transportTypes.push(HttpTransportType.LongPolling);
 
     return transportTypes;
@@ -106,6 +107,9 @@ export function eachTransportAndProtocol(action: (transport: HttpTransportType, 
 export function eachTransportAndProtocolAndHttpClient(action: (transport: HttpTransportType, protocol: IHubProtocol, httpClient: HttpClient) => void) {
     eachTransportAndProtocol((transport, protocol) => {
         getHttpClients().forEach((httpClient) => {
+            if (transport === HttpTransportType.HttpStreaming && !httpClient.supportsStreaming) {
+                return;
+            }
             action(transport, protocol, httpClient);
         });
     });

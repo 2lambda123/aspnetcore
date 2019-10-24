@@ -1,10 +1,11 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+import { AbortController } from "./AbortController";
 import { HttpClient, HttpResponse } from "./HttpClient";
 import { ILogger, LogLevel } from "./ILogger";
 import { ITransport, TransferFormat } from "./ITransport";
-import { getDataDetail } from "./Utils";
+import { getDataDetail, getUserAgentHeader } from "./Utils";
 
 // Not exported from 'index', this type is internal.
 /** @private */
@@ -17,6 +18,7 @@ export class HttpStreamingTransport implements ITransport {
     private streamPromise: Promise<any>;
     private url: string = "";
     private reader: ReadableStreamReader | null;
+    private streamAbort: AbortController;
 
     public onreceive: ((data: string | ArrayBuffer) => void) | null;
     public onclose: ((error?: Error) => void) | null;
@@ -34,6 +36,7 @@ export class HttpStreamingTransport implements ITransport {
         this.onclose = null;
         this.reader = null;
         this.streamPromise = Promise.resolve();
+        this.streamAbort = new AbortController();
     }
 
     // @ts-ignore
@@ -44,7 +47,10 @@ export class HttpStreamingTransport implements ITransport {
         const headers: { [key: string]: string } = {};
         this.updateHeaderToken(headers, token);
 
-        const response = await this.httpClient.get(url, { stream: true, headers });
+        const [name, value] = getUserAgentHeader();
+        headers[name] = value;
+
+        const response = await this.httpClient.get(url, { abortSignal: this.streamAbort.signal, headers, stream: true });
 
         this.streamPromise = this.stream(response);
     }
@@ -73,13 +79,23 @@ export class HttpStreamingTransport implements ITransport {
     }
 
     public async send(data: any): Promise<void> {
-        await this.httpClient.post(this.url, { content: data });
+        const token = await this.getAccessToken();
+        const headers: { [key: string]: string } = {};
+        this.updateHeaderToken(headers, token);
+
+        const [name, value] = getUserAgentHeader();
+        headers[name] = value;
+
+        this.logger.log(LogLevel.Trace, `(HttpStreaming transport) sending data. ${getDataDetail(data, this.logMessageContent)}.`);
+
+        await this.httpClient.post(this.url, { content: data, headers });
     }
 
     public async stop(): Promise<void> {
         if (this.reader) {
             await this.reader.cancel();
         }
+        this.streamAbort.abort();
         await this.streamPromise;
 
         if (this.onclose) {

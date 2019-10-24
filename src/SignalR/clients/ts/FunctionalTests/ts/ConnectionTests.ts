@@ -10,6 +10,7 @@ import { TestLogger } from "./TestLogger";
 
 // We want to continue testing HttpConnection, but we don't export it anymore. So just pull it in directly from the source file.
 import { HttpConnection } from "@microsoft/signalr/dist/esm/HttpConnection";
+import { formatArrayBuffer } from "@microsoft/signalr/dist/esm/Utils";
 import "./LogBannerReporter";
 
 const commonOptions: IHttpConnectionOptions = {
@@ -45,6 +46,9 @@ describe("connection", () => {
 
     eachTransport((transportType) => {
         eachHttpClient((httpClient) => {
+            if (transportType === HttpTransportType.HttpStreaming && !httpClient.supportsStreaming) {
+                return;
+            }
             describe(`over ${HttpTransportType[transportType]} with ${(httpClient.constructor as any).name}`, () => {
                 it("can send and receive messages", (done) => {
                     const message = "Hello World!";
@@ -57,7 +61,8 @@ describe("connection", () => {
                     });
 
                     connection.onreceive = (data: any) => {
-                        if (data === message) {
+                        if ((typeof data === "string" && data === message) ||
+                            (data instanceof ArrayBuffer && new TextDecoder("utf-8").decode(data) === message)) {
                             connection.stop();
                         }
                     };
@@ -87,7 +92,8 @@ describe("connection", () => {
                     });
 
                     connection.onreceive = (data: any) => {
-                        if (data === message) {
+                        if ((typeof data === "string" && data === message) ||
+                            (data instanceof ArrayBuffer && new TextDecoder("utf-8").decode(data) === message)) {
                             connection.stop();
                         }
                     };
@@ -114,6 +120,7 @@ describe("connection", () => {
                 it("does log content of messages sent or received when enabled", (done) => {
                     TestLogger.saveLogsAndReset();
                     const message = "Hello World!";
+                    const encodedMessage = formatArrayBuffer(new TextEncoder().encode(message).buffer);
 
                     // DON'T use commonOptions because we want to specifically test the scenario where logMessageContent is set to true (even if commonOptions changes).
                     const connection = new HttpConnection(ECHOENDPOINT_URL, {
@@ -124,7 +131,8 @@ describe("connection", () => {
                     });
 
                     connection.onreceive = (data: any) => {
-                        if (data === message) {
+                        if ((typeof data === "string" && data === message) ||
+                            (data instanceof ArrayBuffer && new TextDecoder("utf-8").decode(data) === message)) {
                             connection.stop();
                         }
                     };
@@ -137,6 +145,8 @@ describe("connection", () => {
                         // @ts-ignore: We don't use the _ or __ parameters intentionally.
                         for (const [_, __, logMessage] of TestLogger.instance.currentLog.messages) {
                             if (logMessage.indexOf(message) !== -1) {
+                                matches += 1;
+                            } else if (logMessage.indexOf(encodedMessage.toString()) !== -1) {
                                 matches += 1;
                             }
                         }

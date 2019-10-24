@@ -143,7 +143,7 @@ export class LongPollingTransport implements ITransport {
                         // Process the response
                         if (response.content) {
                             this.logger.log(LogLevel.Trace, `(LongPolling transport) data received. ${getDataDetail(response.content, this.logMessageContent)}.`);
-                            if (this.onreceive && !(response.content instanceof ReadableStream)) {
+                            if (this.onreceive && (response.content instanceof ArrayBuffer || typeof response.content === "string")) {
                                 this.onreceive(response.content);
                             }
                         } else {
