@@ -403,7 +403,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
 
         void IHttpHeadersHandler.OnHeader(ReadOnlySpan<byte> name, ReadOnlySpan<byte> value)
         {
-            _decodedHeaders[name.GetAsciiStringNonNullCharacters()] = value.GetAsciiOrUTF8StringNonNullCharacters();
+            _decodedHeaders[name.GetAsciiStringNonNullCharacters()] = value.GetAsciiOrUTF8StringNonNullCharacters(useLatin1: false);
         }
 
         void IHttpHeadersHandler.OnHeadersComplete(bool endStream) { }

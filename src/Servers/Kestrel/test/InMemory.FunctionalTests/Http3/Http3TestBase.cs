@@ -322,7 +322,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
 
             public void OnHeader(ReadOnlySpan<byte> name, ReadOnlySpan<byte> value)
             {
-                _decodedHeaders[name.GetAsciiStringNonNullCharacters()] = value.GetAsciiOrUTF8StringNonNullCharacters();
+                _decodedHeaders[name.GetAsciiStringNonNullCharacters()] = value.GetAsciiOrUTF8StringNonNullCharacters(useLatin1: false);
             }
 
             public void OnHeadersComplete(bool endHeaders)
