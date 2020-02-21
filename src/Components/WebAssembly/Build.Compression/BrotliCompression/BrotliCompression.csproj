@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <GetPublishedOutputDependsOn>PreparePublishedOutput</GetPublishedOutputDependsOn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(MicrosoftNETCoreAppPackageVersion)" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PublishedItem Include="$(PublishDir)$(TargetName).dll" />
+  </ItemGroup>
+
+  <Target Name="PreparePublishedOutput" Condition="'@(PublishedItem)' == ''" DependsOnTargets="Publish">
+    <ItemGroup>
+      <PublishedItem Include="$(PublishDir)$(TargetName).dll" />
+    </ItemGroup>
+  </Target>
+  
+  <Target Name="GetPublishedOutput" DependsOnTargets="$(GetPublishedOutputDependsOn)" Returns="@(_BrotliToolDll)">
+    <ItemGroup>
+      <_ToolPublishedItems Include="$(PublishDir)\*" />
+      <_BrotliToolDll Condition="'%(Extension)' != '.pdb' and '%(Extension)' != '.exe'" Include="@(_ToolPublishedItems->'%(FullPath)')" />
+    </ItemGroup>
+  </Target>
+
+</Project>

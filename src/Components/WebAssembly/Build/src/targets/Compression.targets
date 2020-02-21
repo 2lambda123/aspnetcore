@@ -58,6 +58,8 @@
 
     <CompressBlazorApplicationFiles StaticWebAsset="@(_BlazorFileToCompress)" />
 
+    <Exec 
+
   </Target>
 
 </Project>
