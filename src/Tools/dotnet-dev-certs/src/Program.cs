@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -30,6 +31,15 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
 
         public static int Main(string[] args)
         {
+            if (args.Contains("--interactive"))
+            {
+                // This is so that we can attach `dotnet trace` for debug purposes.
+                Console.WriteLine("Press any key to continue...");
+                var newArgs = new List<string>(args);
+                newArgs.Remove("--interactive");
+                args = newArgs.ToArray();
+            }
+
             try
             {
                 var app = new CommandLineApplication
@@ -120,7 +130,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
 
         private static int CleanHttpsCertificates(IReporter reporter)
         {
-            var manager = new CertificateManager();
+            var manager = CertificateManager.Instance;
             try
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -150,8 +160,8 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
         private static int CheckHttpsCertificate(CommandOption trust, IReporter reporter)
         {
             var now = DateTimeOffset.Now;
-            var certificateManager = new CertificateManager();
-            var certificates = CertificateManager.ListCertificates(CertificatePurpose.HTTPS, StoreName.My, StoreLocation.CurrentUser, isValid: true);
+            var certificateManager = CertificateManager.Instance;
+            var certificates = certificateManager.ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true);
             if (certificates.Count == 0)
             {
                 reporter.Output("No valid certificate found.");
@@ -173,7 +183,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             if (trust != null && trust.HasValue())
             {
                 var store = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? StoreName.My : StoreName.Root;
-                var trustedCertificates = CertificateManager.ListCertificates(CertificatePurpose.HTTPS, store, StoreLocation.CurrentUser, isValid: true);
+                var trustedCertificates = CertificateManager.ListCertificates(store, StoreLocation.CurrentUser, isValid: true);
                 if (!certificates.Any(c => certificateManager.IsTrusted(c)))
                 {
                     reporter.Output($@"The following certificates were found, but none of them is trusted:
@@ -192,20 +202,13 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
         private static int EnsureHttpsCertificate(CommandOption exportPath, CommandOption password, CommandOption trust, IReporter reporter)
         {
             var now = DateTimeOffset.Now;
-            var manager = new CertificateManager();
+            var manager = CertificateManager.Instance;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && manager.HasValidCertificateWithInnaccessibleKeyAcrossPartitions() || manager.GetHttpsCertificates().Count == 0)
             {
                 reporter.Warn($"A valid HTTPS certificate with a key accessible across security partitions was not found. The following command will run to fix it:" + Environment.NewLine +
                     "'sudo security set-key-partition-list -D localhost -S unsigned:,teamid:UBF8T346G9'" + Environment.NewLine +
                     "This command will make the certificate key accessible across security partitions and might prompt you for your password. For more information see: https://aka.ms/aspnetcore/2.1/troubleshootcertissues");
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && manager.HasValidCertificateWithInnaccessibleKeyAcrossPartitions() || manager.GetHttpsCertificates().Count == 0)
-            {
-                reporter.Warn($"A valid HTTPS certificate with a key accessible across security partitions was not found. The following command will run to fix it:" + Environment.NewLine +
-                    "'sudo security set-key-partition-list -D localhost -S unsigned:,teamid:UBF8T346G9'" + Environment.NewLine +
-                    "This command will make the certificate key accessible across security partitions and might prompt you for your password. For more information see: https://aka.ms/aspnetcore/3.1/troubleshootcertissues");
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && trust?.HasValue() == true)
