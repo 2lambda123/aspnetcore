@@ -10,7 +10,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
     {
         private const int UserCancelledErrorCode = 1223;
 
-        public override bool IsExportable(X509Certificate2 c)
+        protected override bool IsExportable(X509Certificate2 c)
         {
 #if !XPLAT
             return (c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
@@ -23,14 +23,16 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             // want to bring the dependency in on CLI scenarios. This functionality will be used
             // on CLI scenarios as part of the first run experience, so checking the exportability
             // of the certificate is not important.
-            return
-                ((c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
-                    rsaPrivateKey.CspKeyContainerInfo.Exportable) || !(c.GetRSAPrivateKey() is RSACryptoServiceProvider));
+            return (c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
+                    rsaPrivateKey.CspKeyContainerInfo.Exportable);
 #endif
         }
 
-        public override X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location)
+        protected override X509Certificate2 SaveCertificateCore(X509Certificate2 certificate)
         {
+            var name = StoreName.My;
+            var location = StoreLocation.CurrentUser;
+
             // On non OSX systems we need to export the certificate and import it so that the transient
             // key that we generated gets persisted.
             var export = certificate.Export(X509ContentType.Pkcs12, "");
@@ -38,10 +40,17 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             Array.Clear(export, 0, export.Length);
             certificate.FriendlyName = certificate.FriendlyName;
 
-            return base.SaveCertificateInStore(certificate, name, location);
+            using (var store = new X509Store(name, location))
+            {
+                store.Open(OpenFlags.ReadWrite);
+                store.Add(certificate);
+                store.Close();
+            };
+
+            return certificate;
         }
 
-        internal override void TrustCertificateCore(X509Certificate2 certificate)
+        protected override void TrustCertificateCore(X509Certificate2 certificate)
         {
             var publicCertificate = new X509Certificate2(certificate.Export(X509ContentType.Cert));
 
@@ -71,7 +80,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        internal override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate)
+        protected override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate)
         {
             Log.WindowsRemoveCertificateFromRootStoreStart();
             using var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
@@ -100,7 +109,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 .Any(c => c.Thumbprint == certificate.Thumbprint);
         }
 
-        internal override IList<X509Certificate2> GetCertificatesToRemove(StoreName storeName, StoreLocation storeLocation)
+        protected override IList<X509Certificate2> GetCertificatesToRemove(StoreName storeName, StoreLocation storeLocation)
         {
             return ListCertificates(storeName, storeLocation, isValid: false);
         }

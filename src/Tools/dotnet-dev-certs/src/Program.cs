@@ -150,7 +150,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
                 reporter.Output("HTTPS development certificates successfully removed from the machine.");
                 return Success;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 reporter.Error("There was an error trying to clean HTTPS development certificates on this machine.");
                 reporter.Error(e.Message);
@@ -171,15 +171,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             }
             else
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && certificateManager.HasValidCertificateWithInnaccessibleKeyAcrossPartitions())
-                {
-                    reporter.Warn($"A valid HTTPS certificate was found but it may not be accessible across security partitions. Run dotnet dev-certs https to ensure it will be accessible during development.");
-                    return ErrorMacOsCertificateKeyCouldNotBeAccessible;
-                }
-                else
-                {
-                    reporter.Verbose("A valid certificate was found.");
-                }
+                reporter.Verbose("A valid certificate was found.");
             }
 
             if (trust != null && trust.HasValue())
@@ -205,13 +197,6 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
         {
             var now = DateTimeOffset.Now;
             var manager = CertificateManager.Instance;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && manager.HasValidCertificateWithInnaccessibleKeyAcrossPartitions() || manager.GetHttpsCertificates().Count == 0)
-            {
-                reporter.Warn($"A valid HTTPS certificate with a key accessible across security partitions was not found. The following command will run to fix it:" + Environment.NewLine +
-                    "'sudo security set-key-partition-list -D localhost -S unsigned:,teamid:UBF8T346G9'" + Environment.NewLine +
-                    "This command will make the certificate key accessible across security partitions and might prompt you for your password. For more information see: https://aka.ms/aspnetcore/2.1/troubleshootcertissues");
-            }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && trust?.HasValue() == true)
             {

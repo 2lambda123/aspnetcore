@@ -13,7 +13,7 @@ using System.Text;
 
 namespace Microsoft.AspNetCore.Certificates.Generation
 {
-    internal class CertificateManager
+    internal abstract class CertificateManager
     {
         public const string AspNetHttpsOid = "1.3.6.1.4.1.311.84.1.1";
         public const string AspNetHttpsOidFriendlyName = "ASP.NET Core HTTPS development certificate";
@@ -139,27 +139,177 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        public virtual bool IsExportable(X509Certificate2 c) => false;
-
-        internal static void DisposeCertificates(IEnumerable<X509Certificate2> disposables)
-        {
-            foreach (var disposable in disposables)
-            {
-                try
-                {
-                    disposable.Dispose();
-                }
-                catch
-                {
-                }
-            }
-        }
-
         public IList<X509Certificate2> GetHttpsCertificates() =>
             ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, requireExportable: true);
 
-        public X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(
-            DateTimeOffset notBefore, DateTimeOffset notAfter)
+        public EnsureCertificateResult EnsureAspNetCoreHttpsDevelopmentCertificate(
+            DateTimeOffset notBefore,
+            DateTimeOffset notAfter,
+            string path = null,
+            bool trust = false,
+            bool includePrivateKey = false,
+            string password = null)
+        {
+            var result = EnsureCertificateResult.Succeeded;
+
+            var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, requireExportable: true).Concat(
+                ListCertificates(StoreName.My, StoreLocation.LocalMachine, isValid: true, requireExportable: true));
+
+            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
+            var excludedCertificates = certificates.Except(filteredCertificates);
+
+            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
+            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
+
+            certificates = filteredCertificates;
+
+            X509Certificate2 certificate = null;
+            if (certificates.Any())
+            {
+                Log.ValidCertificatesFound(CertificateManagerEventSource.ToCertificateDescription(certificates));
+                certificate = certificates.First();
+                Log.SelectedCertificate(CertificateManagerEventSource.GetDescription(certificate));
+                result = EnsureCertificateResult.ValidCertificatePresent;
+            }
+            else
+            {
+                Log.NoValidCertificatesFound();
+                try
+                {
+                    Log.CreateDevelopmentCertificateStart();
+                    certificate = CreateAspNetCoreHttpsDevelopmentCertificate(notBefore, notAfter);
+                }
+                catch (Exception e)
+                {
+                    Log.CreateDevelopmentCertificateError(e.ToString());
+                    result = EnsureCertificateResult.ErrorCreatingTheCertificate;
+                    return result;
+                }
+                Log.CreateDevelopmentCertificateEnd();
+
+                try
+                {
+                    certificate = SaveCertificate(certificate);
+                }
+                catch (Exception e)
+                {
+                    Log.SaveCertificateInStoreError(e.ToString());
+                    result = EnsureCertificateResult.ErrorSavingTheCertificateIntoTheCurrentUserPersonalStore;
+                    return result;
+                }
+            }
+            if (path != null)
+            {
+                try
+                {
+                    ExportCertificate(certificate, path, includePrivateKey, password);
+                }
+                catch (Exception e)
+                {
+                    Log.ExportCertificateError(e.ToString());
+                    result = EnsureCertificateResult.ErrorExportingTheCertificate;
+                    return result;
+                }
+            }
+
+            if (trust)
+            {
+                try
+                {
+                    TrustCertificate(certificate);
+                }
+                catch (UserCancelledTrustException)
+                {
+                    result = EnsureCertificateResult.UserCancelledTrustStep;
+                    return result;
+                }
+                catch
+                {
+                    result = EnsureCertificateResult.FailedToTrustTheCertificate;
+                    return result;
+                }
+            }
+
+            return result;
+        }
+
+        public void CleanupHttpsCertificates()
+        {
+            // On OS X we don't have a good way to manage trusted certificates in the system keychain
+            // so we do everything by invoking the native toolchain.
+            // This has some limitations, like for example not being able to identify our custom OID extension. For that
+            // matter, when we are cleaning up certificates on the machine, we start by removing the trusted certificates.
+            // To do this, we list the certificates that we can identify on the current user personal store and we invoke
+            // the native toolchain to remove them from the sytem keychain. Once we have removed the trusted certificates,
+            // we remove the certificates from the local user store to finish up the cleanup.
+            var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: false);
+            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
+            var excludedCertificates = certificates.Except(filteredCertificates);
+
+            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
+            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
+
+            foreach (var certificate in filteredCertificates)
+            {
+                RemoveCertificate(certificate, RemoveLocations.All);
+            }
+        }
+
+        public abstract bool IsTrusted(X509Certificate2 certificate);
+
+        protected abstract X509Certificate2 SaveCertificateCore(X509Certificate2 certificate);
+
+        protected abstract void TrustCertificateCore(X509Certificate2 certificate);
+
+        protected abstract bool IsExportable(X509Certificate2 c);
+
+        protected abstract void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate);
+
+        protected abstract IList<X509Certificate2> GetCertificatesToRemove(StoreName storeName, StoreLocation storeLocation);
+
+        internal void ExportCertificate(X509Certificate2 certificate, string path, bool includePrivateKey, string password)
+        {
+            Log.ExportCertificateStart(CertificateManagerEventSource.GetDescription(certificate), path, includePrivateKey);
+            if (includePrivateKey && password == null)
+            {
+                Log.NoPasswordForCertificate();
+            }
+
+            var targetDirectoryPath = Path.GetDirectoryName(path);
+            if (targetDirectoryPath != "")
+            {
+                Log.CreateExportCertificateDirectory(targetDirectoryPath);
+                Directory.CreateDirectory(targetDirectoryPath);
+            }
+
+            byte[] bytes;
+            try
+            {
+                bytes = includePrivateKey ? certificate.Export(X509ContentType.Pkcs12, password) : certificate.Export(X509ContentType.Cert);
+            }
+            catch (Exception e)
+            {
+                Log.ExportCertificateError(e.ToString());
+                throw;
+            }
+
+            try
+            {
+                Log.WriteCertificateToDisk(path);
+                File.WriteAllBytes(path, bytes);
+            }
+            catch (Exception ex)
+            {
+                Log.WriteCertificateToDiskError(ex.ToString());
+                throw;
+            }
+            finally
+            {
+                Array.Clear(bytes, 0, bytes.Length);
+            }
+        }
+
+        internal X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
         {
             var subject = new X500DistinguishedName(Subject);
             var extensions = new List<X509Extension>();
@@ -209,7 +359,72 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             return certificate;
         }
 
-        internal static bool CheckDeveloperCertificateKey(X509Certificate2 candidate)
+        internal X509Certificate2 SaveCertificate(X509Certificate2 certificate)
+        {
+            var name = StoreName.My;
+            var location = StoreLocation.CurrentUser;
+
+            Log.SaveCertificateInStoreStart(CertificateManagerEventSource.GetDescription(certificate), name, location);
+
+            certificate = SaveCertificateCore(certificate);
+
+            Log.SaveCertificateInStoreEnd();
+            return certificate;
+        }
+
+        internal void TrustCertificate(X509Certificate2 certificate)
+        {
+            try
+            {
+                Log.TrustCertificateStart(CertificateManagerEventSource.GetDescription(certificate));
+                TrustCertificateCore(certificate);
+                Log.TrustCertificateEnd();
+            }
+            catch (Exception ex)
+            {
+                Log.TrustCertificateError(ex.ToString());
+                throw;
+            }
+        }
+
+        // Internal, for testing purposes only.
+        internal void RemoveAllCertificates(StoreName storeName, StoreLocation storeLocation)
+        {
+            var certificates = GetCertificatesToRemove(storeName, storeLocation);
+            var certificatesWithName = certificates.Where(c => c.Subject == Subject);
+
+            var removeLocation = storeName == StoreName.My ? RemoveLocations.Local : RemoveLocations.Trusted;
+
+            foreach (var certificate in certificates)
+            {
+                RemoveCertificate(certificate, removeLocation);
+            }
+
+            DisposeCertificates(certificates);
+        }
+
+        internal void RemoveCertificate(X509Certificate2 certificate, RemoveLocations locations)
+        {
+            switch (locations)
+            {
+                case RemoveLocations.Undefined:
+                    throw new InvalidOperationException($"'{nameof(RemoveLocations.Undefined)}' is not a valid location.");
+                case RemoveLocations.Local:
+                    RemoveCertificateFromUserStore(certificate);
+                    break;
+                case RemoveLocations.Trusted:
+                    RemoveCertificateFromTrustedRoots(certificate);
+                    break;
+                case RemoveLocations.All:
+                    RemoveCertificateFromTrustedRoots(certificate);
+                    RemoveCertificateFromUserStore(certificate);
+                    break;
+                default:
+                    throw new InvalidOperationException("Invalid location.");
+            }
+        }
+
+        internal bool CheckDeveloperCertificateKey(X509Certificate2 candidate)
         {
             // Tries to use the certificate key to validate it can't access it
             try
@@ -236,7 +451,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        public virtual X509Certificate2 CreateSelfSignedCertificate(
+        internal X509Certificate2 CreateSelfSignedCertificate(
             X500DistinguishedName subject,
             IEnumerable<X509Extension> extensions,
             DateTimeOffset notBefore,
@@ -266,147 +481,17 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        public virtual X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location)
+        internal static void DisposeCertificates(IEnumerable<X509Certificate2> disposables)
         {
-            Log.SaveCertificateInStoreStart(CertificateManagerEventSource.GetDescription(certificate), name, location);
-
-            using (var store = new X509Store(name, location))
+            foreach (var disposable in disposables)
             {
-                store.Open(OpenFlags.ReadWrite);
-                store.Add(certificate);
-                store.Close();
-            };
-
-            Log.SaveCertificateInStoreEnd();
-            return certificate;
-        }
-
-        public void ExportCertificate(X509Certificate2 certificate, string path, bool includePrivateKey, string password)
-        {
-            Log.ExportCertificateStart(CertificateManagerEventSource.GetDescription(certificate), path, includePrivateKey);
-            if (includePrivateKey && password == null)
-            {
-                Log.NoPasswordForCertificate();
-            }
-
-            var targetDirectoryPath = Path.GetDirectoryName(path);
-            if (targetDirectoryPath != "")
-            {
-                Log.CreateExportCertificateDirectory(targetDirectoryPath);
-                Directory.CreateDirectory(targetDirectoryPath);
-            }
-
-            byte[] bytes;
-            try
-            {
-                bytes = includePrivateKey ? certificate.Export(X509ContentType.Pkcs12, password) : certificate.Export(X509ContentType.Cert);
-            }
-            catch (Exception e)
-            {
-                Log.ExportCertificateError(e.ToString());
-                throw;
-            }
-
-            try
-            {
-                Log.WriteCertificateToDisk(path);
-                File.WriteAllBytes(path, bytes);
-            }
-            catch (Exception ex)
-            {
-                Log.WriteCertificateToDiskError(ex.ToString());
-                throw;
-            }
-            finally
-            {
-                Array.Clear(bytes, 0, bytes.Length);
-            }
-        }
-
-        internal void TrustCertificate(X509Certificate2 certificate)
-        {
-            try
-            {
-                Log.TrustCertificateStart(CertificateManagerEventSource.GetDescription(certificate));
-                TrustCertificateCore(certificate);
-                Log.TrustCertificateEnd();
-            }
-            catch (Exception ex)
-            {
-                Log.TrustCertificateError(ex.ToString());
-                throw;
-            }
-        }
-
-        internal virtual void TrustCertificateCore(X509Certificate2 certificate)
-        {
-        }
-
-        public virtual bool IsTrusted(X509Certificate2 certificate)
-        {
-            return false;
-        }
-
-        public void CleanupHttpsCertificates()
-        {
-            // On OS X we don't have a good way to manage trusted certificates in the system keychain
-            // so we do everything by invoking the native toolchain.
-            // This has some limitations, like for example not being able to identify our custom OID extension. For that
-            // matter, when we are cleaning up certificates on the machine, we start by removing the trusted certificates.
-            // To do this, we list the certificates that we can identify on the current user personal store and we invoke
-            // the native toolchain to remove them from the sytem keychain. Once we have removed the trusted certificates,
-            // we remove the certificates from the local user store to finish up the cleanup.
-            var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: false);
-            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
-            var excludedCertificates = certificates.Except(filteredCertificates);
-
-            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
-            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
-
-            foreach (var certificate in filteredCertificates)
-            {
-                RemoveCertificate(certificate, RemoveLocations.All);
-            }
-        }
-
-        public void RemoveAllCertificates(StoreName storeName, StoreLocation storeLocation)
-        {
-            var certificates = GetCertificatesToRemove(storeName, storeLocation);
-            var certificatesWithName = certificates.Where(c => c.Subject == Subject);
-
-            var removeLocation = storeName == StoreName.My ? RemoveLocations.Local : RemoveLocations.Trusted;
-
-            foreach (var certificate in certificates)
-            {
-                RemoveCertificate(certificate, removeLocation);
-            }
-
-            DisposeCertificates(certificates);
-        }
-
-        internal virtual IList<X509Certificate2> GetCertificatesToRemove(StoreName storeName, StoreLocation storeLocation)
-        {
-            return ListCertificates(storeName, storeLocation, isValid: false);
-        }
-
-        internal virtual void RemoveCertificate(X509Certificate2 certificate, RemoveLocations locations)
-        {
-            switch (locations)
-            {
-                case RemoveLocations.Undefined:
-                    throw new InvalidOperationException($"'{nameof(RemoveLocations.Undefined)}' is not a valid location.");
-                case RemoveLocations.Local:
-                    RemoveCertificateFromUserStore(certificate);
-                    break;
-                case RemoveLocations.Trusted:
-                    RemoveCertificateFromTrustedRoots(certificate);
-                    break;
-                case RemoveLocations.All:
-                    RemoveCertificateFromTrustedRoots(certificate);
-                    RemoveCertificateFromUserStore(certificate);
-                    break;
-                default:
-                    throw new InvalidOperationException("Invalid location.");
+                try
+                {
+                    disposable.Dispose();
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -430,120 +515,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 Log.RemoveCertificateFromUserStoreError(ex.ToString());
                 throw;
             }
-        }
-
-        internal virtual void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate)
-        {
-        }
-
-        public EnsureCertificateResult EnsureAspNetCoreHttpsDevelopmentCertificate(
-            DateTimeOffset notBefore,
-            DateTimeOffset notAfter,
-            string path = null,
-            bool trust = false,
-            bool includePrivateKey = false,
-            string password = null,
-            bool isInteractive = true)
-        {
-            return EnsureValidCertificateExists(notBefore, notAfter, path, trust, includePrivateKey, password, isInteractive);
-        }
-
-        public EnsureCertificateResult EnsureValidCertificateExists(
-            DateTimeOffset notBefore,
-            DateTimeOffset notAfter,
-            string path = null,
-            bool trust = false,
-            bool includePrivateKey = false,
-            string password = null,
-            bool isInteractive = true)
-        {
-            var result = EnsureCertificateResult.Succeeded;
-
-            var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, requireExportable: true).Concat(
-                ListCertificates(StoreName.My, StoreLocation.LocalMachine, isValid: true, requireExportable: true));
-
-            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
-            var excludedCertificates = certificates.Except(filteredCertificates);
-
-            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
-            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
-
-            certificates = filteredCertificates;
-
-            X509Certificate2 certificate = null;
-            if (certificates.Count() > 0)
-            {
-                if (!TryEnsureCertificatesAreAccessibleAcrossPartitions(filteredCertificates, isInteractive, result))
-                {
-                    result = EnsureCertificateResult.FailedToMakeKeyAccessible;
-                    return result;
-                }
-
-                Log.ValidCertificatesFound(CertificateManagerEventSource.ToCertificateDescription(certificates));
-                certificate = certificates.First();
-                Log.SelectedCertificate(CertificateManagerEventSource.GetDescription(certificate));
-                result = EnsureCertificateResult.ValidCertificatePresent;
-            }
-            else
-            {
-                Log.NoValidCertificatesFound();
-                try
-                {
-                    Log.CreateDevelopmentCertificateStart();
-                    certificate = CreateAspNetCoreHttpsDevelopmentCertificate(notBefore, notAfter);
-                }
-                catch (Exception e)
-                {
-                    Log.CreateDevelopmentCertificateError(e.ToString());
-                    result = EnsureCertificateResult.ErrorCreatingTheCertificate;
-                    return result;
-                }
-                Log.CreateDevelopmentCertificateEnd();
-
-                try
-                {
-                    certificate = SaveCertificateInStore(certificate, StoreName.My, StoreLocation.CurrentUser);
-                }
-                catch (Exception e)
-                {
-                    Log.SaveCertificateInStoreError(e.ToString());
-                    result = EnsureCertificateResult.ErrorSavingTheCertificateIntoTheCurrentUserPersonalStore;
-                    return result;
-                }
-            }
-            if (path != null)
-            {
-                try
-                {
-                    ExportCertificate(certificate, path, includePrivateKey, password);
-                }
-                catch (Exception e)
-                {
-                    Log.ExportCertificateError(e.ToString());
-                    result = EnsureCertificateResult.ErrorExportingTheCertificate;
-                    return result;
-                }
-            }
-
-            if (trust)
-            {
-                try
-                {
-                    TrustCertificate(certificate);
-                }
-                catch (UserCancelledTrustException)
-                {
-                    result = EnsureCertificateResult.UserCancelledTrustStep;
-                    return result;
-                }
-                catch
-                {
-                    result = EnsureCertificateResult.FailedToTrustTheCertificate;
-                    return result;
-                }
-            }
-
-            return result;
         }
 
         [EventSource(Name = "Dotnet-dev-certs")]
@@ -719,20 +690,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             internal static string GetDescription(X509Certificate2 c) =>
                 $"{c.Thumbprint[0..6]} - {c.Subject} - {c.GetEffectiveDateString()} - {c.GetExpirationDateString()} - {Instance.IsHttpsDevelopmentCertificate(c)} - {Instance.IsExportable(c)}";
         }
-
-        public virtual bool TryEnsureCertificatesAreAccessibleAcrossPartitions(
-                        IEnumerable<X509Certificate2> certificates,
-            bool isInteractive,
-            EnsureCertificateResult result)
-        {
-            return true;
-        }
-
-        public virtual void MakeCertificateKeyAccessibleAcrossPartitions(X509Certificate2 certificate)
-        {
-        }
-
-        public virtual bool HasValidCertificateWithInnaccessibleKeyAcrossPartitions() => false;
 
         internal class UserCancelledTrustException : Exception
         {
