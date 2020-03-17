@@ -36,7 +36,19 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         // Setting to 0 means we don't append the version byte,
         // which is what all machines currently have.
-        public static int AspNetHttpsCertificateVersion { get; set; } = 1;
+        public int AspNetHttpsCertificateVersion { get; }
+
+        public string Subject { get; }
+
+        public CertificateManager() : this(LocalhostHttpsDistinguishedName, 1)
+        {
+        }
+
+        internal CertificateManager(string subject, int version)
+        {
+            Subject = subject;
+            AspNetHttpsCertificateVersion = version;
+        }
 
         public bool IsHttpsDevelopmentCertificate(X509Certificate2 certificate) =>
             certificate.Extensions.OfType<X509Extension>()
@@ -107,7 +119,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 certificate.Extensions.OfType<X509Extension>()
                     .Any(e => string.Equals(oid, e.Oid.Value, StringComparison.Ordinal));
 
-            static bool MatchesVersion(X509Certificate2 c)
+            bool MatchesVersion(X509Certificate2 c)
             {
                 var byteArray = c.Extensions.OfType<X509Extension>()
                     .Where(e => string.Equals(AspNetHttpsOid, e.Oid.Value, StringComparison.Ordinal))
@@ -146,9 +158,10 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         public IList<X509Certificate2> GetHttpsCertificates() =>
             ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, requireExportable: true);
 
-        public X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter, string subjectOverride)
+        public X509Certificate2 CreateAspNetCoreHttpsDevelopmentCertificate(
+            DateTimeOffset notBefore, DateTimeOffset notAfter)
         {
-            var subject = new X500DistinguishedName(subjectOverride ?? LocalhostHttpsDistinguishedName);
+            var subject = new X500DistinguishedName(Subject);
             var extensions = new List<X509Extension>();
             var sanBuilder = new SubjectAlternativeNameBuilder();
             sanBuilder.AddDnsName(LocalhostHttpsDnsName);
@@ -334,7 +347,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             return false;
         }
 
-        public void CleanupHttpsCertificates(string subject = LocalhostHttpsDistinguishedName)
+        public void CleanupHttpsCertificates()
         {
             // On OS X we don't have a good way to manage trusted certificates in the system keychain
             // so we do everything by invoking the native toolchain.
@@ -344,18 +357,11 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             // the native toolchain to remove them from the sytem keychain. Once we have removed the trusted certificates,
             // we remove the certificates from the local user store to finish up the cleanup.
             var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: false);
-            var filteredCertificates = certificates.Where(c => c.Subject == subject);
-            if (subject != null)
-            {
-                var excludedCertificates = certificates.Except(filteredCertificates);
+            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
+            var excludedCertificates = certificates.Except(filteredCertificates);
 
-                Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
-                Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
-            }
-            else
-            {
-                Log.CertificatesNotFiltered();
-            }
+            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
+            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
 
             foreach (var certificate in filteredCertificates)
             {
@@ -363,10 +369,10 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        public void RemoveAllCertificates(StoreName storeName, StoreLocation storeLocation, string subject = null)
+        public void RemoveAllCertificates(StoreName storeName, StoreLocation storeLocation)
         {
             var certificates = GetCertificatesToRemove(storeName, storeLocation);
-            var certificatesWithName = subject == null ? certificates : certificates.Where(c => c.Subject == subject);
+            var certificatesWithName = certificates.Where(c => c.Subject == Subject);
 
             var removeLocation = storeName == StoreName.My ? RemoveLocations.Local : RemoveLocations.Trusted;
 
@@ -437,10 +443,9 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             bool trust = false,
             bool includePrivateKey = false,
             string password = null,
-            string subject = LocalhostHttpsDistinguishedName,
             bool isInteractive = true)
         {
-            return EnsureValidCertificateExists(notBefore, notAfter, path, trust, includePrivateKey, password, subject, isInteractive);
+            return EnsureValidCertificateExists(notBefore, notAfter, path, trust, includePrivateKey, password, isInteractive);
         }
 
         public EnsureCertificateResult EnsureValidCertificateExists(
@@ -450,7 +455,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             bool trust = false,
             bool includePrivateKey = false,
             string password = null,
-            string subjectOverride = null,
             bool isInteractive = true)
         {
             var result = EnsureCertificateResult.Succeeded;
@@ -458,18 +462,11 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             var certificates = ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, requireExportable: true).Concat(
                 ListCertificates(StoreName.My, StoreLocation.LocalMachine, isValid: true, requireExportable: true));
 
-            var filteredCertificates = subjectOverride == null ? certificates : certificates.Where(c => c.Subject == subjectOverride);
-            if (subjectOverride != null)
-            {
-                var excludedCertificates = certificates.Except(filteredCertificates);
+            var filteredCertificates = certificates.Where(c => c.Subject == Subject);
+            var excludedCertificates = certificates.Except(filteredCertificates);
 
-                Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
-                Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
-            }
-            else
-            {
-                Log.CertificatesNotFiltered();
-            }
+            Log.FilteredCertificates(CertificateManagerEventSource.ToCertificateDescription(filteredCertificates));
+            Log.ExcludedCertificates(CertificateManagerEventSource.ToCertificateDescription(excludedCertificates));
 
             certificates = filteredCertificates;
 
@@ -493,7 +490,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 try
                 {
                     Log.CreateDevelopmentCertificateStart();
-                    certificate = CreateAspNetCoreHttpsDevelopmentCertificate(notBefore, notAfter, subjectOverride);
+                    certificate = CreateAspNetCoreHttpsDevelopmentCertificate(notBefore, notAfter);
                 }
                 catch (Exception e)
                 {
@@ -552,8 +549,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         [EventSource(Name = "Dotnet-dev-certs")]
         public class CertificateManagerEventSource : EventSource
         {
-            // Events relted to ListCertificates
-
             [Event(1, Level = EventLevel.Verbose)]
             public void ListCertificatesStart(StoreLocation location, StoreName storeName) => WriteEvent(1, $"Listing certificates from {location}\\{storeName}");
 
@@ -580,10 +575,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
             [Event(9, Level = EventLevel.Verbose)]
             public void ExcludedCertificates(string excludedCertificates) => WriteEvent(9, excludedCertificates);
-
-            [Event(10, Level = EventLevel.Verbose)]
-            public void CertificatesNotFiltered() => WriteEvent(10, "Certificates not filtered");
-
 
             [Event(11, Level = EventLevel.Verbose)]
             public void MacOSMakeCertificateAccessibleAcrossPartitionsStart(string cert) => WriteEvent(11, $"Trying to make certificate accessible across partitions: {cert}");
