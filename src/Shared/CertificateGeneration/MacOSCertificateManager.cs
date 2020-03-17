@@ -29,23 +29,23 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         private static readonly TimeSpan MaxRegexTimeout = TimeSpan.FromMinutes(1);
 
-        internal override void TrustCertificate(
-            X509Certificate2 publicCertificate,
-            DiagnosticInformation diagnostics)
+        internal override void TrustCertificateCore(X509Certificate2 publicCertificate)
         {
             var tmpFile = Path.GetTempFileName();
             try
             {
                 ExportCertificate(publicCertificate, tmpFile, includePrivateKey: false, password: null);
-                diagnostics?.Debug("Running the trust command on Mac OS");
+                Log.MacOSTrustCommandStart($"{MacOSTrustCertificateCommandLine} {MacOSTrustCertificateCommandLineArguments}{tmpFile}");
                 using (var process = Process.Start(MacOSTrustCertificateCommandLine, MacOSTrustCertificateCommandLineArguments + tmpFile))
                 {
                     process.WaitForExit();
                     if (process.ExitCode != 0)
                     {
+                        Log.MacOSTrustCommandError(process.ExitCode);
                         throw new InvalidOperationException("There was an error trusting the certificate.");
                     }
                 }
+                Log.MacOSTrustCommandEnd();
             }
             finally
             {
@@ -71,48 +71,50 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 throw new InvalidOperationException($"Can't determine the subject for the certificate with subject '{certificate.Subject}'.");
             }
             var subject = subjectMatch.Groups[1].Value;
-            using (var checkTrustProcess = Process.Start(new ProcessStartInfo(
+            using var checkTrustProcess = Process.Start(new ProcessStartInfo(
                 MacOSFindCertificateCommandLine,
                 string.Format(MacOSFindCertificateCommandLineArgumentsFormat, subject))
             {
                 RedirectStandardOutput = true
-            }))
-            {
-                var output = checkTrustProcess.StandardOutput.ReadToEnd();
-                checkTrustProcess.WaitForExit();
-                var matches = Regex.Matches(output, MacOSFindCertificateOutputRegex, RegexOptions.Multiline, MaxRegexTimeout);
-                var hashes = matches.OfType<Match>().Select(m => m.Groups[1].Value).ToList();
-                return hashes.Any(h => string.Equals(h, certificate.Thumbprint, StringComparison.Ordinal));
-            }
+            });
+            var output = checkTrustProcess.StandardOutput.ReadToEnd();
+            checkTrustProcess.WaitForExit();
+            var matches = Regex.Matches(output, MacOSFindCertificateOutputRegex, RegexOptions.Multiline, MaxRegexTimeout);
+            var hashes = matches.OfType<Match>().Select(m => m.Groups[1].Value).ToList();
+            return hashes.Any(h => string.Equals(h, certificate.Thumbprint, StringComparison.Ordinal));
         }
 
-        internal override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate, DiagnosticInformation diagnostics)
+        internal override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate)
         {
             if (IsTrusted(certificate)) // On OSX this check just ensures its on the system keychain
             {
+                // A trusted certificate in OSX is installed into the system keychain and
+                // as a "trust rule" applied to it.
+                // To remove the certificate we first need to remove the "trust rule" and then
+                // remove the certificate from the keychain.
+                // We don't care if we fail to remove the trust rule if
+                // for some reason the certificate became untrusted.
+                // Trying to remove the certificate from the keychain will fail if the certificate is
+                // trusted.
                 try
                 {
-                    diagnostics?.Debug("Trying to remove the certificate trust rule.");
                     RemoveCertificateTrustRule(certificate);
                 }
                 catch
                 {
-                    diagnostics?.Debug("Failed to remove the certificate trust rule.");
-                    // We don't care if we fail to remove the trust rule if
-                    // for some reason the certificate became untrusted.
-                    // The delete command will fail if the certificate is
-                    // trusted.
                 }
+
                 RemoveCertificateFromKeyChain(MacOSSystemKeyChain, certificate);
             }
             else
             {
-                diagnostics?.Debug("The certificate was not trusted.");
+                Log.MacOSCertificateUntrusted(CertificateManagerEventSource.GetDescription(certificate));
             }
         }
 
         private static void RemoveCertificateTrustRule(X509Certificate2 certificate)
         {
+            Log.MacOSRemoveCertificateTrustRuleStart(CertificateManagerEventSource.GetDescription(certificate));
             var certificatePath = Path.GetTempFileName();
             try
             {
@@ -124,10 +126,13 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                         MacOSRemoveCertificateTrustCommandLineArgumentsFormat,
                         certificatePath
                     ));
-                using (var process = Process.Start(processInfo))
+                using var process = Process.Start(processInfo);
+                process.WaitForExit();
+                if (process.ExitCode != 0)
                 {
-                    process.WaitForExit();
+                    Log.MacOSRemoveCertificateTrustRuleError(process.ExitCode);
                 }
+                Log.MacOSRemoveCertificateTrustRuleEnd();
             }
             finally
             {
@@ -159,6 +164,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 RedirectStandardError = true
             };
 
+            Log.MacOSRemoveCertificateFromKeyChainStart(keyChain, CertificateManagerEventSource.GetDescription(certificate));
             using (var process = Process.Start(processInfo))
             {
                 var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
@@ -166,11 +172,14 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
                 if (process.ExitCode != 0)
                 {
+                    Log.MacOSRemoveCertificateFromKeyChainError(process.ExitCode);
                     throw new InvalidOperationException($@"There was an error removing the certificate with thumbprint '{certificate.Thumbprint}'.
 
 {output}");
                 }
             }
+
+            Log.MacOSRemoveCertificateFromKeyChainEnd();
         }
 
         public override void MakeCertificateKeyAccessibleAcrossPartitions(X509Certificate2 certificate)
@@ -244,7 +253,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         public override bool TryEnsureCertificatesAreAccessibleAcrossPartitions(
             IEnumerable<X509Certificate2> certificates,
             bool isInteractive,
-            DetailedEnsureCertificateResult result)
+            EnsureCertificateResult result)
         {
             foreach (var cert in certificates)
             {
@@ -260,17 +269,19 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                     {
                         // The command we run handles making keys for all localhost certificates accessible across partitions. If it can not run the
                         // command safely (because there are other localhost certificates that were not created by asp.net core, it will throw.
+                        Log.MacOSMakeCertificateAccessibleAcrossPartitionsStart(CertificateManagerEventSource.GetDescription(cert));
                         MakeCertificateKeyAccessibleAcrossPartitions(cert);
                         break;
                     }
                     catch (Exception ex)
                     {
-                        result.Diagnostics.Error("Failed to make certificate key accessible", ex);
-                        result.ResultCode = EnsureCertificateResult.FailedToMakeKeyAccessible;
+                        Log.MacOSMakeCertificateAccessibleAcrossPartitionsError(ex.ToString());
                         return false;
                     }
                 }
             }
+
+            Log.MacOSMakeCertificateAccessibleAcrossPartitionsEnd();
 
             return true;
         }
@@ -295,7 +306,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         public override bool IsExportable(X509Certificate2 c) => false;
 
-        public override X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location, DiagnosticInformation diagnostics = null)
+        public override X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location)
         {
             using (var store = new X509Store(name, location))
             {

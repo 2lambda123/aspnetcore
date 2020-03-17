@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Microsoft.AspNetCore.Certificates.Generation;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Tools.Internal;
@@ -35,6 +36,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             {
                 // This is so that we can attach `dotnet trace` for debug purposes.
                 Console.WriteLine("Press any key to continue...");
+                _ = Console.ReadKey();
                 var newArgs = new List<string>(args);
                 newArgs.Remove("--interactive");
                 args = newArgs.ToArray();
@@ -183,7 +185,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             if (trust != null && trust.HasValue())
             {
                 var store = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? StoreName.My : StoreName.Root;
-                var trustedCertificates = CertificateManager.ListCertificates(store, StoreLocation.CurrentUser, isValid: true);
+                var trustedCertificates = certificateManager.ListCertificates(store, StoreLocation.CurrentUser, isValid: true);
                 if (!certificates.Any(c => certificateManager.IsTrusted(c)))
                 {
                     reporter.Output($@"The following certificates were found, but none of them is trusted:
@@ -234,9 +236,7 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
                 password.HasValue(),
                 password.Value());
 
-            reporter.Verbose(string.Join(Environment.NewLine, result.Diagnostics.Messages));
-
-            switch (result.ResultCode)
+            switch (result)
             {
                 case EnsureCertificateResult.Succeeded:
                     reporter.Output("The HTTPS developer certificate was generated successfully.");

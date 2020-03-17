@@ -29,7 +29,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 #endif
         }
 
-        public override X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location, DiagnosticInformation diagnostics = null)
+        public override X509Certificate2 SaveCertificateInStore(X509Certificate2 certificate, StoreName name, StoreLocation location)
         {
             // On non OSX systems we need to export the certificate and import it so that the transient
             // key that we generated gets persisted.
@@ -38,58 +38,60 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             Array.Clear(export, 0, export.Length);
             certificate.FriendlyName = certificate.FriendlyName;
 
-            return base.SaveCertificateInStore(certificate, name, location, diagnostics);
+            return base.SaveCertificateInStore(certificate, name, location);
         }
 
-        internal override void TrustCertificate(X509Certificate2 certificate, DiagnosticInformation diagnostics = null)
+        internal override void TrustCertificateCore(X509Certificate2 certificate)
         {
-            diagnostics?.Debug("Trusting the certificate on Windows.");
             var publicCertificate = new X509Certificate2(certificate.Export(X509ContentType.Cert));
 
             publicCertificate.FriendlyName = certificate.FriendlyName;
 
-            using (var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+            using var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
+
+            store.Open(OpenFlags.ReadWrite);
+            var existing = store.Certificates.Find(X509FindType.FindByThumbprint, publicCertificate.Thumbprint, validOnly: false);
+            if (existing.Count > 0)
             {
-                store.Open(OpenFlags.ReadWrite);
-                var existing = store.Certificates.Find(X509FindType.FindByThumbprint, publicCertificate.Thumbprint, validOnly: false);
-                if (existing.Count > 0)
-                {
-                    diagnostics?.Debug("Certificate already trusted. Skipping trust step.");
-                    DisposeCertificates(existing.OfType<X509Certificate2>());
-                    return;
-                }
+                Log.WindowsCertificateAlreadyTrusted();
+                DisposeCertificates(existing.OfType<X509Certificate2>());
+                return;
+            }
 
-                try
-                {
-                    diagnostics?.Debug("Adding certificate to the store.");
-                    store.Add(publicCertificate);
-                }
-                catch (CryptographicException exception) when (exception.HResult == UserCancelledErrorCode)
-                {
-                    diagnostics?.Debug("User cancelled the trust prompt.");
-                    throw new UserCancelledTrustException();
-                }
-                store.Close();
-            };
-        }
-
-        internal override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate, DiagnosticInformation diagnostics)
-        {
-            diagnostics?.Debug($"Trying to remove certificate with thumbprint '{certificate.Thumbprint}' from certificate store '{StoreLocation.CurrentUser}\\{StoreName.Root}'.");
-            using (var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+            try
             {
-                store.Open(OpenFlags.ReadWrite);
-                var matching = store.Certificates
-                    .OfType<X509Certificate2>()
-                    .SingleOrDefault(c => c.SerialNumber == certificate.SerialNumber);
-
-                if (matching != null)
-                {
-                    store.Remove(matching);
-                }
-
+                Log.WindowsAddCertificateToRootStore();
+                store.Add(publicCertificate);
                 store.Close();
             }
+            catch (CryptographicException exception) when (exception.HResult == UserCancelledErrorCode)
+            {
+                Log.WindowsCertificateTrustCanceled();
+                throw new UserCancelledTrustException();
+            }
+        }
+
+        internal override void RemoveCertificateFromTrustedRoots(X509Certificate2 certificate)
+        {
+            Log.WindowsRemoveCertificateFromRootStoreStart();
+            using var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
+
+            store.Open(OpenFlags.ReadWrite);
+            var matching = store.Certificates
+                .OfType<X509Certificate2>()
+                .SingleOrDefault(c => c.SerialNumber == certificate.SerialNumber);
+
+            if (matching != null)
+            {
+                store.Remove(matching);
+            }
+            else
+            {
+                Log.WindowsRemoveCertificateFromRootStoreNotFound();
+            }
+
+            store.Close();
+            Log.WindowsRemoveCertificateFromRootStoreEnd();
         }
 
         public override bool IsTrusted(X509Certificate2 certificate)
