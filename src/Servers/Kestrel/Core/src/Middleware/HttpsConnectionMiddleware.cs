@@ -218,8 +218,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Https.Internal
                 catch (AuthenticationException ex)
                 {
                     if (_serverCertificate == null ||
-                        !CertificateManager.IsHttpsDevelopmentCertificate(_serverCertificate) ||
-                        CertificateManager.CheckDeveloperCertificateKey(_serverCertificate))
+                        !CertificateManager.Instance.IsHttpsDevelopmentCertificate(_serverCertificate) ||
+                        CertificateManager.Instance.CheckDeveloperCertificateKey(_serverCertificate))
                     {
                         _logger?.LogDebug(1, ex, CoreStrings.AuthenticationFailed);
                     }
