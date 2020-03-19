@@ -495,7 +495,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
 
             var result = request.CreateSelfSigned(notBefore, notAfter);
-            result.FriendlyName = AspNetHttpsOidFriendlyName;
             return result;
 
             RSA CreateKeyMaterial(int minimumKeySize)

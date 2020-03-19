@@ -46,17 +46,14 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         protected override X509Certificate2 SaveCertificateCore(X509Certificate2 certificate)
         {
-            var name = StoreName.My;
-            var location = StoreLocation.CurrentUser;
-
             // On non OSX systems we need to export the certificate and import it so that the transient
             // key that we generated gets persisted.
             var export = certificate.Export(X509ContentType.Pkcs12, "");
             certificate = new X509Certificate2(export, "", X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
             Array.Clear(export, 0, export.Length);
-            certificate.FriendlyName = certificate.FriendlyName;
+            certificate.FriendlyName = AspNetHttpsOidFriendlyName;
 
-            using (var store = new X509Store(name, location))
+            using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadWrite);
                 store.Add(certificate);
