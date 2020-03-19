@@ -52,7 +52,7 @@ namespace Templates.Test.Helpers
             };
 
             var now = DateTimeOffset.Now;
-            new CertificateManager().EnsureAspNetCoreHttpsDevelopmentCertificate(now, now.AddYears(1));
+            CertificateManager.Instance.EnsureAspNetCoreHttpsDevelopmentCertificate(now, now.AddYears(1));
 
             output.WriteLine("Running ASP.NET application...");
 
