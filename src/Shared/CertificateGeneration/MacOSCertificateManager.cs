@@ -119,6 +119,17 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
+
+        internal override void CorrectCertificateState(X509Certificate2 candidate)
+        {
+            var status = CheckCertificateState(candidate, true);
+            if (!status.Result)
+            {
+                throw new InvalidOperationException(InvalidCertificateState);
+            }
+        }
+
+
         public override bool IsTrusted(X509Certificate2 certificate)
         {
             var subjectMatch = Regex.Match(certificate.Subject, CertificateSubjectRegex, RegexOptions.Singleline, MaxRegexTimeout);

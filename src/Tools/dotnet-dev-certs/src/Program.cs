@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using Microsoft.AspNetCore.Certificates.Generation;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Tools.Internal;
@@ -26,19 +25,19 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
         private const int ErrorNoValidCertificateFound = 6;
         private const int ErrorCertificateNotTrusted = 7;
         private const int ErrorCleaningUpCertificates = 8;
-        private const int ErrorMacOsCertificateKeyCouldNotBeAccessible = 9;
+        private const int InvalidCertificateState = 9;
 
         public static readonly TimeSpan HttpsCertificateValidity = TimeSpan.FromDays(365);
 
         public static int Main(string[] args)
         {
-            if (args.Contains("--interactive"))
+            if (args.Contains("--debug"))
             {
                 // This is so that we can attach `dotnet trace` for debug purposes.
                 Console.WriteLine("Press any key to continue...");
                 _ = Console.ReadKey();
                 var newArgs = new List<string>(args);
-                newArgs.Remove("--interactive");
+                newArgs.Remove("--debug");
                 args = newArgs.ToArray();
             }
 
@@ -171,6 +170,18 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             }
             else
             {
+                foreach (var certificate in certificates)
+                {
+                    // We never want check to require interaction.
+                    // When IDEs run dotnet dev-certs https after calling --check, we will try to access the key and
+                    // that will trigger a prompt if necessary.
+                    var status = certificateManager.CheckCertificateState(certificate, interactive: false);
+                    if (!status.Result)
+                    {
+                        reporter.Warn(status.Message);
+                        return InvalidCertificateState;
+                    }
+                }
                 reporter.Verbose("A valid certificate was found.");
             }
 

@@ -36,7 +36,8 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         // Setting to 0 means we don't append the version byte,
         // which is what all machines currently have.
-        public int AspNetHttpsCertificateVersion {
+        public int AspNetHttpsCertificateVersion
+        {
             get;
             // For testing purposes only
             internal set;
@@ -172,10 +173,36 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             X509Certificate2 certificate = null;
             if (certificates.Any())
             {
-                Log.ValidCertificatesFound(CertificateManagerEventSource.ToCertificateDescription(certificates));
                 certificate = certificates.First();
-                Log.SelectedCertificate(CertificateManagerEventSource.GetDescription(certificate));
-                result = EnsureCertificateResult.ValidCertificatePresent;
+                if (isInteractive)
+                {
+                    // Skip this step if the command is not interactive,
+                    // as we don't want to prompt on first run experience.
+                    // Check only the first certificate as is the one we plan to use.
+                    var status = CheckCertificateState(certificate, true);
+                    if (!status.Result)
+                    {
+                        try
+                        {
+                            Log.CorrectCertificateStateStart(CertificateManagerEventSource.GetDescription(certificate));
+                            CorrectCertificateState(certificate);
+                            Log.CorrectCertificateStateEnd();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.CorrectCertificateStateError(e.ToString());
+                            result = EnsureCertificateResult.FailedToMakeKeyAccessible;
+                            return result;
+                        }
+                    }
+                }
+                else
+                {
+                    Log.ValidCertificatesFound(CertificateManagerEventSource.ToCertificateDescription(certificates));
+                    certificate = certificates.First();
+                    Log.SelectedCertificate(CertificateManagerEventSource.GetDescription(certificate));
+                    result = EnsureCertificateResult.ValidCertificatePresent;
+                }
             }
             else
             {
@@ -203,7 +230,24 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                     result = EnsureCertificateResult.ErrorSavingTheCertificateIntoTheCurrentUserPersonalStore;
                     return result;
                 }
+
+                if (isInteractive)
+                {
+                    try
+                    {
+                        Log.CorrectCertificateStateStart(CertificateManagerEventSource.GetDescription(certificate));
+                        CorrectCertificateState(certificate);
+                        Log.CorrectCertificateStateEnd();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.CorrectCertificateStateError(e.ToString());
+                        result = EnsureCertificateResult.FailedToMakeKeyAccessible;
+                        return result;
+                    }
+                }
             }
+
             if (path != null)
             {
                 try
@@ -431,6 +475,8 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         }
 
         internal abstract CheckCertificateStateResult CheckCertificateState(X509Certificate2 candidate, bool interactive);
+
+        internal abstract void CorrectCertificateState(X509Certificate2 candidate);
 
         internal X509Certificate2 CreateSelfSignedCertificate(
             X500DistinguishedName subject,
@@ -660,7 +706,16 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             public void WindowsRemoveCertificateFromRootStoreEnd() => WriteEvent(49, $"Finished removing the certificate from the trusted root certification authority store.");
 
             [Event(50, Level = EventLevel.Verbose)]
-            public void WindowsRemoveCertificateFromRootStoreNotFound() => WriteEvent(50, $"The certificate was not trusted.");
+            public void WindowsRemoveCertificateFromRootStoreNotFound() => WriteEvent(50, "The certificate was not trusted.");
+
+            [Event(50, Level = EventLevel.Verbose)]
+            public void CorrectCertificateStateStart(string certificate) => WriteEvent(51, $"Correcting the the certificate state for '{certificate}'");
+
+            [Event(51, Level = EventLevel.Verbose)]
+            public void CorrectCertificateStateEnd() => WriteEvent(52, "Finished correcting the certificate state");
+
+            [Event(52, Level = EventLevel.Error)]
+            public void CorrectCertificateStateError(string error) => WriteEvent(53, $"An error has ocurred while correcting the certificate state: {error}.");
 
             internal static string ToCertificateDescription(IEnumerable<X509Certificate2> matchingCertificates) =>
                 string.Join(Environment.NewLine, matchingCertificates

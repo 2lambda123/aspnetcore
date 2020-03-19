@@ -45,6 +45,11 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             return new CheckCertificateStateResult(true, null);
         }
 
+        internal override void CorrectCertificateState(X509Certificate2 candidate)
+        {
+            // Do nothing since we don't have anything to check here.
+        }
+
         protected override bool IsExportable(X509Certificate2 c) => true;
 
         protected override void TrustCertificateCore(X509Certificate2 certificate) =>
