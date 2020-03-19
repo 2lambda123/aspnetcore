@@ -6,6 +6,15 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 {
     internal class UnixCertificateManager : CertificateManager
     {
+        public UnixCertificateManager()
+        {
+        }
+
+        internal UnixCertificateManager(string subject, int version)
+            : base(subject, version)
+        {
+        }
+
         public override bool IsTrusted(X509Certificate2 certificate) => false;
 
         protected override X509Certificate2 SaveCertificateCore(X509Certificate2 certificate)
@@ -28,6 +37,12 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             };
 
             return certificate;
+        }
+
+        internal override CheckCertificateStateResult CheckCertificateState(X509Certificate2 candidate, bool interactive)
+        {
+            // Return true as we don't perform any check.
+            return new CheckCertificateStateResult(true, null);
         }
 
         protected override bool IsExportable(X509Certificate2 c) => true;

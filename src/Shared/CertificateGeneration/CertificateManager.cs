@@ -36,7 +36,11 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         // Setting to 0 means we don't append the version byte,
         // which is what all machines currently have.
-        public int AspNetHttpsCertificateVersion { get; }
+        public int AspNetHttpsCertificateVersion {
+            get;
+            // For testing purposes only
+            internal set;
+        }
 
         public string Subject { get; }
 
@@ -44,6 +48,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         {
         }
 
+        // For testing purposes only
         internal CertificateManager(string subject, int version)
         {
             Subject = subject;
@@ -148,7 +153,8 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             string path = null,
             bool trust = false,
             bool includePrivateKey = false,
-            string password = null)
+            string password = null,
+            bool isInteractive = true)
         {
             var result = EnsureCertificateResult.Succeeded;
 
@@ -424,32 +430,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             }
         }
 
-        internal bool CheckDeveloperCertificateKey(X509Certificate2 candidate)
-        {
-            // Tries to use the certificate key to validate it can't access it
-            try
-            {
-                var rsa = candidate.GetRSAPrivateKey();
-                if (rsa == null)
-                {
-                    return false;
-                }
-
-                // Encrypting a random value is the ultimate test for a key validity.
-                // Windows and Mac OS both return HasPrivateKey = true if there is (or there has been) a private key associated
-                // with the certificate at some point.
-                var value = new byte[32];
-                RandomNumberGenerator.Fill(value);
-                rsa.Decrypt(rsa.Encrypt(value, RSAEncryptionPadding.Pkcs1), RSAEncryptionPadding.Pkcs1);
-
-                // Being able to encrypt and decrypt a payload is the strongest guarantee that the key is valid.
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
+        internal abstract CheckCertificateStateResult CheckCertificateState(X509Certificate2 candidate, bool interactive);
 
         internal X509Certificate2 CreateSelfSignedCertificate(
             X500DistinguishedName subject,
@@ -693,6 +674,24 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         internal class UserCancelledTrustException : Exception
         {
+        }
+
+        internal struct CheckCertificateStateResult
+        {
+            public bool Result { get; }
+            public string Message { get; }
+
+            public CheckCertificateStateResult(bool result, string message)
+            {
+                Result = result;
+                Message = message;
+            }
+
+            public void Deconstruct(out bool result, out string message)
+            {
+                result = Result;
+                message = Message;
+            }
         }
 
         internal enum RemoveLocations

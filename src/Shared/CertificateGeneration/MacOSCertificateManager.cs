@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
@@ -23,7 +24,26 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         private const string MacOSTrustCertificateCommandLine = "sudo";
         private static readonly string MacOSTrustCertificateCommandLineArguments = "security add-trusted-cert -d -r trustRoot -k " + MacOSSystemKeyChain + " ";
 
+        public const string InvalidCertificateState = "The ASP.NET Core developer certificate is in an invalid state. " +
+            "To fix this issue, run the following commands 'dotnet dev-certs https --clean' and 'dotnet dev-certs https' to remove all existing ASP.NET Core development certificates " +
+            "and create a new untrusted developer certificate. " +
+            "On macOS or Windows, use 'dotnet dev-certs https --trust' to trust the new certificate.";
+
+        public const string KeyNotAccessibleWithoutUserInteraction =
+            "Kestrel is trying to access the ASP.NET Core developer certificate key. " +
+            "A prompt might appear to ask for permission to access the key. " +
+            "When that happens, select 'Always allow' to grant 'dotnet' access to the certificate key in the future.";
+
         private static readonly TimeSpan MaxRegexTimeout = TimeSpan.FromMinutes(1);
+
+        public MacOSCertificateManager()
+        {
+        }
+
+        internal MacOSCertificateManager(string subject, int version)
+            : base(subject, version)
+        {
+        }
 
         protected override void TrustCertificateCore(X509Certificate2 publicCertificate)
         {
@@ -56,6 +76,46 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 {
                     // We don't care if we can't delete the temp file.
                 }
+            }
+        }
+
+        internal override CheckCertificateStateResult CheckCertificateState(X509Certificate2 candidate, bool interactive)
+        {
+            var sentinelPath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", $"certificates.{candidate.GetCertHashString(HashAlgorithmName.SHA256)}.sentinel");
+            if (!interactive && !File.Exists(sentinelPath))
+            {
+                return new CheckCertificateStateResult(false, KeyNotAccessibleWithoutUserInteraction);
+            }
+
+            // Tries to use the certificate key to validate it can't access it
+            try
+            {
+                var rsa = candidate.GetRSAPrivateKey();
+                if (rsa == null)
+                {
+                    return new CheckCertificateStateResult(false, InvalidCertificateState);
+                }
+
+                // Encrypting a random value is the ultimate test for a key validity.
+                // Windows and Mac OS both return HasPrivateKey = true if there is (or there has been) a private key associated
+                // with the certificate at some point.
+                var value = new byte[32];
+                RandomNumberGenerator.Fill(value);
+                rsa.Decrypt(rsa.Encrypt(value, RSAEncryptionPadding.Pkcs1), RSAEncryptionPadding.Pkcs1);
+
+                // If we were able to access the key, create a sentinel so that we don't have to show a prompt
+                // on every kestrel run.
+                if (Directory.Exists(Path.GetDirectoryName(sentinelPath)) && !File.Exists(sentinelPath))
+                {
+                    File.WriteAllText(sentinelPath, "true");
+                }
+
+                // Being able to encrypt and decrypt a payload is the strongest guarantee that the key is valid.
+                return new CheckCertificateStateResult(true, null);
+            }
+            catch (Exception)
+            {
+                return new CheckCertificateStateResult(false, InvalidCertificateState);
             }
         }
 

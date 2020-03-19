@@ -10,6 +10,16 @@ namespace Microsoft.AspNetCore.Certificates.Generation
     {
         private const int UserCancelledErrorCode = 1223;
 
+        public WindowsCertificateManager()
+        {
+        }
+
+        // For testing purposes only
+        internal WindowsCertificateManager(string subject, int version)
+            : base(subject, version)
+        {
+        }
+
         protected override bool IsExportable(X509Certificate2 c)
         {
 #if !XPLAT
@@ -26,6 +36,12 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             return (c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
                     rsaPrivateKey.CspKeyContainerInfo.Exportable);
 #endif
+        }
+
+        internal override CheckCertificateStateResult CheckCertificateState(X509Certificate2 candidate, bool interactive)
+        {
+            // Return true as we don't perform any check.
+            return new CheckCertificateStateResult(true, null);
         }
 
         protected override X509Certificate2 SaveCertificateCore(X509Certificate2 certificate)
