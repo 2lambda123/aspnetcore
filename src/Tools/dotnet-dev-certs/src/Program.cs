@@ -209,6 +209,24 @@ namespace Microsoft.AspNetCore.DeveloperCertificates.Tools
             var now = DateTimeOffset.Now;
             var manager = CertificateManager.Instance;
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                var certificates = manager.ListCertificates(StoreName.My, StoreLocation.CurrentUser, isValid: true, exportPath.HasValue());
+                foreach (var certificate in certificates)
+                {
+                    var status = manager.CheckCertificateState(certificate, interactive: true);
+                    if (!status.Result)
+                    {
+                        reporter.Warn("One or more certificates might be in an invalid state. We will try to access the certificate key " +
+                            "for each certificate and as a result you might be prompted one or more times to enter " +
+                            "your password to access the user keychain. " +
+                            "When that happens, select 'Always Allow' to grant 'dotnet' access to the certificate key in the future.");
+                    }
+
+                    break;
+                }
+            }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && trust?.HasValue() == true)
             {
                 reporter.Warn("Trusting the HTTPS development certificate was requested. If the certificate is not " +

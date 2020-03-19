@@ -178,22 +178,24 @@ namespace Microsoft.AspNetCore.Certificates.Generation
                 {
                     // Skip this step if the command is not interactive,
                     // as we don't want to prompt on first run experience.
-                    // Check only the first certificate as is the one we plan to use.
-                    var status = CheckCertificateState(certificate, true);
-                    if (!status.Result)
+                    foreach (var candidate in certificates)
                     {
-                        try
+                        var status = CheckCertificateState(candidate, true);
+                        if (!status.Result)
                         {
-                            Log.CorrectCertificateStateStart(CertificateManagerEventSource.GetDescription(certificate));
-                            CorrectCertificateState(certificate);
-                            Log.CorrectCertificateStateEnd();
-                        }
-                        catch (Exception e)
-                        {
-                            Log.CorrectCertificateStateError(e.ToString());
-                            result = EnsureCertificateResult.FailedToMakeKeyAccessible;
-                            return result;
-                        }
+                            try
+                            {
+                                Log.CorrectCertificateStateStart(CertificateManagerEventSource.GetDescription(candidate));
+                                CorrectCertificateState(candidate);
+                                Log.CorrectCertificateStateEnd();
+                            }
+                            catch (Exception e)
+                            {
+                                Log.CorrectCertificateStateError(e.ToString());
+                                result = EnsureCertificateResult.FailedToMakeKeyAccessible;
+                                return result;
+                            }
+                        } 
                     }
                 }
                 else

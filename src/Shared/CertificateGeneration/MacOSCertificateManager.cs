@@ -32,7 +32,7 @@ namespace Microsoft.AspNetCore.Certificates.Generation
         public const string KeyNotAccessibleWithoutUserInteraction =
             "Kestrel is trying to access the ASP.NET Core developer certificate key. " +
             "A prompt might appear to ask for permission to access the key. " +
-            "When that happens, select 'Always allow' to grant 'dotnet' access to the certificate key in the future.";
+            "When that happens, select 'Always Allow' to grant 'dotnet' access to the certificate key in the future.";
 
         private static readonly TimeSpan MaxRegexTimeout = TimeSpan.FromMinutes(1);
 
