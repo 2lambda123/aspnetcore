@@ -22,19 +22,14 @@ namespace Microsoft.AspNetCore.Certificates.Generation
 
         protected override bool IsExportable(X509Certificate2 c)
         {
-#if !XPLAT
+#if XPLAT
+            // For the first run experience we don't need to know if the certificate can be exported.
+            return true;
+#else
             return (c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
                     rsaPrivateKey.CspKeyContainerInfo.Exportable) ||
                 (c.GetRSAPrivateKey() is RSACng cngPrivateKey &&
                     cngPrivateKey.Key.ExportPolicy == CngExportPolicies.AllowExport);
-#else
-            // Only check for RSA CryptoServiceProvider and do not fail in XPlat tooling as
-            // System.Security.Cryptography.Cng is not part of the shared framework and we don't
-            // want to bring the dependency in on CLI scenarios. This functionality will be used
-            // on CLI scenarios as part of the first run experience, so checking the exportability
-            // of the certificate is not important.
-            return (c.GetRSAPrivateKey() is RSACryptoServiceProvider rsaPrivateKey &&
-                    rsaPrivateKey.CspKeyContainerInfo.Exportable);
 #endif
         }
 
