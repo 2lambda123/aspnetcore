@@ -70,48 +70,46 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             var certificates = new List<X509Certificate2>();
             try
             {
-                using (var store = new X509Store(storeName, location))
+                using var store = new X509Store(storeName, location);
+                store.Open(OpenFlags.ReadOnly);
+                certificates.AddRange(store.Certificates.OfType<X509Certificate2>());
+                IEnumerable<X509Certificate2> matchingCertificates = certificates;
+                matchingCertificates = matchingCertificates
+                    .Where(c => HasOid(c, AspNetHttpsOid));
+
+                Log.DescribeFoundCertificates(ToCertificateDescription(matchingCertificates));
+
+                if (isValid)
                 {
-                    store.Open(OpenFlags.ReadOnly);
-                    certificates.AddRange(store.Certificates.OfType<X509Certificate2>());
-                    IEnumerable<X509Certificate2> matchingCertificates = certificates;
-                    matchingCertificates = matchingCertificates
-                        .Where(c => HasOid(c, AspNetHttpsOid));
+                    // Ensure the certificate hasn't expired, has a private key and its exportable
+                    // (for container/unix scenarios).
+                    Log.CheckCertificatesValidity();
+                    var now = DateTimeOffset.Now;
+                    var validCertificates = matchingCertificates
+                        .Where(c => c.NotBefore <= now &&
+                            now <= c.NotAfter &&
+                            (!requireExportable || IsExportable(c))
+                            && MatchesVersion(c))
+                        .ToArray();
 
-                    Log.DescribeFoundCertificates(ToCertificateDescription(matchingCertificates));
+                    var invalidCertificates = matchingCertificates.Except(validCertificates);
 
-                    if (isValid)
-                    {
-                        // Ensure the certificate hasn't expired, has a private key and its exportable
-                        // (for container/unix scenarios).
-                        Log.CheckCertificatesValidity();
-                        var now = DateTimeOffset.Now;
-                        var validCertificates = matchingCertificates
-                            .Where(c => c.NotBefore <= now &&
-                                now <= c.NotAfter &&
-                                (!requireExportable || IsExportable(c))
-                                && MatchesVersion(c))
-                            .ToArray();
+                    Log.DescribeValidCertificates(ToCertificateDescription(validCertificates));
+                    Log.DescribeInvalidValidCertificates(ToCertificateDescription(invalidCertificates));
 
-                        var invalidCertificates = matchingCertificates.Except(validCertificates);
-
-                        Log.DescribeValidCertificates(ToCertificateDescription(validCertificates));
-                        Log.DescribeInvalidValidCertificates(ToCertificateDescription(invalidCertificates));
-
-                        matchingCertificates = validCertificates;
-                    }
-
-                    // We need to enumerate the certificates early to prevent disposing issues.
-                    matchingCertificates = matchingCertificates.ToList();
-
-                    var certificatesToDispose = certificates.Except(matchingCertificates);
-                    DisposeCertificates(certificatesToDispose);
-
-                    store.Close();
-
-                    Log.ListCertificatesEnd();
-                    return (IList<X509Certificate2>)matchingCertificates;
+                    matchingCertificates = validCertificates;
                 }
+
+                // We need to enumerate the certificates early to prevent disposing issues.
+                matchingCertificates = matchingCertificates.ToList();
+
+                var certificatesToDispose = certificates.Except(matchingCertificates);
+                DisposeCertificates(certificatesToDispose);
+
+                store.Close();
+
+                Log.ListCertificatesEnd();
+                return (IList<X509Certificate2>)matchingCertificates;
             }
             catch (Exception e)
             {
@@ -750,12 +748,6 @@ namespace Microsoft.AspNetCore.Certificates.Generation
             {
                 Result = result;
                 Message = message;
-            }
-
-            public void Deconstruct(out bool result, out string message)
-            {
-                result = Result;
-                message = Message;
             }
         }
 
