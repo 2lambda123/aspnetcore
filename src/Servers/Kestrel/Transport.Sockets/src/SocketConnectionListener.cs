@@ -3,7 +3,6 @@
 
 using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -14,7 +13,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    internal sealed class SocketConnectionListener : IConnectionListener
+    internal sealed class SocketConnectionListener : IConnectionListener, System.Net.Connections.IConnectionListener
     {
         private readonly MemoryPool<byte> _memoryPool;
         private readonly int _numSchedulers;
@@ -98,7 +97,17 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _listenSocket = listenSocket;
         }
 
+        async ValueTask<System.Net.Connections.IConnection> System.Net.Connections.IConnectionListener.AcceptAsync(CancellationToken cancellationToken)
+        {
+            return await AcceptAsyncInternal(cancellationToken);
+        }
+
         public async ValueTask<ConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
+        {
+            return await AcceptAsyncInternal(cancellationToken);
+        }
+
+        private async ValueTask<SocketConnection> AcceptAsyncInternal(CancellationToken cancellationToken)
         {
             while (true)
             {

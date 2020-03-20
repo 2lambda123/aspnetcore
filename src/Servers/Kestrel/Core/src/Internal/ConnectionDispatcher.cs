@@ -26,13 +26,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 
         private IKestrelTrace Log => _serviceContext.Log;
 
-        public Task StartAcceptingConnections(IConnectionListener listener)
+        public Task StartAcceptingConnections(System.Net.Connections.IConnectionListener listener)
         {
             ThreadPool.UnsafeQueueUserWorkItem(StartAcceptingConnectionsCore, listener, preferLocal: false);
             return _acceptLoopTcs.Task;
         }
 
-        private void StartAcceptingConnectionsCore(IConnectionListener listener)
+        private void StartAcceptingConnectionsCore(System.Net.Connections.IConnectionListener listener)
         {
             // REVIEW: Multiple accept loops in parallel?
             _ = AcceptConnectionsAsync();
@@ -51,13 +51,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
                             break;
                         }
 
+                        var connectionContext = new SystemNetConnectionsConnectionContext(connection);
+
                         // Add the connection to the connection manager before we queue it for execution
                         var id = Interlocked.Increment(ref _lastConnectionId);
-                        var kestrelConnection = new KestrelConnection<ConnectionContext>(id, _serviceContext, c => _connectionDelegate(c), connection, Log);
+                        var kestrelConnection = new KestrelConnection<ConnectionContext>(id, _serviceContext, c => _connectionDelegate(c), connectionContext, Log);
 
                         _serviceContext.ConnectionManager.AddConnection(id, kestrelConnection);
 
-                        Log.ConnectionAccepted(connection.ConnectionId);
+                        Log.ConnectionAccepted(connectionContext.ConnectionId);
 
                         ThreadPool.UnsafeQueueUserWorkItem(kestrelConnection, preferLocal: false);
                     }

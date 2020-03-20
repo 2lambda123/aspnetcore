@@ -26,6 +26,7 @@ namespace Microsoft.AspNetCore.Hosting
         {
             return hostBuilder.ConfigureServices(services =>
             {
+                services.AddSingleton<System.Net.Connections.IConnectionListenerFactory, SocketTransportFactory>();
                 services.AddSingleton<IConnectionListenerFactory, SocketTransportFactory>();
             });
         }

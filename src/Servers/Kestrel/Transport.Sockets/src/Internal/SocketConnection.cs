@@ -4,6 +4,7 @@
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -15,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
 {
-    internal sealed class SocketConnection : TransportConnection
+    internal sealed class SocketConnection : TransportConnection, System.Net.Connections.IConnection
     {
         private static readonly int MinAllocBufferSize = SlabMemoryPool.BlockSize / 2;
         private static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -34,6 +35,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
         private readonly TaskCompletionSource<object> _waitForConnectionClosedTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private bool _connectionClosed;
         private readonly bool _waitForData;
+
+        // System.Net.Connections-related fields
+        private System.Net.Connections.IConnectionProperties _connectionProperties;
+        private IDuplexPipe _duplexPipe;
+        private Stream _duplexStream;
 
         internal SocketConnection(Socket socket,
                                   MemoryPool<byte> memoryPool,
@@ -83,6 +89,59 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
         public PipeReader Output => Application.Input;
 
         public override MemoryPool<byte> MemoryPool { get; }
+
+        EndPoint System.Net.Connections.IConnection.LocalEndPoint => LocalEndPoint;
+
+        EndPoint System.Net.Connections.IConnection.RemoteEndPoint => RemoteEndPoint;
+
+        System.Net.Connections.IConnectionProperties System.Net.Connections.IConnectionStream.ConnectionProperties
+        {
+            get
+            {
+                if (_connectionProperties is null)
+                {
+                    _connectionProperties = new System.Net.Connections.Helpers.FeatureCollectionConnectionProperties(Features);
+                }
+
+                return _connectionProperties;
+            }
+        }
+
+        Stream System.Net.Connections.IConnectionStream.Stream
+        {
+            get
+            {
+                if (_duplexPipe is object)
+                {
+                    throw new InvalidOperationException($"{nameof(Stream)} cannot be accessed after accessing {nameof(Pipe)}");
+                }
+
+                if (_duplexStream is null)
+                {
+                    _duplexStream = new System.Net.Connections.Helpers.DuplexPipeStream(new DuplexPipe(Transport.Input, Transport.Output));
+                }
+
+                return _duplexStream;
+            }
+        }
+
+        IDuplexPipe System.Net.Connections.IConnectionStream.Pipe
+        {
+            get
+            {
+                if (_duplexStream is object)
+                {
+                    throw new InvalidOperationException($"{nameof(Pipe)} cannot be accessed after accessing {nameof(Stream)}");
+                }
+
+                if (_duplexPipe is null)
+                {
+                    _duplexPipe = new DuplexPipe(Transport.Input, Transport.Output);
+                }
+
+                return _duplexPipe;
+            }
+        }
 
         public void Start()
         {

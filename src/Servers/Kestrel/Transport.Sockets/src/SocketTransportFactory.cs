@@ -8,12 +8,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    public sealed class SocketTransportFactory : IConnectionListenerFactory
+    public sealed class SocketTransportFactory : IConnectionListenerFactory, System.Net.Connections.IConnectionListenerFactory
     {
         private readonly SocketTransportOptions _options;
         private readonly SocketsTrace _trace;
@@ -37,11 +36,23 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _trace = new SocketsTrace(logger);
         }
 
-        public ValueTask<IConnectionListener> BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
+        ValueTask<System.Net.Connections.IConnectionListener> System.Net.Connections.IConnectionListenerFactory.BindAsync(EndPoint endPoint, System.Net.Connections.IConnectionProperties options, CancellationToken cancellationToken)
+        {
+            var transport = new SocketConnectionListener(endPoint, _options, _trace);
+            transport.Bind();
+            return new ValueTask<System.Net.Connections.IConnectionListener>(transport);
+        }
+
+        public ValueTask<Connections.IConnectionListener> BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
         {
             var transport = new SocketConnectionListener(endpoint, _options, _trace);
             transport.Bind();
-            return new ValueTask<IConnectionListener>(transport);
+            return new ValueTask<Connections.IConnectionListener>(transport);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return default;
         }
     }
 }

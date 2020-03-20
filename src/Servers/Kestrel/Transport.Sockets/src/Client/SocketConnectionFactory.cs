@@ -9,14 +9,13 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    public class SocketConnectionFactory : IConnectionFactory, IAsyncDisposable
+    public class SocketConnectionFactory : IConnectionFactory, IAsyncDisposable, System.Net.Connections.IConnectionFactory
     {
         private readonly SocketTransportOptions _options;
         private readonly MemoryPool<byte> _memoryPool;
@@ -40,7 +39,17 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _trace = new SocketsTrace(logger);
         }
 
+        async ValueTask<System.Net.Connections.IConnection> System.Net.Connections.IConnectionFactory.ConnectAsync(EndPoint endPoint, System.Net.Connections.IConnectionProperties options, CancellationToken cancellationToken)
+        {
+            return await ConnectAsyncInternal(endPoint, cancellationToken);
+        }
+
         public async ValueTask<ConnectionContext> ConnectAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
+        {
+            return await ConnectAsyncInternal(endpoint, cancellationToken);
+        }
+
+        private async ValueTask<SocketConnection> ConnectAsyncInternal(EndPoint endpoint, CancellationToken cancellationToken = default)
         {
             var ipEndPoint = endpoint as IPEndPoint;
 

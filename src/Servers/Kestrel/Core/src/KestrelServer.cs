@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
@@ -22,33 +21,33 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 {
     public class KestrelServer : IServer
     {
-        private readonly List<(IConnectionListener, Task)> _transports = new List<(IConnectionListener, Task)>();
+        private readonly List<(System.Net.Connections.IConnectionListener, Task)> _transports = new List<(System.Net.Connections.IConnectionListener, Task)>();
         private readonly List<(IMultiplexedConnectionListener, Task)> _multiplexedTransports = new List<(IMultiplexedConnectionListener, Task)>();
         private readonly IServerAddressesFeature _serverAddresses;
-        private readonly List<IConnectionListenerFactory> _transportFactories;
+        private readonly List<System.Net.Connections.IConnectionListenerFactory> _transportFactories;
         private readonly List<IMultiplexedConnectionListenerFactory> _multiplexedTransportFactories;
 
         private bool _hasStarted;
         private int _stopping;
         private readonly TaskCompletionSource<object> _stoppedTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public KestrelServer(IOptions<KestrelServerOptions> options, IEnumerable<IConnectionListenerFactory> transportFactories, ILoggerFactory loggerFactory)
+        public KestrelServer(IOptions<KestrelServerOptions> options, IEnumerable<System.Net.Connections.IConnectionListenerFactory> transportFactories, ILoggerFactory loggerFactory)
             : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
         {
         }
-        public KestrelServer(IOptions<KestrelServerOptions> options, IEnumerable<IConnectionListenerFactory> transportFactories, IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories, ILoggerFactory loggerFactory)
+        public KestrelServer(IOptions<KestrelServerOptions> options, IEnumerable<System.Net.Connections.IConnectionListenerFactory> transportFactories, IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories, ILoggerFactory loggerFactory)
             : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory))
         {
         }
 
         // For testing
-        internal KestrelServer(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
+        internal KestrelServer(IEnumerable<System.Net.Connections.IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
             : this(transportFactories, null, serviceContext)
         {
         }
 
         // For testing
-        internal KestrelServer(IEnumerable<IConnectionListenerFactory> transportFactories, IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories, ServiceContext serviceContext)
+        internal KestrelServer(IEnumerable<System.Net.Connections.IConnectionListenerFactory> transportFactories, IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories, ServiceContext serviceContext)
         {
             if (transportFactories == null)
             {
@@ -183,12 +182,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                         var connectionDispatcher = new ConnectionDispatcher(ServiceContext, connectionDelegate);
                         var factory = _transportFactories.Last();
-                        var transport = await factory.BindAsync(options.EndPoint).ConfigureAwait(false);
+                        var transport = await factory.BindAsync(options.EndPoint, options: null).ConfigureAwait(false);
 
                         var acceptLoopTask = connectionDispatcher.StartAcceptingConnections(transport);
 
                         _transports.Add((transport, acceptLoopTask));
-                        options.EndPoint = transport.EndPoint;
+                        //options.EndPoint = transport.EndPoint;
                     }
                 }
 
@@ -219,8 +218,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                 for (int i = 0; i < connectionTransportCount; i++)
                 {
-                    (IConnectionListener listener, Task acceptLoop) = _transports[i];
-                    tasks[i] = Task.WhenAll(listener.UnbindAsync(cancellationToken).AsTask(), acceptLoop);
+                    (System.Net.Connections.IConnectionListener listener, Task acceptLoop) = _transports[i];
+                    tasks[i] = Task.WhenAll(listener.DisposeAsync().AsTask(), acceptLoop);
                 }
 
                 for (int i = connectionTransportCount; i < totalTransportCount; i++)
@@ -243,7 +242,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                 for (int i = 0; i < connectionTransportCount; i++)
                 {
-                    (IConnectionListener listener, Task acceptLoop) = _transports[i];
+                    (System.Net.Connections.IConnectionListener listener, Task acceptLoop) = _transports[i];
                     tasks[i] = listener.DisposeAsync().AsTask();
                 }
 
