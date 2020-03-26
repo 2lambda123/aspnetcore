@@ -19,6 +19,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
     {
         internal readonly List<Func<ConnectionDelegate, ConnectionDelegate>> _middleware = new List<Func<ConnectionDelegate, ConnectionDelegate>>();
         internal readonly List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>> _multiplexedMiddleware = new List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>>();
+        internal readonly List<Func<System.Net.Connections.IConnectionListener, System.Net.Connections.IConnectionListener>> _listenerFilters = new List<Func<System.Net.Connections.IConnectionListener, System.Net.Connections.IConnectionListener>>();
 
         internal ListenOptions(IPEndPoint endPoint)
         {
@@ -130,6 +131,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             return this;
         }
 
+        public ListenOptions UseListenerFilter(Func<System.Net.Connections.IConnectionListener, System.Net.Connections.IConnectionListener> listenerFilter)
+        {
+            _listenerFilters.Add(listenerFilter);
+            return this;
+        }
+
         public ConnectionDelegate Build()
         {
             ConnectionDelegate app = context =>
@@ -160,6 +167,16 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             }
 
             return app;
+        }
+
+        public System.Net.Connections.IConnectionListener BuildConnectionListener(System.Net.Connections.IConnectionListener previous)
+        {
+            foreach (var filter in _listenerFilters)
+            {
+                previous = filter(previous);
+            }
+
+            return previous;
         }
 
         internal virtual async Task BindAsync(AddressBindContext context)

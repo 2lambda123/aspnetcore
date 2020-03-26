@@ -217,15 +217,7 @@ namespace Microsoft.AspNetCore.Hosting
             var loggerFactory = listenOptions.KestrelServerOptions?.ApplicationServices.GetRequiredService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
 
             listenOptions.IsTls = true;
-            listenOptions.Use(next =>
-            {
-                // Set the list of protocols from listen options
-                httpsOptions.HttpProtocols = listenOptions.Protocols;
-                var middleware = new HttpsConnectionMiddleware(next, httpsOptions, loggerFactory);
-                return middleware.OnConnectionAsync;
-            });
-
-            return listenOptions;
+            return listenOptions.UseListenerFilter(previous => new HttpsConnectionMiddleware2(previous, httpsOptions, loggerFactory));
         }
     }
 }

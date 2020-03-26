@@ -183,6 +183,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                         var connectionDispatcher = new ConnectionDispatcher(ServiceContext, connectionDelegate);
                         var factory = _transportFactories.Last();
                         var transport = await factory.BindAsync(options.EndPoint, options: null).ConfigureAwait(false);
+                        transport = options.BuildConnectionListener(transport);
 
                         var acceptLoopTask = connectionDispatcher.StartAcceptingConnections(transport);
 
