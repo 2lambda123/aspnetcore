@@ -164,7 +164,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         internal virtual async Task BindAsync(AddressBindContext context)
         {
             await AddressBinder.BindEndpointAsync(this, context).ConfigureAwait(false);
-            context.Addresses.Add(GetDisplayName());
+            context.NewlyBoundAddresses.Add(GetDisplayName());
         }
     }
 }

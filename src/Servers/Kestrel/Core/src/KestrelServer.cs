@@ -22,7 +22,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 {
     public class KestrelServer : IServer
     {
-        private readonly IServerAddressesFeature _serverAddresses;
+        private readonly ServerAddressesFeature _serverAddresses;
         private readonly TransportManager _transportManager;
         private readonly IConnectionListenerFactory _transportFactory;
         private readonly IMultiplexedConnectionListenerFactory _multiplexedTransportFactory;
@@ -71,7 +71,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
             Features = new FeatureCollection();
             _serverAddresses = new ServerAddressesFeature();
-            Features.Set(_serverAddresses);
+            Features.Set<IServerAddressesFeature>(_serverAddresses);
 
             _transportManager = new TransportManager(_transportFactory, _multiplexedTransportFactory,  ServiceContext);
 
@@ -260,6 +260,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                 IChangeToken reloadToken = null;
 
+                _serverAddresses.BlockExternalAddressesMutation();
+
                 if (Options.ConfigurationLoader?.ReloadOnChange == true && (!_serverAddresses.PreferHostingUrls || _serverAddresses.Addresses.Count == 0))
                 {
                     reloadToken = Options.ConfigurationLoader.Configuration.GetReloadToken();
@@ -267,7 +269,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
                 Options.ConfigurationLoader?.Load();
 
-                await AddressBinder.BindAsync(Options.ListenOptions, AddressBindContext).ConfigureAwait(false);
+                var bindContext = AddressBindContext.Clone();
+                await AddressBinder.BindAsync(Options.ListenOptions, bindContext).ConfigureAwait(false);
+                _serverAddresses.Addresses = bindContext.NewlyBoundAddresses;
+
                 _configChangedRegistration = reloadToken?.RegisterChangeCallback(async state => await ((KestrelServer)state).RebindAsync(), this);
             }
             finally
@@ -292,6 +297,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 reloadToken = Options.ConfigurationLoader.Configuration.GetReloadToken();
                 var (endpointsToStop, endpointsToStart) = Options.ConfigurationLoader.Reload();
 
+                var boundAddresses = new List<string>(_serverAddresses.Addresses);
+
                 if (endpointsToStop.Count > 0)
                 {
                     var urlsToStop = endpointsToStop.Select(lo => lo.EndpointConfig.Url ?? "<unknown>");
@@ -309,7 +316,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     foreach (var listenOption in endpointsToStop)
                     {
                         Options.OptionsInUse.Remove(listenOption);
-                        _serverAddresses.Addresses.Remove(listenOption.GetDisplayName());
+                        boundAddresses.Remove(listenOption.GetDisplayName());
                     }
                 }
 
@@ -318,19 +325,25 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     var urlsToStart = endpointsToStart.Select(lo => lo.EndpointConfig.Url ?? "<unknown>");
                     Trace.LogInformation("Config changed. Starting the following endpoints: {endpoints}", string.Join(", ", urlsToStart));
 
+                    var bindContext = AddressBindContext.Clone();
+
                     foreach (var listenOption in endpointsToStart)
                     {
                         try
                         {
                             // TODO: This should probably be canceled by the _stopCts too, but we don't currently support bind cancellation even in StartAsync().
-                            await listenOption.BindAsync(AddressBindContext).ConfigureAwait(false);
+                            await listenOption.BindAsync(bindContext).ConfigureAwait(false);
                         }
                         catch (Exception ex)
                         {
                             Trace.LogCritical(0, ex, "Unable to bind to '{url}' on config reload.", listenOption.EndpointConfig.Url ?? "<unknown>");
                         }
                     }
+
+                    boundAddresses.AddRange(bindContext.NewlyBoundAddresses);
                 }
+
+                _serverAddresses.Addresses = boundAddresses;
             }
             catch (Exception ex)
             {

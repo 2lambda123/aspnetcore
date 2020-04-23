@@ -23,13 +23,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         {
             var strategy = CreateStrategy(
                 listenOptions.ToArray(),
-                context.Addresses.ToArray(),
+                context.ServerAddressesFeature.Addresses.ToArray(),
                 context.ServerAddressesFeature.PreferHostingUrls);
 
             // reset options. The actual used options and addresses will be populated
             // by the address binding feature
             context.ServerOptions.OptionsInUse.Clear();
-            context.Addresses.Clear();
 
             await strategy.BindAsync(context).ConfigureAwait(false);
         }

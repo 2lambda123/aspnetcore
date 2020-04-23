@@ -125,7 +125,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
                 ServerOptions = options,
                 Logger = NullLogger.Instance,
                 CreateBinding = endpoint => throw new AddressInUseException("already in use"),
-            };
+            }.Clone();
 
             await Assert.ThrowsAsync<IOException>(() =>
                 AddressBinder.BindAsync(options.ListenOptions, addressBindContext));
@@ -165,7 +165,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
 
                     return Task.CompletedTask;
                 },
-            };
+            }.Clone();
 
             await AddressBinder.BindAsync(options.ListenOptions, addressBindContext);
 
@@ -209,7 +209,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
                     endpoints.Add(listenOptions);
                     return Task.CompletedTask;
                 },
-            };
+            }.Clone();
 
             await AddressBinder.BindAsync(options.ListenOptions, addressBindContext);
 

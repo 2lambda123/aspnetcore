@@ -12,11 +12,23 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
     internal class AddressBindContext
     {
         public IServerAddressesFeature ServerAddressesFeature { get; set; }
-        public ICollection<string> Addresses => ServerAddressesFeature.Addresses;
+        public ICollection<string> NewlyBoundAddresses { get; private set; }
 
         public KestrelServerOptions ServerOptions { get; set; }
         public ILogger Logger { get; set; }
 
         public Func<ListenOptions, Task> CreateBinding { get; set; }
+
+        public AddressBindContext Clone()
+        {
+            return new AddressBindContext
+            {
+                ServerAddressesFeature = ServerAddressesFeature,
+                NewlyBoundAddresses = new List<string>(),
+                ServerOptions = ServerOptions,
+                Logger = Logger,
+                CreateBinding = CreateBinding,
+            };
+        }
     }
 }

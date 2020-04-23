@@ -63,7 +63,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
             // If StartLocalhost doesn't throw, there is at least one listener.
             // The port cannot change for "localhost".
-            context.Addresses.Add(GetDisplayName());
+            context.NewlyBoundAddresses.Add(GetDisplayName());
         }
 
         // used for cloning to two IPEndpoints
