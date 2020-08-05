@@ -58,9 +58,20 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Https.Internal
                 throw new ArgumentNullException(nameof(options));
             }
 
+            if (options.ServerCertificate == null && options.ServerCertificateSelector == null)
+            {
+                throw new ArgumentException(CoreStrings.ServerCertificateRequired, nameof(options));
+            }
+
             _next = next;
             _handshakeTimeout = options.HandshakeTimeout;
             _logger = loggerFactory.CreateLogger<HttpsConnectionMiddleware>();
+
+            // Something like the following should work allowing the removal of HttpsConnectionAdapterOptions-specific code paths, but there's an SslStream bug when "ClientCertificateRequired = true" on Windows. :(
+            //var sniOptionsSelector = new SniOptionsSelector("", new Dictionary<string, SniConfig> { { "*", new SniConfig() } }, new NoopCertificateConfigLoader(), options, options.HttpProtocols, _logger);
+            //_httpsOptionsCallback = SniOptionsSelector.OptionsCallback;
+            //_httpsOptionsCallbackState = sniOptionsSelector;
+            //_sslStreamFactory = s => new SslStream(s);
 
             _options = options;
             _options.HttpProtocols = ValidateAndNormalizeHttpProtocols(_options.HttpProtocols, _logger);
@@ -68,10 +79,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Https.Internal
             // capture the certificate now so it can't be switched after validation
             _serverCertificate = options.ServerCertificate;
             _serverCertificateSelector = options.ServerCertificateSelector;
-            if (_serverCertificate == null && _serverCertificateSelector == null)
-            {
-                throw new ArgumentException(CoreStrings.ServerCertificateRequired, nameof(options));
-            }
 
             // If a selector is provided then ignore the cert, it may be a default cert.
             if (_serverCertificateSelector != null)
