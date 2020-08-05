@@ -180,6 +180,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
                         // Not to mention this is equivalent to the test above.
                         ClientCertificateRequired = true,
                         RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true,
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck
                     }), state: null, HttpsConnectionAdapterOptions.DefaultHandshakeTimeout);
             }
 

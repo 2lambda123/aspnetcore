@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Certificates;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -46,6 +47,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Https.Internal
         private readonly HttpsOptionsCallback _httpsOptionsCallback;
         private readonly object _httpsOptionsCallbackState;
 
+        public HttpsConnectionMiddleware(Func<ConnectionContext, string, X509Certificate2> func)
+        {
+            _options = new HttpsConnectionAdapterOptions();
+            _serverCertificate = new X509Certificate2();
+            _serverCertificateSelector = func;
+        }
+
         public HttpsConnectionMiddleware(ConnectionDelegate next, HttpsConnectionAdapterOptions options)
           : this(next, options, loggerFactory: NullLoggerFactory.Instance)
         {
@@ -68,33 +76,43 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Https.Internal
             _logger = loggerFactory.CreateLogger<HttpsConnectionMiddleware>();
 
             // Something like the following should work allowing the removal of HttpsConnectionAdapterOptions-specific code paths, but there's an SslStream bug when "ClientCertificateRequired = true" on Windows. :(
-            //var sniOptionsSelector = new SniOptionsSelector("", new Dictionary<string, SniConfig> { { "*", new SniConfig() } }, new NoopCertificateConfigLoader(), options, options.HttpProtocols, _logger);
-            //_httpsOptionsCallback = SniOptionsSelector.OptionsCallback;
-            //_httpsOptionsCallbackState = sniOptionsSelector;
-            //_sslStreamFactory = s => new SslStream(s);
+            var sniOptionsSelector = new SniOptionsSelector("", new Dictionary<string, SniConfig> { { "*", new SniConfig() } }, new NoopCertificateConfigLoader(), options, options.HttpProtocols, _logger);
+            _httpsOptionsCallback = SniOptionsSelector.OptionsCallback;
+            _httpsOptionsCallbackState = sniOptionsSelector;
+            _sslStreamFactory = s => new SslStream(s);
 
-            _options = options;
-            _options.HttpProtocols = ValidateAndNormalizeHttpProtocols(_options.HttpProtocols, _logger);
+            //_options = options;
+            //_options.HttpProtocols = ValidateAndNormalizeHttpProtocols(_options.HttpProtocols, _logger);
 
-            // capture the certificate now so it can't be switched after validation
-            _serverCertificate = options.ServerCertificate;
-            _serverCertificateSelector = options.ServerCertificateSelector;
+            //// capture the certificate now so it can't be switched after validation
+            //_serverCertificate = options.ServerCertificate;
+            //_serverCertificateSelector = options.ServerCertificateSelector;
 
-            // If a selector is provided then ignore the cert, it may be a default cert.
-            if (_serverCertificateSelector != null)
+            //// If a selector is provided then ignore the cert, it may be a default cert.
+            //if (_serverCertificateSelector != null)
+            //{
+            //    // SslStream doesn't allow both.
+            //    _serverCertificate = null;
+            //}
+            //else
+            //{
+            //    EnsureCertificateIsAllowedForServerAuth(_serverCertificate);
+            //}
+
+            //var remoteCertificateValidationCallback = _options.ClientCertificateMode == ClientCertificateMode.NoCertificate ?
+            //    (RemoteCertificateValidationCallback)null : RemoteCertificateValidationCallback;
+
+            //_sslStreamFactory = s => new SslStream(s, leaveInnerStreamOpen: false, userCertificateValidationCallback: remoteCertificateValidationCallback);
+        }
+
+        private class NoopCertificateConfigLoader : ICertificateConfigLoader
+        {
+            public bool SkipValidation => false;
+
+            public X509Certificate2 LoadCertificate(CertificateConfig certInfo, string endpointName)
             {
-                // SslStream doesn't allow both.
-                _serverCertificate = null;
+                return null;
             }
-            else
-            {
-                EnsureCertificateIsAllowedForServerAuth(_serverCertificate);
-            }
-
-            var remoteCertificateValidationCallback = _options.ClientCertificateMode == ClientCertificateMode.NoCertificate ?
-                (RemoteCertificateValidationCallback)null : RemoteCertificateValidationCallback;
-
-            _sslStreamFactory = s => new SslStream(s, leaveInnerStreamOpen: false, userCertificateValidationCallback: remoteCertificateValidationCallback);
         }
 
         internal HttpsConnectionMiddleware(
