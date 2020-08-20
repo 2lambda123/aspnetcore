@@ -3,35 +3,41 @@
 
 using System;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
+using System.Net.Connections;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections.Abstractions.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    internal sealed class SocketConnectionListener : IConnectionListener
+    internal sealed class SocketConnectionListener : ConnectionListener, IConnectionProperties, IUnbindFeature
     {
         private readonly MemoryPool<byte> _memoryPool;
         private readonly int _numSchedulers;
         private readonly PipeScheduler[] _schedulers;
-        private readonly ISocketsTrace _trace;
-        private Socket _listenSocket;
-        private int _schedulerIndex;
         private readonly SocketTransportOptions _options;
-        private SafeSocketHandle _socketHandle;
+        private readonly ISocketsTrace _trace;
 
-        public EndPoint EndPoint { get; private set; }
+        private EndPoint _localEndPoint;
+        private Socket _listenSocket;
+        private SafeSocketHandle _socketHandle;
+        private int _schedulerIndex;
+
+        public override IConnectionProperties ListenerProperties => this;
+        public override EndPoint LocalEndPoint => _localEndPoint;
 
         internal SocketConnectionListener(
             EndPoint endpoint,
             SocketTransportOptions options,
             ISocketsTrace trace)
         {
-            EndPoint = endpoint;
+            _localEndPoint = endpoint;
             _trace = trace;
             _options = options;
             _memoryPool = _options.MemoryPoolFactory();
@@ -64,7 +70,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 
             Socket listenSocket;
 
-            switch (EndPoint)
+            switch (_localEndPoint)
             {
                 case FileHandleEndPoint fileHandle:
                     _socketHandle = new SafeSocketHandle((IntPtr)fileHandle.FileHandle, ownsHandle: true);
@@ -85,7 +91,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
                     BindSocket();
                     break;
                 default:
-                    listenSocket = new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                    listenSocket = new Socket(_localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                     BindSocket();
                     break;
             }
@@ -94,7 +100,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             {
                 try
                 {
-                    listenSocket.Bind(EndPoint);
+                    listenSocket.Bind(_localEndPoint);
                 }
                 catch (SocketException e) when (e.SocketErrorCode == SocketError.AddressAlreadyInUse)
                 {
@@ -102,14 +108,20 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
                 }
             }
 
-            EndPoint = listenSocket.LocalEndPoint;
+            _localEndPoint = listenSocket.LocalEndPoint;
 
             listenSocket.Listen(_options.Backlog);
 
             _listenSocket = listenSocket;
         }
 
-        public async ValueTask<ConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
+        public void Unbind()
+        {
+            _listenSocket?.Dispose();
+            _socketHandle?.Dispose();
+        }
+
+        public override async ValueTask<Connection> AcceptAsync(IConnectionProperties options = null, CancellationToken cancellationToken = default)
         {
             while (true)
             {
@@ -151,21 +163,21 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             }
         }
 
-        public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
+        public bool TryGet(Type propertyKey, [NotNullWhen(true)] out object property)
         {
-            _listenSocket?.Dispose();
+            if (propertyKey == typeof(IUnbindFeature))
+            {
+                property = this;
+                return true;
+            }
 
-            _socketHandle?.Dispose();
-            return default;
+            property = null;
+            return false;
         }
 
-        public ValueTask DisposeAsync()
+        protected override ValueTask DisposeAsyncCore()
         {
-            _listenSocket?.Dispose();
-
-            _socketHandle?.Dispose();
-
-            // Dispose the memory pool
+            Unbind();
             _memoryPool.Dispose();
             return default;
         }

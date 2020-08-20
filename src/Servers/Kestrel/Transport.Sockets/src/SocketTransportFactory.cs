@@ -3,17 +3,17 @@
 
 using System;
 using System.Net;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    public sealed class SocketTransportFactory : IConnectionListenerFactory
+    public sealed class SocketTransportFactory : ConnectionListenerFactory
     {
         private readonly SocketTransportOptions _options;
         private readonly SocketsTrace _trace;
@@ -37,11 +37,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _trace = new SocketsTrace(logger);
         }
 
-        public ValueTask<IConnectionListener> BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
+        public override ValueTask<ConnectionListener> ListenAsync(EndPoint endPoint, IConnectionProperties options = null, CancellationToken cancellationToken = default)
         {
-            var transport = new SocketConnectionListener(endpoint, _options, _trace);
+            var transport = new SocketConnectionListener(endPoint, _options, _trace);
             transport.Bind();
-            return new ValueTask<IConnectionListener>(transport);
+            return new ValueTask<ConnectionListener>(transport);
         }
     }
 }

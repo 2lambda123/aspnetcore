@@ -40,8 +40,14 @@ namespace CodeGenerator
                 Console.Error.WriteLine("Missing path to TransportConnection.Generated.cs");
                 return 1;
             }
+            else if (args.Length < 7)
+            {
+                Console.Error.WriteLine("Missing path to SystemNetTransportConnection.Generated.cs");
+                return 1;
+            }
 
-            Run(args[0], args[1], args[2], args[3], args[4], args[5]);
+
+            Run(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
 
             return 0;
         }
@@ -52,14 +58,16 @@ namespace CodeGenerator
             string httpUtilitiesPath,
             string http2ConnectionPath,
             string transportMultiplexedConnectionFeatureCollectionPath,
-            string transportConnectionFeatureCollectionPath)
+            string transportConnectionFeatureCollectionPath,
+            string systemNetTransportConnectionFeatureCollectionPath)
         {
             var knownHeadersContent = KnownHeaders.GeneratedFile();
             var httpProtocolFeatureCollectionContent = HttpProtocolFeatureCollection.GenerateFile();
             var httpUtilitiesContent = HttpUtilities.HttpUtilities.GeneratedFile();
+            var http2ConnectionContent = Http2Connection.GenerateFile();
             var transportMultiplexedConnectionFeatureCollectionContent = TransportMultiplexedConnectionFeatureCollection.GenerateFile();
             var transportConnectionFeatureCollectionContent = TransportConnectionFeatureCollection.GenerateFile();
-            var http2ConnectionContent = Http2Connection.GenerateFile();
+            var systemNetConnectionFeatureCollectionContent = SystemNetTransportConnectionFeatureCollection.GenerateFile();
 
             UpdateFile(knownHeadersPath, knownHeadersContent);
             UpdateFile(httpProtocolFeatureCollectionPath, httpProtocolFeatureCollectionContent);
@@ -67,6 +75,7 @@ namespace CodeGenerator
             UpdateFile(http2ConnectionPath, http2ConnectionContent);
             UpdateFile(transportMultiplexedConnectionFeatureCollectionPath, transportMultiplexedConnectionFeatureCollectionContent);
             UpdateFile(transportConnectionFeatureCollectionPath, transportConnectionFeatureCollectionContent);
+            UpdateFile(systemNetTransportConnectionFeatureCollectionPath, systemNetConnectionFeatureCollectionContent);
         }
 
         public static void UpdateFile(string path, string content)

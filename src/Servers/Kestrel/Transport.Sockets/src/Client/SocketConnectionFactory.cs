@@ -5,18 +5,17 @@ using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
+using System.Net.Connections;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
-    internal class SocketConnectionFactory : IConnectionFactory, IAsyncDisposable
+    internal class SocketConnectionFactory : ConnectionFactory
     {
         private readonly SocketTransportOptions _options;
         private readonly MemoryPool<byte> _memoryPool;
@@ -40,9 +39,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _trace = new SocketsTrace(logger);
         }
 
-        public async ValueTask<ConnectionContext> ConnectAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
+        public override async ValueTask<Connection> ConnectAsync(EndPoint endPoint, IConnectionProperties options = null, CancellationToken cancellationToken = default)
         {
-            var ipEndPoint = endpoint as IPEndPoint;
+            var ipEndPoint = endPoint as IPEndPoint;
 
             if (ipEndPoint is null)
             {
@@ -70,7 +69,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             return socketConnection;
         }
 
-        public ValueTask DisposeAsync()
+        protected override ValueTask DisposeAsyncCore()
         {
             _memoryPool.Dispose();
             return default;

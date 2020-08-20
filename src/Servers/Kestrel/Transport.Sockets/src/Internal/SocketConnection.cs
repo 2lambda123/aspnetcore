@@ -5,7 +5,7 @@ using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Net;
+using System.Net.Connections;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
 {
-    internal sealed class SocketConnection : TransportConnection
+    internal sealed class SocketConnection : SystemNetTransportConnection
     {
         private static readonly int MinAllocBufferSize = SlabMemoryPool.BlockSize / 2;
         private static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -43,6 +43,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
                                   long? maxWriteBufferSize = null,
                                   bool waitForData = true,
                                   bool useInlineSchedulers = false)
+            : base(socket.LocalEndPoint, socket.RemoteEndPoint)
         {
             Debug.Assert(socket != null);
             Debug.Assert(memoryPool != null);
@@ -52,9 +53,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
             MemoryPool = memoryPool;
             _trace = trace;
             _waitForData = waitForData;
-
-            LocalEndPoint = _socket.LocalEndPoint;
-            RemoteEndPoint = _socket.RemoteEndPoint;
 
             ConnectionClosed = _connectionClosedTokenSource.Token;
 
@@ -119,6 +117,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
             }
         }
 
+        protected override IDuplexPipe CreatePipe()
+        {
+            return Transport;
+        }
+
         public override void Abort(ConnectionAbortedException abortReason)
         {
             // Try to gracefully close the socket to match libuv behavior.
@@ -128,15 +131,45 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
             Output.CancelPendingRead();
         }
 
-        // Only called after connection middleware is complete which means the ConnectionClosed token has fired.
-        public override async ValueTask DisposeAsync()
+        protected override async ValueTask CloseAsyncCore(ConnectionCloseMethod method, CancellationToken cancellationToken)
         {
-            Transport.Input.Complete();
-            Transport.Output.Complete();
-
-            if (_processingTask != null)
+            // CloseAsyncCore can be called multiple times. Graceful shutdown is only attempted after middleware is done reading and writing.
+            // Abortive shutdown can happen while reads and writes are ongoing.
+            if (method == ConnectionCloseMethod.GracefulShutdown)
             {
-                await _processingTask;
+                Transport.Input.Complete();
+                Transport.Output.Complete();
+            }
+
+            IDisposable cancellationRegistration = null;
+
+            if (_socketDisposed)
+            {
+                // No need to abort if the socket is already closed.
+            }
+            else if (method != ConnectionCloseMethod.GracefulShutdown)
+            {
+                Abort(new ConnectionAbortedException($"The connection was closed with ConnectionCloseMethod.{method}."));
+            }
+            else if (cancellationToken.IsCancellationRequested)
+            {
+                Abort(new ConnectionAbortedException("The connection was closed with a canceled token."));
+            }
+            else if (cancellationToken.CanBeCanceled)
+            {
+                cancellationRegistration = cancellationToken.Register(state =>
+                {
+                    var connection = (SocketConnection)state;
+                    connection.Abort(new ConnectionAbortedException("Graceful connection close was canceled with a token."));
+                }, this, useSynchronizationContext: false);
+            }
+
+            using (cancellationRegistration)
+            {
+                if (_processingTask != null)
+                {
+                    await _processingTask;
+                }
             }
 
             _connectionClosedTokenSource.Dispose();
