@@ -5,12 +5,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections.Abstractions.Features;
 using Microsoft.AspNetCore.Connections.Experimental;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 {
@@ -18,12 +22,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
     {
         private readonly List<ActiveTransport> _transports = new List<ActiveTransport>();
 
-        private readonly IConnectionListenerFactory? _transportFactory;
+        private readonly ConnectionListenerFactory? _transportFactory;
         private readonly IMultiplexedConnectionListenerFactory? _multiplexedTransportFactory;
         private readonly ServiceContext _serviceContext;
 
         public TransportManager(
-            IConnectionListenerFactory? transportFactory,
+            ConnectionListenerFactory? transportFactory,
             IMultiplexedConnectionListenerFactory? multiplexedTransportFactory,
             ServiceContext serviceContext)
         {
@@ -35,16 +39,28 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         private ConnectionManager ConnectionManager => _serviceContext.ConnectionManager;
         private IKestrelTrace Trace => _serviceContext.Log;
 
-        public async Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig)
+        //public async Task<EndPoint?> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig)
+        //{
+        //    if (_transportFactory is null)
+        //    {
+        //        throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(ConnectionListenerFactory)} is registered.");
+        //    }
+
+        //    var transport = await _transportFactory.ListenAsync(endPoint).ConfigureAwait(false);
+        //    StartAcceptLoop(new GenericConnectionListener(transport), c => connectionDelegate(c), endpointConfig);
+        //    return transport.LocalEndPoint;
+        //}
+
+        public async Task<EndPoint?> BindAsync(EndPoint endPoint, Func<Connection, Task<Connection>> connectionDelegate, EndpointConfig? endpointConfig)
         {
             if (_transportFactory is null)
             {
-                throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(IConnectionListenerFactory)} is registered.");
+                throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(ConnectionListenerFactory)} is registered.");
             }
 
-            var transport = await _transportFactory.BindAsync(endPoint).ConfigureAwait(false);
+            var transport = await _transportFactory.ListenAsync(endPoint).ConfigureAwait(false);
             StartAcceptLoop(new GenericConnectionListener(transport), c => connectionDelegate(c), endpointConfig);
-            return transport.EndPoint;
+            return transport.LocalEndPoint;
         }
 
         public async Task<EndPoint> BindAsync(EndPoint endPoint, MultiplexedConnectionDelegate multiplexedConnectionDelegate, EndpointConfig? endpointConfig)
@@ -54,12 +70,21 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
             }
 
+            static Func<MultiplexedConnectionContextWrapper, Task<MultiplexedConnectionContextWrapper>> ConvertDelegate(MultiplexedConnectionDelegate unwrappedDelegate)
+            {
+                return async wrapper =>
+                {
+                    await unwrappedDelegate(wrapper.MultiplexedConnectionContext);
+                    return wrapper;
+                };
+            }
+
             var transport = await _multiplexedTransportFactory.BindAsync(endPoint).ConfigureAwait(false);
-            StartAcceptLoop(new GenericMultiplexedConnectionListener(transport), c => multiplexedConnectionDelegate(c), endpointConfig);
+            StartAcceptLoop(new GenericMultiplexedConnectionListener(transport), ConvertDelegate(multiplexedConnectionDelegate), endpointConfig);
             return transport.EndPoint;
         }
 
-        private void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, Task> connectionDelegate, EndpointConfig? endpointConfig) where T : BaseConnectionContext
+        private void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, Task<T>> connectionDelegate, EndpointConfig? endpointConfig) where T : ConnectionBase
         {
             var transportConnectionManager = new TransportConnectionManager(_serviceContext.ConnectionManager);
             var connectionDispatcher = new ConnectionDispatcher<T>(_serviceContext, connectionDelegate, transportConnectionManager);
@@ -151,28 +176,86 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             }
         }
 
-        private class GenericConnectionListener : IConnectionListener<ConnectionContext>
+        private class GenericConnectionListener : IConnectionListener<Connection>
         {
-            private readonly IConnectionListener _connectionListener;
+            private readonly ConnectionListener _connectionListener;
+            private readonly IUnbindFeature? _unbindFeature;
+            private readonly TaskCompletionSource? _fakeUnbindTcs;
 
-            public GenericConnectionListener(IConnectionListener connectionListener)
+            public GenericConnectionListener(ConnectionListener connectionListener)
             {
                 _connectionListener = connectionListener;
+
+                if (!_connectionListener.ListenerProperties.TryGet(out _unbindFeature))
+                {
+                    _fakeUnbindTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                }
             }
 
-            public EndPoint EndPoint => _connectionListener.EndPoint;
+            public EndPoint? EndPoint => _connectionListener.LocalEndPoint;
 
-            public ValueTask<ConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
-                 => _connectionListener.AcceptAsync(cancellationToken);
+            public ValueTask<Connection?> AcceptAsync(CancellationToken cancellationToken = default)
+            {
+                if (_unbindFeature is null)
+                {
+                    if (_fakeUnbindTcs!.Task.IsCompleted)
+                    {
+                        return new ValueTask<Connection?>(result: null);
+                    }
+
+                    return AcceptAsyncAwaited(cancellationToken);
+                }
+
+                return _connectionListener.AcceptAsync(options: null, cancellationToken)!;
+            }
+
+            private async ValueTask<Connection?> AcceptAsyncAwaited(CancellationToken cancellationToken)
+            {
+                var acceptTask = _connectionListener.AcceptAsync(options: null, cancellationToken).AsTask();
+                var completedTask = await Task.WhenAny(acceptTask, _fakeUnbindTcs!.Task);
+
+                static async Task RefuseAcceptedConnection(Task<Connection> task)
+                {
+                    try
+                    {
+                        using var connection = await task;
+                        connection?.CloseAsync(ConnectionCloseMethod.Abort);
+                    }
+                    catch
+                    {
+                        // If we expect to keep this, we should log.
+                    }
+                }
+
+                if (completedTask == _fakeUnbindTcs!.Task)
+                {
+                    // This should be temporary: https://github.com/dotnet/runtime/issues/41118
+                    _ = RefuseAcceptedConnection(acceptTask);
+                    return null;
+                }
+
+                return await acceptTask;
+            }
 
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
-                => _connectionListener.UnbindAsync();
+            {
+                if (_unbindFeature is null)
+                {
+                    _fakeUnbindTcs!.TrySetResult();
+                }
+                else
+                {
+                    _unbindFeature.Unbind();
+                }
+
+                return default;
+            }
 
             public ValueTask DisposeAsync()
                 => _connectionListener.DisposeAsync();
         }
 
-        private class GenericMultiplexedConnectionListener : IConnectionListener<MultiplexedConnectionContext>
+        private class GenericMultiplexedConnectionListener : IConnectionListener<MultiplexedConnectionContextWrapper>
         {
             private readonly IMultiplexedConnectionListener _multiplexedConnectionListener;
 
@@ -181,10 +264,19 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 _multiplexedConnectionListener = multiplexedConnectionListener;
             }
 
-            public EndPoint EndPoint => _multiplexedConnectionListener.EndPoint;
+            public EndPoint? EndPoint => _multiplexedConnectionListener.EndPoint;
 
-            public ValueTask<MultiplexedConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
-                 => _multiplexedConnectionListener.AcceptAsync(features: null, cancellationToken);
+            public async ValueTask<MultiplexedConnectionContextWrapper?> AcceptAsync(CancellationToken cancellationToken = default)
+            {
+                var multiplexedConnection = await _multiplexedConnectionListener.AcceptAsync(features: null, cancellationToken);
+
+                if (multiplexedConnection is null)
+                {
+                    return null;
+                }
+
+                return new MultiplexedConnectionContextWrapper(multiplexedConnection);
+            }
 
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
                 => _multiplexedConnectionListener.UnbindAsync();

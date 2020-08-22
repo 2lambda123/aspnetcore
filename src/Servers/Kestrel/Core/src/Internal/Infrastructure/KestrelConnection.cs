@@ -3,10 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
@@ -59,7 +60,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             }
         }
 
-        public abstract BaseConnectionContext TransportConnection { get; }
+        public abstract ConnectionBase TransportConnection { get; }
 
         public void OnHeartbeat(Action<object> action, object state)
         {
@@ -171,11 +172,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             _connectionClosingCts.Dispose();
         }
 
-        protected IDisposable BeginConnectionScope(BaseConnectionContext connectionContext)
+        protected IDisposable BeginConnectionScope(ConnectionBase connection)
         {
             if (Logger.IsEnabled(LogLevel.Critical))
             {
-                return Logger.BeginScope(new ConnectionLogScope(connectionContext.ConnectionId));
+                return Logger.BeginScope(new ConnectionLogScope(connection.ConnectionId()));
             }
 
             return null;

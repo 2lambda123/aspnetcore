@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
@@ -25,7 +26,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
     {
         private readonly ServerAddressesFeature _serverAddresses;
         private readonly TransportManager _transportManager;
-        private readonly IConnectionListenerFactory _transportFactory;
+        private readonly ConnectionListenerFactory _transportFactory;
         private readonly IMultiplexedConnectionListenerFactory _multiplexedTransportFactory;
 
         private readonly SemaphoreSlim _bindSemaphore = new SemaphoreSlim(initialCount: 1);
@@ -36,32 +37,32 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         private IDisposable _configChangedRegistration;
 
-        public KestrelServerImpl(
-            IOptions<KestrelServerOptions> options,
-            IEnumerable<IConnectionListenerFactory> transportFactories,
-            ILoggerFactory loggerFactory)
-            : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
-        {
-        }
+        //public KestrelServerImpl(
+        //    IOptions<KestrelServerOptions> options,
+        //    IEnumerable<IConnectionListenerFactory> transportFactories,
+        //    ILoggerFactory loggerFactory)
+        //    : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
+        //{
+        //}
 
         public KestrelServerImpl(
             IOptions<KestrelServerOptions> options,
-            IEnumerable<IConnectionListenerFactory> transportFactories,
+            IEnumerable<ConnectionListenerFactory> transportFactories,
             IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
             ILoggerFactory loggerFactory)
             : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory))
         {
         }
 
-        // For testing
-        internal KestrelServerImpl(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
-            : this(transportFactories, null, serviceContext)
-        {
-        }
+        //// For testing
+        //internal KestrelServerImpl(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
+        //    : this(transportFactories, null, serviceContext)
+        //{
+        //}
 
         // For testing
         internal KestrelServerImpl(
-            IEnumerable<IConnectionListenerFactory> transportFactories,
+            IEnumerable<ConnectionListenerFactory> transportFactories,
             IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
             ServiceContext serviceContext)
         {

@@ -2,24 +2,25 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 {
-    internal class ConnectionDispatcher<T> where T : BaseConnectionContext
+    internal class ConnectionDispatcher<T> where T : ConnectionBase
     {
         private static long _lastConnectionId = long.MinValue;
 
         private readonly ServiceContext _serviceContext;
-        private readonly Func<T, Task> _connectionDelegate;
+        private readonly Func<T, Task<T>> _connectionDelegate;
         private readonly TransportConnectionManager _transportConnectionManager;
         private readonly TaskCompletionSource _acceptLoopTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ConnectionDispatcher(ServiceContext serviceContext, Func<T, Task> connectionDelegate, TransportConnectionManager transportConnectionManager)
+        public ConnectionDispatcher(ServiceContext serviceContext, Func<T, Task<T>> connectionDelegate, TransportConnectionManager transportConnectionManager)
         {
             _serviceContext = serviceContext;
             _connectionDelegate = connectionDelegate;
@@ -60,7 +61,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 
                         _transportConnectionManager.AddConnection(id, kestrelConnection);
 
-                        Log.ConnectionAccepted(connection.ConnectionId);
+                        Log.ConnectionAccepted(connection.ConnectionId());
                         KestrelEventSource.Log.ConnectionQueuedStart(connection);
 
                         ThreadPool.UnsafeQueueUserWorkItem(kestrelConnection, preferLocal: false);

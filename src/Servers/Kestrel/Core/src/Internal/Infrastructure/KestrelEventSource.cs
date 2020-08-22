@@ -3,12 +3,15 @@
 
 using System;
 using System.Diagnostics.Tracing;
+using System.Net;
+using System.Net.Connections;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 {
@@ -50,7 +53,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         // - Avoid renaming methods or parameters marked with EventAttribute. EventSource uses these to form the event object.
 
         [NonEvent]
-        public void ConnectionStart(BaseConnectionContext connection)
+        public void ConnectionStart(ConnectionBase connection)
         {
             // avoid allocating strings unless this event source is enabled
             Interlocked.Increment(ref _totalConnections);
@@ -59,7 +62,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             if (IsEnabled())
             {
                 ConnectionStart(
-                    connection.ConnectionId,
+                    connection.ConnectionId(),
                     connection.LocalEndPoint?.ToString(),
                     connection.RemoteEndPoint?.ToString());
             }
@@ -80,12 +83,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         }
 
         [NonEvent]
-        public void ConnectionStop(BaseConnectionContext connection)
+        public void ConnectionStop(ConnectionBase connection)
         {
             Interlocked.Decrement(ref _currentConnections);
             if (IsEnabled())
             {
-                ConnectionStop(connection.ConnectionId);
+                ConnectionStop(connection.ConnectionId());
             }
         }
 
@@ -141,13 +144,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         }
 
         [NonEvent]
-        public void ConnectionQueuedStart(BaseConnectionContext connection)
+        public void ConnectionQueuedStart(ConnectionBase connection)
         {
             Interlocked.Increment(ref _connectionQueueLength);
             if (IsEnabled())
             {
                 ConnectionQueuedStart(
-                    connection.ConnectionId,
+                    connectionId: connection.ConnectionId(),
                     connection.LocalEndPoint?.ToString(),
                     connection.RemoteEndPoint?.ToString());
             }
@@ -168,13 +171,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         }
 
         [NonEvent]
-        public void ConnectionQueuedStop(BaseConnectionContext connection)
+        public void ConnectionQueuedStop(ConnectionBase connection)
         {
             Interlocked.Decrement(ref _connectionQueueLength);
             if (IsEnabled())
             {
                 ConnectionQueuedStop(
-                    connection.ConnectionId,
+                    connection.ConnectionId(),
                     connection.LocalEndPoint?.ToString(),
                     connection.RemoteEndPoint?.ToString());
             }

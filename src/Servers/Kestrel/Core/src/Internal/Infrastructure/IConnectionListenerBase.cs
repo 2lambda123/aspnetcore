@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+#nullable enable
+
 using System;
 using System.Net;
 using System.Threading;
@@ -16,7 +18,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         /// <summary>
         /// The endpoint that was bound. This may differ from the requested endpoint, such as when the caller requested that any free port be selected.
         /// </summary>
-        EndPoint EndPoint { get; }
+        EndPoint? EndPoint { get; }
 
         /// <summary>
         /// Stops listening for incoming connections.
