@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Connections;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
@@ -17,11 +18,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
     /// Describes either an <see cref="IPEndPoint"/>, Unix domain socket path, or a file descriptor for an already open
     /// socket that Kestrel should bind to or open.
     /// </summary>
-    public class ListenOptions : IConnectionBuilder, IMultiplexedConnectionBuilder
+    public class ListenOptions : IConnectionBuilder, IMultiplexedConnectionBuilder, ISystemNetConnectionsBuilder
     {
         internal static readonly HttpProtocols DefaultHttpProtocols = HttpProtocols.Http1AndHttp2;
 
-        internal readonly List<Func<ConnectionDelegate, ConnectionDelegate>> _middleware = new List<Func<ConnectionDelegate, ConnectionDelegate>>();
+        // ">>>>" We're doing our best to emulate OWIN!
+        // TODO: File an issue to put a Func<Connection, Task<Connection>> delegate in the runtime.
+        internal readonly List<Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>>> _middleware = new List<Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>>>();
         internal readonly List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>> _multiplexedMiddleware = new List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>>();
 
         internal ListenOptions(EndPoint endPoint)
@@ -121,7 +124,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         /// <returns>The <see cref="IConnectionBuilder"/>.</returns>
         public IConnectionBuilder Use(Func<ConnectionDelegate, ConnectionDelegate> middleware)
         {
-            _middleware.Add(middleware);
+            //_middleware.Add(middleware);
             return this;
         }
 
@@ -131,18 +134,21 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             return this;
         }
 
+        IConnectionBuilder ISystemNetConnectionsBuilder.Use(Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>> middleware)
+        {
+            _middleware.Add(middleware);
+            return this;
+        }
+
         public ConnectionDelegate Build()
         {
-            ConnectionDelegate app = context =>
-            {
-                return Task.CompletedTask;
-            };
+            ConnectionDelegate app = context => Task.CompletedTask;
 
-            for (int i = _middleware.Count - 1; i >= 0; i--)
-            {
-                var component = _middleware[i];
-                app = component(app);
-            }
+            //for (int i = _middleware.Count - 1; i >= 0; i--)
+            //{
+            //    var component = _middleware[i];
+            //    app = component(app);
+            //}
 
             return app;
         }
@@ -157,6 +163,22 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             for (int i = _multiplexedMiddleware.Count - 1; i >= 0; i--)
             {
                 var component = _multiplexedMiddleware[i];
+                app = component(app);
+            }
+
+            return app;
+        }
+
+        Func<Connection, Task<Connection>> ISystemNetConnectionsBuilder.Build()
+        {
+            Func<Connection, Task<Connection>> app = connection =>
+            {
+                return Task.FromResult(connection);
+            };
+
+            for (int i = _middleware.Count - 1; i >= 0; i--)
+            {
+                var component = _middleware[i];
                 app = component(app);
             }
 

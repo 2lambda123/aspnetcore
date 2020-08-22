@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Connections;
@@ -209,6 +208,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 return _connectionListener.AcceptAsync(options: null, cancellationToken)!;
             }
 
+            // This should be temporary: https://github.com/dotnet/runtime/issues/41118
             private async ValueTask<Connection?> AcceptAsyncAwaited(CancellationToken cancellationToken)
             {
                 var acceptTask = _connectionListener.AcceptAsync(options: null, cancellationToken).AsTask();
@@ -229,7 +229,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 
                 if (completedTask == _fakeUnbindTcs!.Task)
                 {
-                    // This should be temporary: https://github.com/dotnet/runtime/issues/41118
                     _ = RefuseAcceptedConnection(acceptTask);
                     return null;
                 }

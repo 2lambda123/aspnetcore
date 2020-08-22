@@ -30,8 +30,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         {
             _connectionDelegate = connectionDelegate;
 
-            // I know the object casts are super ugly, but it's either that or we're duplicating a lot of code paths.
-            // This is only necessary since there's no generic way to add features to an arbitrary object that implements ConnectionBase
+            // I know the following is super ugly, but it's either this or we're duplicating a lot of code.
+            // This is only necessary since there's no way to add features to arbitrary ConnectionBase objects
             // while keeping the same derived type.
             if (typeof(T) == typeof(Connection))
             {
@@ -48,6 +48,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             }
             else
             {
+                // This is basically an assert that should only ever throw given a bug in Kestrel itself.
                 throw new ArgumentException($"T must be {nameof(Connection)} or {nameof(MultiplexedConnectionContextWrapper)}.");
             }
         }

@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 {
@@ -16,7 +17,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             _id = id;
 
             _weakReference = new WeakReference<KestrelConnection>(connection);
-            ConnectionId = connection.TransportConnection.ConnectionId;
+            ConnectionId = connection.TransportConnection.ConnectionId();
 
             _transportConnectionManager = transportConnectionManager;
         }
