@@ -179,7 +179,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         {
             private readonly ConnectionListener _connectionListener;
             private readonly IUnbindFeature? _unbindFeature;
-            private readonly TaskCompletionSource? _fakeUnbindTcs;
+            private readonly CancellationTokenSource? _fakeUnbindCts;
 
             public GenericConnectionListener(ConnectionListener connectionListener)
             {
@@ -187,7 +187,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 
                 if (!_connectionListener.ListenerProperties.TryGet(out _unbindFeature))
                 {
-                    _fakeUnbindTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _fakeUnbindCts = new CancellationTokenSource();
                 }
             }
 
@@ -197,7 +197,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             {
                 if (_unbindFeature is null)
                 {
-                    if (_fakeUnbindTcs!.Task.IsCompleted)
+                    if (_fakeUnbindCts!.IsCancellationRequested)
                     {
                         return new ValueTask<Connection?>(result: null);
                     }
@@ -211,36 +211,24 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             // This should be temporary: https://github.com/dotnet/runtime/issues/41118
             private async ValueTask<Connection?> AcceptAsyncAwaited(CancellationToken cancellationToken)
             {
-                var acceptTask = _connectionListener.AcceptAsync(options: null, cancellationToken).AsTask();
-                var completedTask = await Task.WhenAny(acceptTask, _fakeUnbindTcs!.Task);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_fakeUnbindCts!.Token, cancellationToken);
 
-                static async Task RefuseAcceptedConnection(Task<Connection> task)
+                try
                 {
-                    try
-                    {
-                        using var connection = await task;
-                        connection?.CloseAsync(ConnectionCloseMethod.Abort);
-                    }
-                    catch
-                    {
-                        // If we expect to keep this, we should log.
-                    }
+
+                    return await _connectionListener.AcceptAsync(options: null, linkedCts.Token);
                 }
-
-                if (completedTask == _fakeUnbindTcs!.Task)
+                catch (OperationCanceledException)
                 {
-                    _ = RefuseAcceptedConnection(acceptTask);
                     return null;
                 }
-
-                return await acceptTask;
             }
 
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
             {
                 if (_unbindFeature is null)
                 {
-                    _fakeUnbindTcs!.TrySetResult();
+                    _fakeUnbindCts!.Cancel();
                 }
                 else
                 {
@@ -250,8 +238,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 return default;
             }
 
-            public ValueTask DisposeAsync()
-                => _connectionListener.DisposeAsync();
+            public async ValueTask DisposeAsync()
+            {
+                await _connectionListener.DisposeAsync();
+                _fakeUnbindCts?.Dispose();
+            }
         }
 
         private class GenericMultiplexedConnectionListener : IConnectionListener<MultiplexedConnectionContextWrapper>
