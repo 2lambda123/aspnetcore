@@ -117,10 +117,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
             }
         }
 
-        protected override IDuplexPipe CreatePipe()
-        {
-            return Transport;
-        }
+        protected override IDuplexPipe CreatePipe() => Transport;
 
         public override void Abort(ConnectionAbortedException abortReason)
         {

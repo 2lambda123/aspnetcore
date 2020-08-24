@@ -23,10 +23,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             _connectionContext = connectionContext;
         }
 
-        protected override IDuplexPipe CreatePipe()
-        {
-            return _connectionContext.Transport;
-        }
+        protected override IDuplexPipe CreatePipe() => _connectionContext.Transport;
 
         public override IConnectionProperties ConnectionProperties => this;
 

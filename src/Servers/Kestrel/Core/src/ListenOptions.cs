@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Experimental;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core
 {
@@ -124,7 +125,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         /// <returns>The <see cref="IConnectionBuilder"/>.</returns>
         public IConnectionBuilder Use(Func<ConnectionDelegate, ConnectionDelegate> middleware)
         {
-            //_middleware.Add(middleware);
+            _middleware.Add(connectionDelegate => UnwrapDelegate(middleware(WrapDelegate(connectionDelegate))));
             return this;
         }
 
@@ -142,15 +143,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         public ConnectionDelegate Build()
         {
-            ConnectionDelegate app = context => Task.CompletedTask;
-
-            //for (int i = _middleware.Count - 1; i >= 0; i--)
-            //{
-            //    var component = _middleware[i];
-            //    app = component(app);
-            //}
-
-            return app;
+            return WrapDelegate(((ISystemNetConnectionsBuilder)this).Build());
         }
 
         MultiplexedConnectionDelegate IMultiplexedConnectionBuilder.Build()
@@ -189,6 +182,25 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         {
             await AddressBinder.BindEndpointAsync(this, context).ConfigureAwait(false);
             context.Addresses.Add(GetDisplayName());
+        }
+
+        private static ConnectionDelegate WrapDelegate(Func<Connection, Task<Connection>> connectionDelegate)
+        {
+            return async connection =>
+            {
+                var wrapper = new ConnectionContextWrapper(connection);
+                await connectionDelegate(wrapper);
+            };
+        }
+
+        private static Func<Connection, Task<Connection>> UnwrapDelegate(ConnectionDelegate connectionDelegate)
+        {
+            return async connection =>
+            {
+                var wrapper = new ConnectionWrapper(connection);
+                await connectionDelegate(wrapper);
+                return wrapper.ModifiedConnection;
+            };
         }
     }
 }

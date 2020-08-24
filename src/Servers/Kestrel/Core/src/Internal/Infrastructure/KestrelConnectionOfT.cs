@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Connections;
 using System.Threading;
@@ -109,6 +110,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 _innerConnection = innerConnection;
                 _kestrelConnection = kestrelConnection;
             }
+
+            protected override IDuplexPipe CreatePipe() => _innerConnection.Pipe;
 
             public override IConnectionProperties ConnectionProperties => this;
 
