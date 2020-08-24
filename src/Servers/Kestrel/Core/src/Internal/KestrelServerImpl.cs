@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -183,8 +184,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                     // Add the HTTP middleware as the terminal connection middleware
                     if ((options.Protocols & HttpProtocols.Http1) == HttpProtocols.Http1
                         || (options.Protocols & HttpProtocols.Http2) == HttpProtocols.Http2
-                        || options.Protocols == HttpProtocols.None) // TODO a test fails because it doesn't throw an exception in the right place
-                                                                    // when there is no HttpProtocols in KestrelServer, can we remove/change the test?
+                        || options.Protocols == HttpProtocols.None)
                     {
                         if (_transportFactory is null)
                         {
@@ -197,7 +197,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                         // Add the connection limit middleware
                         connectionDelegate = EnforceConnectionLimit(connectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
-                        options.EndPoint = await _transportManager.BindAsync(options.EndPoint, connectionDelegate, options.EndpointConfig).ConfigureAwait(false);
+                        Func<Connection, Task<Connection>> systemNetConnectionDelegate = async connection =>
+                        {
+                            var wrapper = new ConnectionWrapper(connection);
+                            await connectionDelegate(wrapper);
+                            return wrapper.ModifiedConnection;
+                        };
+
+                        options.EndPoint = await _transportManager.BindAsync(options.EndPoint, systemNetConnectionDelegate, options.EndpointConfig).ConfigureAwait(false);
                     }
                 }
 

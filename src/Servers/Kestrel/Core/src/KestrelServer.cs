@@ -23,12 +23,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             ILoggerFactory loggerFactory)
         {
             //_innerKestrelServer = new KestrelServerImpl(options, transportFactories, loggerFactory);
+            _innerKestrelServer = new KestrelServerImpl(null, null, null, null);
         }
 
         // For testing
         internal KestrelServer(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
         {
             //_innerKestrelServer = new KestrelServerImpl(transportFactories, serviceContext);
+            _innerKestrelServer = new KestrelServerImpl(null, null, null, null);
         }
 
         public IFeatureCollection Features => _innerKestrelServer.Features;
