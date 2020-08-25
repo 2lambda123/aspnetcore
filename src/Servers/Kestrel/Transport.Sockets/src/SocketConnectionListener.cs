@@ -3,6 +3,7 @@
 
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
@@ -115,10 +116,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
             _listenSocket = listenSocket;
         }
 
-        public void Unbind()
+        public ValueTask UnbindAsync()
         {
             _listenSocket?.Dispose();
             _socketHandle?.Dispose();
+            return default;
         }
 
         public override async ValueTask<Connection> AcceptAsync(IConnectionProperties options = null, CancellationToken cancellationToken = default)
@@ -177,7 +179,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 
         protected override ValueTask DisposeAsyncCore()
         {
-            Unbind();
+            _listenSocket?.Dispose();
+            _socketHandle?.Dispose();
             _memoryPool.Dispose();
             return default;
         }

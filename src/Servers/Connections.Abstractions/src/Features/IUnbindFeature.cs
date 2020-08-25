@@ -3,10 +3,12 @@
 
 #nullable enable
 
+using System.Threading.Tasks;
+
 namespace Microsoft.AspNetCore.Connections.Features
 {
     public interface IUnbindFeature
     {
-        void Unbind();
+        ValueTask UnbindAsync();
     }
 }

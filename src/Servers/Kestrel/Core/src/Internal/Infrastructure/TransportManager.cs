@@ -220,13 +220,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 if (_unbindFeature is null)
                 {
                     _fakeUnbindCts!.Cancel();
+                    return default;
                 }
                 else
                 {
-                    _unbindFeature.Unbind();
+                    return _unbindFeature.UnbindAsync();
                 }
-
-                return default;
             }
 
             public async ValueTask DisposeAsync()

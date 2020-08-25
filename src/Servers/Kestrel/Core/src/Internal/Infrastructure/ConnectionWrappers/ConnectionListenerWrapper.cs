@@ -39,10 +39,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             return new ConnectionContextWrapper(connection);
         }
 
-        public void Unbind()
-        {
-            _listener.UnbindAsync().GetAwaiter().GetResult();
-        }
+        public ValueTask UnbindAsync() => _listener.UnbindAsync();
 
         protected override ValueTask DisposeAsyncCore() => _listener.DisposeAsync();
 

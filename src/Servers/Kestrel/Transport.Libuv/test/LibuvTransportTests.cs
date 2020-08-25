@@ -251,8 +251,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
             {
                 Assert.True(_connectionListener.ListenerProperties.TryGet<IUnbindFeature>(out var unbindFeature));
-                unbindFeature.Unbind();
-                return default;
+                return unbindFeature.UnbindAsync();
             }
 
             public ValueTask DisposeAsync()
