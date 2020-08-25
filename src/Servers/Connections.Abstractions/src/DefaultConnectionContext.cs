@@ -71,7 +71,7 @@ namespace Microsoft.AspNetCore.Connections
         public override EndPoint? LocalEndPoint { get; set; }
         public override EndPoint? RemoteEndPoint { get; set; }
 
-        public override void Abort(ConnectionAbortedException abortReason)
+        public override void Abort(ConnectionAbortedException? abortReason)
         {
             ThreadPool.UnsafeQueueUserWorkItem(cts => ((CancellationTokenSource)cts!).Cancel(), _connectionClosedTokenSource);
         }

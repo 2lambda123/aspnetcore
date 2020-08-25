@@ -6,36 +6,49 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net.Connections;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers
 {
-    internal class ConnectionWrapper : ConnectionContext, IFeatureCollection, IConnectionIdFeature, IConnectionLifetimeFeature, IItemsFeature
+    internal class ConnectionWrapper : ConnectionContext,
+                                       IFeatureCollection,
+                                       IConnectionIdFeature,
+                                       IItemsFeature,
+                                       IConnectionLifetimeFeature,
+                                       IAbortWithReasonFeature
     {
         private readonly Connection _connection;
 
-        private IDuplexPipe? _modifiedTransport;
+        private bool _wasModified;
+        private IDuplexPipe? _transport;
         private FeatureCollection? _extraFeatures;
+
+        private string? _connectionId;
+        private IDictionary<object, object?>? _connectionItems;
+        private CancellationToken? _connectionClosedToken;
 
         public ConnectionWrapper(Connection connection)
         {
             _connection = connection;
         }
 
-        public Connection ModifiedConnection => _modifiedTransport is null && _extraFeatures is null ?
-            _connection : new ConnectionContextWrapper(this);
+        public Connection ModifiedConnection => _wasModified ? new ConnectionContextWrapper(this) : _connection;
 
         public override IDuplexPipe Transport
         {
-            get => _modifiedTransport ?? _connection.Pipe;
-            set => _modifiedTransport = value;
+            get => _transport ?? _connection.Pipe;
+            set
+            {
+                _wasModified = true;
+                _transport = value;
+            }
         }
 
         public override IFeatureCollection Features => this;
@@ -44,78 +57,106 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
         {
             get
             {
-                var connectionIdFeature = Features.Get<IConnectionIdFeature>();
-
-                if (connectionIdFeature is null)
+                if (_connection.ConnectionProperties.TryGet<IConnectionIdFeature>(out var connectionIdFeature))
                 {
-                    return _connection.ConnectionId();
+                    return connectionIdFeature.ConnectionId;
                 }
 
-                return connectionIdFeature.ConnectionId;
+                _wasModified = true;
+                _connectionId ??= CorrelationIdGenerator.GetNextId();
+
+                return _connectionId;
             }
             set
             {
-                var connectionIdFeature = Features.Get<IConnectionIdFeature>();
-
-                if (connectionIdFeature is null)
+                if (_connection.ConnectionProperties.TryGet<IConnectionIdFeature>(out var connectionIdFeature))
                 {
-                    connectionIdFeature = this;
-                    Features.Set<IConnectionIdFeature>(this);
+                    connectionIdFeature.ConnectionId = value;
+                }
+                else
+                {
+                    _wasModified = true;
+                    _connectionId = value;
+                }
+            }
+        }
+
+        public override IDictionary<object, object?> Items
+        {
+            get
+            {
+                if (_connection.ConnectionProperties.TryGet<IItemsFeature>(out var itemsFeature))
+                {
+                    return itemsFeature.Items;
                 }
 
-                connectionIdFeature.ConnectionId = value;
+                _wasModified = true;
+                _connectionItems ??= new ConnectionItems();
+
+                return _connectionItems;
+            }
+            set
+            {
+                if (_connection.ConnectionProperties.TryGet<IItemsFeature>(out var itemsFeature))
+                {
+                    itemsFeature.Items = value;
+                }
+                else
+                {
+                    _wasModified = true;
+                    _connectionItems = value;
+                }
             }
         }
 
         public override CancellationToken ConnectionClosed
         {
-            get => GetOrInitializeLifetimeFeature().ConnectionClosed;
-            set => GetOrInitializeLifetimeFeature().ConnectionClosed = value;
-        }
-
-        private IConnectionLifetimeFeature GetOrInitializeLifetimeFeature()
-        {
-            var lifetimeFeature = Features.Get<IConnectionLifetimeFeature>();
-
-            if (lifetimeFeature is null)
+            get
             {
-                lifetimeFeature = this;
-                Features.Set<IConnectionLifetimeFeature>(this);
+                if (_connection.ConnectionProperties.TryGet<IConnectionLifetimeFeature>(out var lifetimeFeature))
+                {
+                    return lifetimeFeature.ConnectionClosed;
+                }
+
+                // It's going to require more work involving wrapping transport reads and writes to observe
+                // the connection closing if there's no IConnectionLifetimeFeature in ConnectionPropertes.
+                // Nothing in Kestrel null-checks ConnectionClosed, so immediately throwing better highlights bugs.
+                return _connectionClosedToken ?? throw new NotImplementedException();
             }
-
-            return lifetimeFeature;
-        }
-
-        public override IDictionary<object, object?> Items
-        {
-            get => GetOrInitializeItemsFeature().Items;
-            set => GetOrInitializeItemsFeature().Items = value;
-        }
-
-        private IItemsFeature GetOrInitializeItemsFeature()
-        {
-            var itemsFeature = Features.Get<IItemsFeature>();
-
-            if (itemsFeature is null)
+            set
             {
-                itemsFeature = this;
-                itemsFeature.Items = new Dictionary<object, object?>();
-                Features.Set<IItemsFeature>(this);
+                if (_connection.ConnectionProperties.TryGet<IConnectionLifetimeFeature>(out var lifetimeFeature))
+                {
+                    lifetimeFeature.ConnectionClosed = value;
+                }
+                else
+                {
+                    _wasModified = true;
+                    _connectionClosedToken = value;
+                }
             }
-
-            return itemsFeature;
         }
 
-        // Silence the compiler's complaints about feature properties being null. We initialize these if used.
-        string IConnectionIdFeature.ConnectionId { get; set; } = string.Empty;
-
-        CancellationToken IConnectionLifetimeFeature.ConnectionClosed
+        public override void Abort(ConnectionAbortedException? abortReason)
         {
-            get => base.ConnectionClosed;
-            set => base.ConnectionClosed = value;
+            if (_connection.ConnectionProperties.TryGet<IAbortWithReasonFeature>(out var abortFeature))
+            {
+                abortFeature.Abort(abortReason);
+            }
+            else if (_connection.ConnectionProperties.TryGet<IConnectionLifetimeFeature>(out var lifetimeFeature))
+            {
+                lifetimeFeature.Abort();
+            }
+            else
+            {
+                _connection.CloseAsync(ConnectionCloseMethod.Abort).GetAwaiter().GetResult();
+            }
         }
 
-        IDictionary<object, object?> IItemsFeature.Items { get; set; } = ImmutableDictionary<object, object?>.Empty;
+        public override ValueTask DisposeAsync()
+        {
+            return _connection.DisposeAsync();
+        }
 
         bool IFeatureCollection.IsReadOnly => false;
 
@@ -123,62 +164,53 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         object? IFeatureCollection.this[Type key]
         {
-            get
-            {
-                var feature = _extraFeatures?[key];
-
-                if (feature is null && _connection.ConnectionProperties.TryGet(key, out var property))
-                {
-                    return property;
-                }
-
-                return feature;
-            }
-            set
-            {
-                _extraFeatures ??= new FeatureCollection();
-                _extraFeatures[key] = value;
-            }
+            get => GetFeature(key);
+            set => SetFeature(key, value);
         }
 
         [return: MaybeNull]
-        TFeature IFeatureCollection.Get<TFeature>()
-        {
-            object? feature = null;
+        TFeature IFeatureCollection.Get<TFeature>() => (TFeature)GetFeature(typeof(TFeature));
 
-            // `?.` isn't allowed here for some reason.
-            if (_extraFeatures != null)
+        void IFeatureCollection.Set<TFeature>(TFeature instance) => SetFeature(typeof(TFeature), instance);
+
+        // We cannot enumerate the _connection's properties, so we throw since Kestrel doesn't enumerate features anyway.
+        // Maybe this could be addressed by putting the IFeatureCollection inside itself.
+        // That recursive reference could also help avoid multiple layers of _extraFeatures.
+        IEnumerator<KeyValuePair<Type, object>> IEnumerable<KeyValuePair<Type, object>>.GetEnumerator()
+            => throw new NotImplementedException();
+
+        IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+
+        private object? GetFeature(Type key)
+        {
+            var extraFeature = _extraFeatures?[key];
+
+            if (extraFeature != null)
             {
-                feature = _extraFeatures.Get<TFeature>();
+                return extraFeature;
             }
 
-            if (feature is null && _connection.ConnectionProperties.TryGet<TFeature>(out var property))
+            if (_connection.ConnectionProperties.TryGet(key, out var property))
             {
                 return property;
             }
 
-            return (TFeature)feature;
+            if (key == typeof(IConnectionIdFeature) ||
+                key == typeof(IItemsFeature) ||
+                key == typeof(IConnectionLifetimeFeature) ||
+                key == typeof(IAbortWithReasonFeature))
+            {
+                return this;
+            }
+
+            return null;
         }
 
-        void IFeatureCollection.Set<TFeature>(TFeature instance)
+        private void SetFeature(Type key, object? feature)
         {
+            _wasModified = true;
             _extraFeatures ??= new FeatureCollection();
-            _extraFeatures.Set(instance);
-        }
-
-        // We cannot enumerate the _connection's properties, so we just enumerate _extraFeatures as a best effort.
-        // This could be addressed by putting the IFeatureCollection inside itself! 
-        // That recursive reference could also help avoid multiple layers of _extraFeatures.
-        IEnumerator<KeyValuePair<Type, object>> IEnumerable<KeyValuePair<Type, object>>.GetEnumerator()
-        {
-            _extraFeatures ??= new FeatureCollection();
-            return _extraFeatures.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            _extraFeatures ??= new FeatureCollection();
-            return ((IEnumerable)_extraFeatures).GetEnumerator();
+            _extraFeatures[key] = feature;
         }
     }
 }

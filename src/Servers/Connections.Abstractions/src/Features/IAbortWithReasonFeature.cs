@@ -5,8 +5,8 @@
 
 namespace Microsoft.AspNetCore.Connections.Features
 {
-    public interface IUnbindFeature
+    public interface IAbortWithReasonFeature
     {
-        void Unbind();
+        void Abort(ConnectionAbortedException? abortReason);
     }
 }

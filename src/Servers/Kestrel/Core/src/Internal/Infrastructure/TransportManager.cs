@@ -11,7 +11,7 @@ using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Connections.Abstractions.Features;
+using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Connections.Experimental;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 
@@ -37,18 +37,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 
         private ConnectionManager ConnectionManager => _serviceContext.ConnectionManager;
         private IKestrelTrace Trace => _serviceContext.Log;
-
-        //public async Task<EndPoint?> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig)
-        //{
-        //    if (_transportFactory is null)
-        //    {
-        //        throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(ConnectionListenerFactory)} is registered.");
-        //    }
-
-        //    var transport = await _transportFactory.ListenAsync(endPoint).ConfigureAwait(false);
-        //    StartAcceptLoop(new GenericConnectionListener(transport), c => connectionDelegate(c), endpointConfig);
-        //    return transport.LocalEndPoint;
-        //}
 
         public async Task<EndPoint?> BindAsync(EndPoint endPoint, Func<Connection, Task<Connection>> connectionDelegate, EndpointConfig? endpointConfig)
         {
@@ -208,7 +196,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 return _connectionListener.AcceptAsync(options: null, cancellationToken)!;
             }
 
-            // This should be temporary: https://github.com/dotnet/runtime/issues/41118
             private async ValueTask<Connection?> AcceptAsyncAwaited(CancellationToken cancellationToken)
             {
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_fakeUnbindCts!.Token, cancellationToken);

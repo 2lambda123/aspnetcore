@@ -4,7 +4,6 @@
 #nullable enable
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Connections;
 using System.Threading;
@@ -13,7 +12,7 @@ using Microsoft.AspNetCore.Connections.Experimental;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers
 {
-    internal class MultiplexedConnectionContextWrapper : ConnectionBase, IConnectionProperties
+    internal class MultiplexedConnectionContextWrapper : ConnectionBase
     {
         public MultiplexedConnectionContextWrapper(MultiplexedConnectionContext multiplexedConnectionContext)
         {
@@ -22,7 +21,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         public MultiplexedConnectionContext MultiplexedConnectionContext { get; }
 
-        public override IConnectionProperties ConnectionProperties => this;
+        public override IConnectionProperties ConnectionProperties => throw new NotImplementedException();
 
         public override EndPoint? LocalEndPoint => MultiplexedConnectionContext.LocalEndPoint;
 
@@ -31,11 +30,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
         protected override ValueTask CloseAsyncCore(ConnectionCloseMethod method, CancellationToken cancellationToken)
         {
             return ConnectionWrapperUtils.CloseAsyncCore(MultiplexedConnectionContext, method, cancellationToken);
-        }
-
-        public bool TryGet(Type propertyKey, [NotNullWhen(true)] out object property)
-        {
-            return ConnectionWrapperUtils.TryGetProperty(MultiplexedConnectionContext.Features, propertyKey, out property);
         }
     }
 }

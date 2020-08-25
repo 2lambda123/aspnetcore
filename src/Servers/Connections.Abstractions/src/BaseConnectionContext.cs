@@ -51,7 +51,7 @@ namespace Microsoft.AspNetCore.Connections
         /// Aborts the underlying connection.
         /// </summary>
         /// <param name="abortReason">An optional <see cref="ConnectionAbortedException"/> describing the reason the connection is being terminated.</param>
-        public abstract void Abort(ConnectionAbortedException abortReason);
+        public abstract void Abort(ConnectionAbortedException? abortReason);
 
         /// <summary>
         /// Releases resources for the underlying connection.
