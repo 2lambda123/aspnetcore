@@ -2,9 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Connections;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +19,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
 {
@@ -93,7 +92,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
                                     c.Configure(context.ServerOptions);
                                 }
 
-                                return new KestrelServer(new List<IConnectionListenerFactory>() { sp.GetRequiredService<IConnectionListenerFactory>() }, context);
+                                // LibuvTransport still implements IConnectionListenerFactory.
+                                var legacyTransportFactory = sp.GetService<IConnectionListenerFactory>();
+
+                                if (legacyTransportFactory != null)
+                                {
+                                    return new KestrelServer(new[] { legacyTransportFactory }, context);
+                                }
+
+                                return new KestrelServerImpl(new[] { sp.GetRequiredService<ConnectionListenerFactory>() }, context);
                             });
                             configureServices(services);
                         })

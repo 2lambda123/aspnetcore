@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Net;
 using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +33,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         private string? _connectionId;
         private IDictionary<object, object?>? _connectionItems;
-        private CancellationToken? _connectionClosedToken;
 
         public ConnectionWrapper(Connection connection)
         {
@@ -40,6 +40,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
         }
 
         public Connection ModifiedConnection => _wasModified ? new ConnectionContextWrapper(this) : _connection;
+
+        public override IFeatureCollection Features => this;
 
         public override IDuplexPipe Transport
         {
@@ -50,8 +52,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                 _transport = value;
             }
         }
-
-        public override IFeatureCollection Features => this;
 
         public override string ConnectionId
         {
@@ -78,6 +78,26 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                     _wasModified = true;
                     _connectionId = value;
                 }
+            }
+        }
+
+        public override EndPoint? LocalEndPoint
+        {
+            get => base.LocalEndPoint ?? _connection.LocalEndPoint;
+            set
+            {
+                _wasModified = true;
+                base.LocalEndPoint = value;
+            }
+        }
+
+        public override EndPoint? RemoteEndPoint
+        {
+            get => base.RemoteEndPoint ?? _connection.RemoteEndPoint;
+            set
+            {
+                _wasModified = true;
+                base.RemoteEndPoint = value;
             }
         }
 
@@ -121,7 +141,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                 // It's going to require more work involving wrapping transport reads and writes to observe
                 // the connection closing if there's no IConnectionLifetimeFeature in ConnectionPropertes.
                 // Nothing in Kestrel null-checks ConnectionClosed, so immediately throwing better highlights bugs.
-                return _connectionClosedToken ?? throw new NotImplementedException();
+                return (CancellationToken?)base.ConnectionClosed ?? throw new NotImplementedException();
             }
             set
             {
@@ -132,7 +152,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                 else
                 {
                     _wasModified = true;
-                    _connectionClosedToken = value;
+                    base.ConnectionClosed = value;
                 }
             }
         }

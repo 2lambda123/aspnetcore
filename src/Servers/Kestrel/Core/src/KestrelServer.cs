@@ -57,6 +57,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         private static IEnumerable<ConnectionListenerFactory> WrapTransportFactories(IEnumerable<IConnectionListenerFactory> transportFactories)
         {
+            if (transportFactories is null)
+            {
+                return null;
+            }
+
             var lastListener = transportFactories.LastOrDefault();
 
             if (lastListener is null)
