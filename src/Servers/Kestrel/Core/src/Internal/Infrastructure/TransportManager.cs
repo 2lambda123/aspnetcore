@@ -222,6 +222,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 {
                     return null;
                 }
+                catch (ObjectDisposedException)
+                {
+                    return null;
+                }
             }
 
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)

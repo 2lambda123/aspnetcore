@@ -38,13 +38,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
 
         private IDisposable _configChangedRegistration;
 
-        //public KestrelServerImpl(
-        //    IOptions<KestrelServerOptions> options,
-        //    IEnumerable<IConnectionListenerFactory> transportFactories,
-        //    ILoggerFactory loggerFactory)
-        //    : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
-        //{
-        //}
+        public KestrelServerImpl(
+            IOptions<KestrelServerOptions> options,
+            IEnumerable<ConnectionListenerFactory> transportFactories,
+            ILoggerFactory loggerFactory)
+            : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
+        {
+        }
 
         public KestrelServerImpl(
             IOptions<KestrelServerOptions> options,
@@ -55,11 +55,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         {
         }
 
-        //// For testing
-        //internal KestrelServerImpl(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
-        //    : this(transportFactories, null, serviceContext)
-        //{
-        //}
+        // For testing
+        internal KestrelServerImpl(IEnumerable<ConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
+            : this(transportFactories, null, serviceContext)
+        {
+        }
 
         // For testing
         internal KestrelServerImpl(

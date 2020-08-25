@@ -2,12 +2,15 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -22,15 +25,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             IEnumerable<IConnectionListenerFactory> transportFactories,
             ILoggerFactory loggerFactory)
         {
-            //_innerKestrelServer = new KestrelServerImpl(options, transportFactories, loggerFactory);
-            _innerKestrelServer = new KestrelServerImpl(null, null, null, null);
+            _innerKestrelServer = new KestrelServerImpl(options, WrapTransportFactories(transportFactories), loggerFactory);
         }
 
         // For testing
         internal KestrelServer(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
         {
-            //_innerKestrelServer = new KestrelServerImpl(transportFactories, serviceContext);
-            _innerKestrelServer = new KestrelServerImpl(null, null, null, null);
+            _innerKestrelServer = new KestrelServerImpl(WrapTransportFactories(transportFactories), serviceContext);
         }
 
         public IFeatureCollection Features => _innerKestrelServer.Features;
@@ -52,6 +53,20 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public void Dispose()
         {
             _innerKestrelServer.Dispose();
+        }
+
+        private static IEnumerable<ConnectionListenerFactory> WrapTransportFactories(IEnumerable<IConnectionListenerFactory> transportFactories)
+        {
+            var lastListener = transportFactories.LastOrDefault();
+
+            if (lastListener is null)
+            {
+                return Enumerable.Empty<ConnectionListenerFactory>();
+            }
+            else
+            {
+                return new ConnectionListenerFactory[] { new ConnectionListenerFactoryWrapper(lastListener) };
+            }
         }
     }
 }
