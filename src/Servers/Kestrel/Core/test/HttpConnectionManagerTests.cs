@@ -2,12 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Net.Connections;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.AspNetCore.Testing;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -42,10 +41,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             Mock<IKestrelTrace> trace)
         {
             var serviceContext = new TestServiceContext();
-            var mock = new Mock<DefaultConnectionContext>() { CallBase = true };
-            mock.Setup(m => m.ConnectionId).Returns(connectionId);
+            var mockConnection = new MockConnection();
+            mockConnection.ConnectionId = connectionId;
             var transportConnectionManager = new TransportConnectionManager(httpConnectionManager);
-            var httpConnection = new KestrelConnection<ConnectionContext>(0, serviceContext, transportConnectionManager, _ => Task.CompletedTask, mock.Object, Mock.Of<IKestrelTrace>());
+            var httpConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => Task.FromResult(c), mockConnection, Mock.Of<IKestrelTrace>());
             transportConnectionManager.AddConnection(0, httpConnection);
 
             var connectionCount = 0;

@@ -6,16 +6,19 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Connections;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections.Abstractions.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests.TestHelpers;
 using Microsoft.AspNetCore.Testing;
@@ -201,7 +204,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
             listenOptions.EndPoint = transport.EndPoint;
 
             var transportConnectionManager = new TransportConnectionManager(serviceContext.ConnectionManager);
-            var dispatcher = new ConnectionDispatcher<ConnectionContext>(serviceContext, c => listenOptions.Build()(c), transportConnectionManager);
+            var dispatcher = new ConnectionDispatcher<Connection>(serviceContext, c => ((ISystemNetConnectionsBuilder)listenOptions).Build()(c), transportConnectionManager);
+
             var acceptTask = dispatcher.StartAcceptingConnections(new GenericConnectionListener(transport));
 
             using (var client = new HttpClient())
@@ -230,22 +234,26 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
             }
         }
 
-        private class GenericConnectionListener : IConnectionListener<ConnectionContext>
+        private class GenericConnectionListener : IConnectionListener<Connection>
         {
-            private readonly IConnectionListener _connectionListener;
+            private readonly ConnectionListener _connectionListener;
 
             public GenericConnectionListener(IConnectionListener connectionListener)
             {
-                _connectionListener = connectionListener;
+                _connectionListener = new ConnectionListenerWrapper(connectionListener);
             }
 
-            public EndPoint EndPoint => _connectionListener.EndPoint;
+            public EndPoint EndPoint => _connectionListener.LocalEndPoint;
 
-            public ValueTask<ConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
-                 => _connectionListener.AcceptAsync(cancellationToken);
+            public ValueTask<Connection> AcceptAsync(CancellationToken cancellationToken = default)
+                 => _connectionListener.AcceptAsync(options: null, cancellationToken);
 
             public ValueTask UnbindAsync(CancellationToken cancellationToken = default)
-                => _connectionListener.UnbindAsync();
+            {
+                Assert.True(_connectionListener.ListenerProperties.TryGet<IUnbindFeature>(out var unbindFeature));
+                unbindFeature.Unbind();
+                return default;
+            }
 
             public ValueTask DisposeAsync()
                 => _connectionListener.DisposeAsync();

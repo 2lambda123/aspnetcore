@@ -10,13 +10,14 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net.Connections;
+using System.Threading;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers
 {
-    internal class ConnectionWrapper : ConnectionContext, IFeatureCollection, IConnectionIdFeature, IItemsFeature
+    internal class ConnectionWrapper : ConnectionContext, IFeatureCollection, IConnectionIdFeature, IConnectionLifetimeFeature, IItemsFeature
     {
         private readonly Connection _connection;
 
@@ -36,6 +37,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             get => _modifiedTransport ?? _connection.Pipe;
             set => _modifiedTransport = value;
         }
+
+        public override IFeatureCollection Features => this;
 
         public override string ConnectionId
         {
@@ -64,7 +67,24 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             }
         }
 
-        public override IFeatureCollection Features => this;
+        public override CancellationToken ConnectionClosed
+        {
+            get => GetOrInitializeLifetimeFeature().ConnectionClosed;
+            set => GetOrInitializeLifetimeFeature().ConnectionClosed = value;
+        }
+
+        private IConnectionLifetimeFeature GetOrInitializeLifetimeFeature()
+        {
+            var lifetimeFeature = Features.Get<IConnectionLifetimeFeature>();
+
+            if (lifetimeFeature is null)
+            {
+                lifetimeFeature = this;
+                Features.Set<IConnectionLifetimeFeature>(this);
+            }
+
+            return lifetimeFeature;
+        }
 
         public override IDictionary<object, object?> Items
         {
@@ -88,6 +108,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         // Silence the compiler's complaints about feature properties being null. We initialize these if used.
         string IConnectionIdFeature.ConnectionId { get; set; } = string.Empty;
+
+        CancellationToken IConnectionLifetimeFeature.ConnectionClosed
+        {
+            get => base.ConnectionClosed;
+            set => base.ConnectionClosed = value;
+        }
 
         IDictionary<object, object?> IItemsFeature.Items { get; set; } = ImmutableDictionary<object, object?>.Empty;
 

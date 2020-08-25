@@ -32,39 +32,5 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             property = null;
             return false;
         }
-
-        private class ConnectionListenerWrapper : ConnectionListener, IConnectionProperties
-        {
-            private readonly IConnectionListener _listener;
-
-            public ConnectionListenerWrapper(IConnectionListener listener)
-            {
-                _listener = listener;
-            }
-
-            public override IConnectionProperties ListenerProperties => this;
-
-            public override EndPoint? LocalEndPoint => _listener.EndPoint;
-
-            public override async ValueTask<Connection> AcceptAsync(IConnectionProperties? options = null, CancellationToken cancellationToken = default)
-            {
-                var connection = await _listener.AcceptAsync(cancellationToken);
-                if (connection is null)
-                {
-                    // Hopefully this will be allowed soon: https://github.com/dotnet/runtime/issues/41304
-                    return null!;
-                }
-
-                return new ConnectionContextWrapper(connection);
-            }
-
-            protected override ValueTask DisposeAsyncCore() => _listener.DisposeAsync();
-
-            public bool TryGet(Type propertyKey, [NotNullWhen(true)] out object? property)
-            {
-                property = null;
-                return false;
-            }
-        }
     }
 }
