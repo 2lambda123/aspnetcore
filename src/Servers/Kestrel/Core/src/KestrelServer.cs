@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Connections;
@@ -20,7 +21,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
     {
         private KestrelServerImpl _innerKestrelServer;
 
-        public KestrelServer(
+        public KestrelServer(IOptions<KestrelServerOptions> options, IConnectionListenerFactory transportFactory, ILoggerFactory loggerFactory)
+            : this(options, new[] { transportFactory ?? throw new ArgumentNullException(nameof(transportFactory)) }, loggerFactory)
+        {
+        }
+
+        internal KestrelServer(
             IOptions<KestrelServerOptions> options,
             IEnumerable<IConnectionListenerFactory> transportFactories,
             ILoggerFactory loggerFactory)

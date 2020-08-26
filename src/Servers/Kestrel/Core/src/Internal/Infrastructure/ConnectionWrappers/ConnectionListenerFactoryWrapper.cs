@@ -3,8 +3,6 @@
 
 #nullable enable
 
-using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Connections;
 using System.Threading;
@@ -13,7 +11,7 @@ using Microsoft.AspNetCore.Connections;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers
 {
-    public class ConnectionListenerFactoryWrapper : ConnectionListenerFactory, IConnectionProperties
+    internal class ConnectionListenerFactoryWrapper : ConnectionListenerFactory
     {
         private IConnectionListenerFactory _listenerFactory;
 
@@ -24,13 +22,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         public override async ValueTask<ConnectionListener> ListenAsync(EndPoint? endPoint, IConnectionProperties? options = null, CancellationToken cancellationToken = default)
         {
-            return new ConnectionListenerWrapper(await _listenerFactory.BindAsync(endPoint!, cancellationToken));
-        }
-
-        public bool TryGet(Type propertyKey, [NotNullWhen(true)] out object? property)
-        {
-            property = null;
-            return false;
+            return new ConnectionListenerWrapper(await _listenerFactory.BindAsync(endPoint, cancellationToken));
         }
     }
 }
