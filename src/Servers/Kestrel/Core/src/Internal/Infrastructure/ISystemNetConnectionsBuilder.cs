@@ -22,13 +22,13 @@ namespace Microsoft.AspNetCore.Connections
         /// </summary>
         /// <param name="middleware">The middleware delegate.</param>
         /// <returns>The <see cref="IConnectionBuilder"/>.</returns>
-        IConnectionBuilder Use(Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>> middleware);
+        IConnectionBuilder Use(Func<Func<Connection, ValueTask<Connection>>, Func<Connection, ValueTask<Connection>>> middleware);
 
         /// <summary>
         /// Builds the delegate used by this application to process connections.
         /// </summary>
         /// <returns>The connection handling delegate.</returns>
-        Func<Connection, Task<Connection>> Build();
+        Func<Connection, ValueTask<Connection>> Build();
     }
 }
 

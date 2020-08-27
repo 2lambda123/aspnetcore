@@ -68,7 +68,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             var logger = ((TestKestrelTrace)serviceContext.Log).Logger;
             logger.ThrowOnCriticalErrors = false;
 
-            var dispatcher = new ConnectionDispatcher<Connection>(serviceContext, c => Task.FromResult(c), new TransportConnectionManager(serviceContext.ConnectionManager));
+            var dispatcher = new ConnectionDispatcher<Connection>(serviceContext, c => new ValueTask<Connection>(c), new TransportConnectionManager(serviceContext.ConnectionManager));
 
             await dispatcher.StartAcceptingConnections(new ThrowingListener());
 
@@ -87,7 +87,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             var connection = new MockConnection();
             connection.ConnectionClosed = new CancellationToken(canceled: true);
             var transportConnectionManager = new TransportConnectionManager(serviceContext.ConnectionManager);
-            var kestrelConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => Task.FromResult(c), connection, serviceContext.Log);
+            var kestrelConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => new ValueTask<Connection>(c), connection, serviceContext.Log);
             transportConnectionManager.AddConnection(0, kestrelConnection);
 
             Assert.True(kestrelConnection.TransportConnection.ConnectionProperties.TryGet<IConnectionCompleteFeature>(out var completeFeature));
@@ -110,7 +110,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             var connection = new MockConnection();
             connection.ConnectionClosed = new CancellationToken(canceled: true);
             var transportConnectionManager = new TransportConnectionManager(serviceContext.ConnectionManager);
-            var kestrelConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => Task.FromResult(c), connection, serviceContext.Log);
+            var kestrelConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => new ValueTask<Connection>(c), connection, serviceContext.Log);
             transportConnectionManager.AddConnection(0, kestrelConnection);
 
             Assert.True(kestrelConnection.TransportConnection.ConnectionProperties.TryGet<IConnectionCompleteFeature>(out var completeFeature));

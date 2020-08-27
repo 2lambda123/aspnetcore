@@ -16,11 +16,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         private static long _lastConnectionId = long.MinValue;
 
         private readonly ServiceContext _serviceContext;
-        private readonly Func<T, Task<T>> _connectionDelegate;
+        private readonly Func<T, ValueTask<T>> _connectionDelegate;
         private readonly TransportConnectionManager _transportConnectionManager;
         private readonly TaskCompletionSource _acceptLoopTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ConnectionDispatcher(ServiceContext serviceContext, Func<T, Task<T>> connectionDelegate, TransportConnectionManager transportConnectionManager)
+        public ConnectionDispatcher(ServiceContext serviceContext, Func<T, ValueTask<T>> connectionDelegate, TransportConnectionManager transportConnectionManager)
         {
             _serviceContext = serviceContext;
             _connectionDelegate = connectionDelegate;

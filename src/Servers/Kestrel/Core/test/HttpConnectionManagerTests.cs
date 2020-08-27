@@ -44,7 +44,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             var mockConnection = new MockConnection();
             mockConnection.ConnectionId = connectionId;
             var transportConnectionManager = new TransportConnectionManager(httpConnectionManager);
-            var httpConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => Task.FromResult(c), mockConnection, Mock.Of<IKestrelTrace>());
+            var httpConnection = new KestrelConnection<Connection>(0, serviceContext, transportConnectionManager, c => new ValueTask<Connection>(c), mockConnection, Mock.Of<IKestrelTrace>());
             transportConnectionManager.AddConnection(0, httpConnection);
 
             var connectionCount = 0;

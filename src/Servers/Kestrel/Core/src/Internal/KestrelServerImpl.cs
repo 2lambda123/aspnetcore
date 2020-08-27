@@ -197,7 +197,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                         // Add the connection limit middleware
                         connectionDelegate = EnforceConnectionLimit(connectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
-                        Func<Connection, Task<Connection>> systemNetConnectionDelegate = async connection =>
+                        Func<Connection, ValueTask<Connection>> systemNetConnectionDelegate = async connection =>
                         {
                             var wrapper = new ConnectionWrapper(connection);
                             await connectionDelegate(wrapper);

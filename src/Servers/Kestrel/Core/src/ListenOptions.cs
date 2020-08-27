@@ -24,8 +24,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         internal static readonly HttpProtocols DefaultHttpProtocols = HttpProtocols.Http1AndHttp2;
 
         // ">>>>" We're doing our best to emulate OWIN!
-        // TODO: File an issue to put a Func<Connection, Task<Connection>> delegate in the runtime.
-        internal readonly List<Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>>> _middleware = new List<Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>>>();
+        internal readonly List<Func<Func<Connection, ValueTask<Connection>>, Func<Connection, ValueTask<Connection>>>> _middleware = new List<Func<Func<Connection, ValueTask<Connection>>, Func<Connection, ValueTask<Connection>>>>();
         internal readonly List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>> _multiplexedMiddleware = new List<Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate>>();
 
         internal ListenOptions(EndPoint endPoint)
@@ -135,7 +134,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             return this;
         }
 
-        IConnectionBuilder ISystemNetConnectionsBuilder.Use(Func<Func<Connection, Task<Connection>>, Func<Connection, Task<Connection>>> middleware)
+        IConnectionBuilder ISystemNetConnectionsBuilder.Use(Func<Func<Connection, ValueTask<Connection>>, Func<Connection, ValueTask<Connection>>> middleware)
         {
             _middleware.Add(middleware);
             return this;
@@ -162,11 +161,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             return app;
         }
 
-        Func<Connection, Task<Connection>> ISystemNetConnectionsBuilder.Build()
+        Func<Connection, ValueTask<Connection>> ISystemNetConnectionsBuilder.Build()
         {
-            Func<Connection, Task<Connection>> app = connection =>
+            Func<Connection, ValueTask<Connection>> app = connection =>
             {
-                return Task.FromResult(connection);
+                return new ValueTask<Connection>(connection);
             };
 
             for (int i = _middleware.Count - 1; i >= 0; i--)
@@ -184,16 +183,16 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             context.Addresses.Add(GetDisplayName());
         }
 
-        private static ConnectionDelegate WrapDelegate(Func<Connection, Task<Connection>> connectionDelegate)
+        private static ConnectionDelegate WrapDelegate(Func<Connection, ValueTask<Connection>> connectionDelegate)
         {
-            return async connection =>
+            return connection =>
             {
                 var wrapper = new ConnectionContextWrapper(connection);
-                await connectionDelegate(wrapper);
+                return connectionDelegate(wrapper).AsTask();
             };
         }
 
-        private static Func<Connection, Task<Connection>> UnwrapDelegate(ConnectionDelegate connectionDelegate)
+        private static Func<Connection, ValueTask<Connection>> UnwrapDelegate(ConnectionDelegate connectionDelegate)
         {
             return async connection =>
             {

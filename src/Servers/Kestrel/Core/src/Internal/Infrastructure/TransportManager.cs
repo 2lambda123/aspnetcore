@@ -38,7 +38,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
         private ConnectionManager ConnectionManager => _serviceContext.ConnectionManager;
         private IKestrelTrace Trace => _serviceContext.Log;
 
-        public async Task<EndPoint?> BindAsync(EndPoint endPoint, Func<Connection, Task<Connection>> connectionDelegate, EndpointConfig? endpointConfig)
+        public async Task<EndPoint?> BindAsync(EndPoint endPoint, Func<Connection, ValueTask<Connection>> connectionDelegate, EndpointConfig? endpointConfig)
         {
             if (_transportFactory is null)
             {
@@ -57,7 +57,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
             }
 
-            static Func<MultiplexedConnectionContextWrapper, Task<MultiplexedConnectionContextWrapper>> ConvertDelegate(MultiplexedConnectionDelegate unwrappedDelegate)
+            static Func<MultiplexedConnectionContextWrapper, ValueTask<MultiplexedConnectionContextWrapper>> ConvertDelegate(MultiplexedConnectionDelegate unwrappedDelegate)
             {
                 return async wrapper =>
                 {
@@ -71,7 +71,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             return transport.EndPoint;
         }
 
-        private void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, Task<T>> connectionDelegate, EndpointConfig? endpointConfig) where T : ConnectionBase
+        private void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, ValueTask<T>> connectionDelegate, EndpointConfig? endpointConfig) where T : ConnectionBase
         {
             var transportConnectionManager = new TransportConnectionManager(_serviceContext.ConnectionManager);
             var connectionDispatcher = new ConnectionDispatcher<T>(_serviceContext, connectionDelegate, transportConnectionManager);

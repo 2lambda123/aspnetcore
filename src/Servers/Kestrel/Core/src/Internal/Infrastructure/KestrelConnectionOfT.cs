@@ -18,13 +18,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 {
     internal class KestrelConnection<T> : KestrelConnection, IThreadPoolWorkItem where T : ConnectionBase
     {
-        private readonly Func<T, Task<T>> _connectionDelegate;
+        private readonly Func<T, ValueTask<T>> _connectionDelegate;
         private readonly T _transportConnection;
 
         public KestrelConnection(long id,
                                  ServiceContext serviceContext,
                                  TransportConnectionManager transportConnectionManager,
-                                 Func<T, Task<T>> connectionDelegate,
+                                 Func<T, ValueTask<T>> connectionDelegate,
                                  T transportConnection,
                                  IKestrelTrace logger)
             : base(id, serviceContext, transportConnectionManager, logger)

@@ -3,7 +3,6 @@
 
 using System;
 using System.Diagnostics.Tracing;
-using System.Net;
 using System.Net.Connections;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
