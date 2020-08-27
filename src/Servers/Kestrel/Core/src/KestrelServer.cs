@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
@@ -17,6 +15,9 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core
 {
+    // REVIEW: Obsolete KestrelServer?
+    // Should we add a ConnectionListenerFactory ctor anyway to make porting KestrelServer decorators easier?
+    // A ConnectionListenerFactory ctor could also avoid a runtime break of apps that add KestrelServer to DI directly.
     public class KestrelServer : IServer
     {
         private KestrelServerImpl _innerKestrelServer;
@@ -31,13 +32,18 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
             IEnumerable<IConnectionListenerFactory> transportFactories,
             ILoggerFactory loggerFactory)
         {
-            _innerKestrelServer = new KestrelServerImpl(options, WrapTransportFactories(transportFactories), loggerFactory);
+            _innerKestrelServer = new KestrelServerImpl(
+                options,
+                transportFactories: null,
+                legacyTransportFactories: transportFactories,
+                multiplexedTransportFactories: null,
+                loggerFactory);
         }
 
         // For testing
-        internal KestrelServer(IEnumerable<IConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
+        internal KestrelServer(IConnectionListenerFactory transportFactory, ServiceContext serviceContext)
         {
-            _innerKestrelServer = new KestrelServerImpl(WrapTransportFactories(transportFactories), serviceContext);
+            _innerKestrelServer = new KestrelServerImpl(new ConnectionListenerFactoryWrapper(transportFactory), null, serviceContext);
         }
 
         public IFeatureCollection Features => _innerKestrelServer.Features;
@@ -59,25 +65,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public void Dispose()
         {
             _innerKestrelServer.Dispose();
-        }
-
-        private static IEnumerable<ConnectionListenerFactory> WrapTransportFactories(IEnumerable<IConnectionListenerFactory> transportFactories)
-        {
-            if (transportFactories is null)
-            {
-                return null;
-            }
-
-            var lastListener = transportFactories.LastOrDefault();
-
-            if (lastListener is null)
-            {
-                return Enumerable.Empty<ConnectionListenerFactory>();
-            }
-            else
-            {
-                return new ConnectionListenerFactory[] { new ConnectionListenerFactoryWrapper(lastListener) };
-            }
         }
     }
 }

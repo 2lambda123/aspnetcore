@@ -97,10 +97,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.FunctionalTests
 
                                 if (legacyTransportFactory != null)
                                 {
-                                    return new KestrelServer(new[] { legacyTransportFactory }, context);
+                                    return new KestrelServer(legacyTransportFactory, context);
                                 }
 
-                                return new KestrelServerImpl(new[] { sp.GetRequiredService<ConnectionListenerFactory>() }, context);
+                                return new KestrelServerImpl(sp.GetRequiredService<ConnectionListenerFactory>(), multiplexedTransportFactory: null, context);
                             });
                             configureServices(services);
                         })

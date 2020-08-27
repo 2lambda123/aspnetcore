@@ -41,45 +41,28 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
         public KestrelServerImpl(
             IOptions<KestrelServerOptions> options,
             IEnumerable<ConnectionListenerFactory> transportFactories,
+            IEnumerable<IConnectionListenerFactory> legacyTransportFactories,
+            IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedTransportFactories,
             ILoggerFactory loggerFactory)
-            : this(transportFactories, null, CreateServiceContext(options, loggerFactory))
-        {
-        }
-
-        public KestrelServerImpl(
-            IOptions<KestrelServerOptions> options,
-            IEnumerable<ConnectionListenerFactory> transportFactories,
-            IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
-            ILoggerFactory loggerFactory)
-            : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory))
-        {
-        }
-
-        // For testing
-        internal KestrelServerImpl(IEnumerable<ConnectionListenerFactory> transportFactories, ServiceContext serviceContext)
-            : this(transportFactories, null, serviceContext)
+            : this(SelectTransportFactory(transportFactories, legacyTransportFactories),
+                  multiplexedTransportFactories?.LastOrDefault(),
+                  CreateServiceContext(options, loggerFactory))
         {
         }
 
         // For testing
         internal KestrelServerImpl(
-            IEnumerable<ConnectionListenerFactory> transportFactories,
-            IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
+            ConnectionListenerFactory transportFactory,
+            IMultiplexedConnectionListenerFactory multiplexedTransportFactory,
             ServiceContext serviceContext)
         {
-            if (transportFactories == null)
-            {
-                throw new ArgumentNullException(nameof(transportFactories));
-            }
-
-            _transportFactory = transportFactories?.LastOrDefault();
-            _multiplexedTransportFactory = multiplexedFactories?.LastOrDefault();
-
-            if (_transportFactory == null && _multiplexedTransportFactory == null)
+            if (transportFactory is null && multiplexedTransportFactory is null)
             {
                 throw new InvalidOperationException(CoreStrings.TransportNotFound);
             }
 
+            _transportFactory = transportFactory;
+            _multiplexedTransportFactory = multiplexedTransportFactory;
             ServiceContext = serviceContext;
 
             Features = new FeatureCollection();
@@ -129,6 +112,26 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core
                 Heartbeat = heartbeat,
                 ServerOptions = serverOptions,
             };
+        }
+
+        private static ConnectionListenerFactory SelectTransportFactory(
+            IEnumerable<ConnectionListenerFactory> transportFactories,
+            IEnumerable<IConnectionListenerFactory> legacyTransportFactories)
+        {
+            var transportFactory = transportFactories?.LastOrDefault();
+            var legacyTransportFactory = legacyTransportFactories?.LastOrDefault();
+
+            if (transportFactory != null && legacyTransportFactory != null)
+            {
+                throw new ArgumentException(CoreStrings.MultipleTransportsFound);
+            }
+
+            if (legacyTransportFactory != null)
+            {
+                return new ConnectionListenerFactoryWrapper(legacyTransportFactory);
+            }
+
+            return transportFactory;
         }
 
         public IFeatureCollection Features { get; }

@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Net.Connections;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -58,47 +59,63 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Tests
                 .UseKestrel()
                 .Configure(app => { });
 
-            Assert.IsType<SocketTransportFactory>(hostBuilder.Build().Services.GetService<IConnectionListenerFactory>());
+            Assert.IsType<SocketTransportFactory>(hostBuilder.Build().Services.GetService<ConnectionListenerFactory>());
         }
 
         [Fact]
         public void LibuvTransportCanBeManuallySelectedIndependentOfOrder()
         {
 #pragma warning disable CS0618
-            var hostBuilder = new WebHostBuilder()
+            var host = new WebHostBuilder()
                 .UseKestrel()
+                .UseSockets()
                 .UseLibuv()
-                .Configure(app => { });
+                .Configure(app => { })
+                .Build();
 #pragma warning restore CS0618
 
-            Assert.IsType<LibuvTransportFactory>(hostBuilder.Build().Services.GetService<IConnectionListenerFactory>());
+            Assert.IsType<LibuvTransportFactory>(host.Services.GetService<IConnectionListenerFactory>());
+            Assert.Null(host.Services.GetService<ConnectionListenerFactory>());
 
 #pragma warning disable CS0618
-            var hostBuilderReversed = new WebHostBuilder()
+            var hostReversed = new WebHostBuilder()
+                .UseSockets()
                 .UseLibuv()
                 .UseKestrel()
-                .Configure(app => { });
+                .Configure(app => { })
+                .Build();
 #pragma warning restore CS0618
 
-            Assert.IsType<LibuvTransportFactory>(hostBuilderReversed.Build().Services.GetService<IConnectionListenerFactory>());
+            Assert.IsType<LibuvTransportFactory>(hostReversed.Services.GetService<IConnectionListenerFactory>());
+            Assert.Null(hostReversed.Services.GetService<ConnectionListenerFactory>());
         }
 
         [Fact]
         public void SocketsTransportCanBeManuallySelectedIndependentOfOrder()
         {
-            var hostBuilder = new WebHostBuilder()
+#pragma warning disable CS0618
+            var host = new WebHostBuilder()
                 .UseKestrel()
+                .UseLibuv()
                 .UseSockets()
-                .Configure(app => { });
+                .Configure(app => { })
+                .Build();
+#pragma warning restore CS0618
 
-            Assert.IsType<SocketTransportFactory>(hostBuilder.Build().Services.GetService<IConnectionListenerFactory>());
+            Assert.IsType<SocketTransportFactory>(host.Services.GetService<ConnectionListenerFactory>());
+            Assert.Null(host.Services.GetService<IConnectionListenerFactory>());
 
-            var hostBuilderReversed = new WebHostBuilder()
+#pragma warning disable CS0618
+            var hostReversed = new WebHostBuilder()
+                .UseLibuv()
                 .UseSockets()
                 .UseKestrel()
-                .Configure(app => { });
+                .Configure(app => { })
+                .Build();
+#pragma warning restore CS0618
 
-            Assert.IsType<SocketTransportFactory>(hostBuilderReversed.Build().Services.GetService<IConnectionListenerFactory>());
+            Assert.IsType<SocketTransportFactory>(hostReversed.Services.GetService<ConnectionListenerFactory>());
+            Assert.Null(hostReversed.Services.GetService<IConnectionListenerFactory>());
         }
 
         [Fact]

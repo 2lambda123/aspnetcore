@@ -6,13 +6,14 @@ using System.Net;
 using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets
 {
+    // REVIEW: Make SocketTransportFactory internal? This is a breaking change anyway.
+    // We would need to figure out how UseKestrel() try-adds the SocketTransportFactory if it's internal though. New extension method?
     public sealed class SocketTransportFactory : ConnectionListenerFactory
     {
         private readonly SocketTransportOptions _options;

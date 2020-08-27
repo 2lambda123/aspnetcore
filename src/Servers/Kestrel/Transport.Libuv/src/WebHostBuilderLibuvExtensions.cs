@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Net.Connections;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Internal;
@@ -26,6 +27,15 @@ namespace Microsoft.AspNetCore.Hosting
         {
             return hostBuilder.ConfigureServices(services =>
             {
+                // Remove any already-registered ConnectionListenerFactories so they're overridden.
+                for (var i = services.Count - 1; i >= 0; i--)
+                {
+                    if (services[i].ServiceType == typeof(ConnectionListenerFactory))
+                    {
+                        services.RemoveAt(i);
+                    }    
+                }
+
                 services.AddSingleton<IConnectionListenerFactory, LibuvTransportFactory>();
             });
         }

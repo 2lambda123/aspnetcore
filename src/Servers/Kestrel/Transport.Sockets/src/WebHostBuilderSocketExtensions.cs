@@ -3,6 +3,7 @@
 
 using System;
 using System.Net.Connections;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,15 @@ namespace Microsoft.AspNetCore.Hosting
         {
             return hostBuilder.ConfigureServices(services =>
             {
+                // Remove any already-registered IConnectionListenerFactories so they're overridden.
+                for (var i = services.Count - 1; i >= 0; i--)
+                {
+                    if (services[i].ServiceType == typeof(IConnectionListenerFactory))
+                    {
+                        services.RemoveAt(i);
+                    }    
+                }
+
                 services.AddSingleton<ConnectionListenerFactory, SocketTransportFactory>();
             });
         }
