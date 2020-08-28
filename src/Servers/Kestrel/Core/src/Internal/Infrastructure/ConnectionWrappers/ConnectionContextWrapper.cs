@@ -45,7 +45,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         bool IConnectionProperties.TryGet(Type propertyKey, [NotNullWhen(true)] out object property)
         {
-            if (ConnectionWrapperUtils.TryGetProperty(_connectionContext.Features, propertyKey, out property))
+            property = _connectionContext.Features[propertyKey]!;
+
+            if (property != null)
             {
                 return true;
             }

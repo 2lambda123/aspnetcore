@@ -130,13 +130,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.Internal
 
         protected override async ValueTask CloseAsyncCore(ConnectionCloseMethod method, CancellationToken cancellationToken)
         {
-            // CloseAsyncCore can be called multiple times. Graceful shutdown is only attempted after middleware is done reading and writing.
-            // Abortive shutdown can happen while reads and writes are ongoing.
-            if (method == ConnectionCloseMethod.GracefulShutdown)
-            {
-                Transport.Input.Complete();
-                Transport.Output.Complete();
-            }
+            Transport.Input.Complete();
+            Transport.Output.Complete();
 
             IDisposable cancellationRegistration = null;
 

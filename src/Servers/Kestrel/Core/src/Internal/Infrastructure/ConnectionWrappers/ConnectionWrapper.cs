@@ -169,6 +169,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
             }
             else
             {
+                // CloseAsync is terminal and will make the Pipe unusable unlike "real" ConnectionContext.Abort implementations,
+                // so we only call it as a last resort.
                 _connection.CloseAsync(ConnectionCloseMethod.Abort).GetAwaiter().GetResult();
             }
         }

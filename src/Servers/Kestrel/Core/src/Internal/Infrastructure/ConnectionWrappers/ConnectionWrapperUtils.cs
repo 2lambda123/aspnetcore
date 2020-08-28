@@ -4,13 +4,11 @@
 #nullable enable
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Connections;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
-using Microsoft.AspNetCore.Http.Features;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.ConnectionWrappers
 {
@@ -65,12 +63,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                     await CancellationTokenAsTask(baseContext.ConnectionClosed);
                 }
             }
-        }
-
-        public static bool TryGetProperty(IFeatureCollection features, Type propertyKey, [NotNullWhen(true)] out object property)
-        {
-            property = features[propertyKey]!;
-            return property != null;
         }
 
         private static Task CancellationTokenAsTask(CancellationToken token)
