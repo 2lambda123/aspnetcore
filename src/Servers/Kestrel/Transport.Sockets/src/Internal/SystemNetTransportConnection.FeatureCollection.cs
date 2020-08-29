@@ -13,8 +13,7 @@ namespace Microsoft.AspNetCore.Connections
                                                  IConnectionTransportFeature,
                                                  IConnectionItemsFeature,
                                                  IMemoryPoolFeature,
-                                                 IConnectionLifetimeFeature,
-                                                 IAbortWithReasonFeature
+                                                 IConnectionLifetimeFeature
     {
         // NOTE: When feature interfaces are added to or removed from this TransportConnection class implementation,
         // then the list of `features` in the generated code project MUST also be updated.

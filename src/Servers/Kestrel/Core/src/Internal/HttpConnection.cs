@@ -3,7 +3,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Logging;
 
@@ -150,13 +148,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
             {
                 previousState = _protocolSelectionState;
                 Debug.Assert(previousState != ProtocolSelectionState.Initializing, "The state should never be initializing");
-
-                switch (_protocolSelectionState)
-                {
-                    case ProtocolSelectionState.Selected:
-                    case ProtocolSelectionState.Aborted:
-                        break;
-                }
             }
 
             switch (previousState)

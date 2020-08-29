@@ -22,8 +22,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
                                        IFeatureCollection,
                                        IConnectionIdFeature,
                                        IItemsFeature,
-                                       IConnectionLifetimeFeature,
-                                       IAbortWithReasonFeature
+                                       IConnectionLifetimeFeature
     {
         private readonly Connection _connection;
 
@@ -159,11 +158,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
         public override void Abort(ConnectionAbortedException? abortReason)
         {
-            if (_connection.ConnectionProperties.TryGet<IAbortWithReasonFeature>(out var abortFeature))
-            {
-                abortFeature.Abort(abortReason);
-            }
-            else if (_connection.ConnectionProperties.TryGet<IConnectionLifetimeFeature>(out var lifetimeFeature))
+            if (_connection.ConnectionProperties.TryGet<IConnectionLifetimeFeature>(out var lifetimeFeature))
             {
                 lifetimeFeature.Abort();
             }
@@ -219,8 +214,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Conne
 
             if (key == typeof(IConnectionIdFeature) ||
                 key == typeof(IItemsFeature) ||
-                key == typeof(IConnectionLifetimeFeature) ||
-                key == typeof(IAbortWithReasonFeature))
+                key == typeof(IConnectionLifetimeFeature))
             {
                 return this;
             }

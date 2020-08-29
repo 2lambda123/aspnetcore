@@ -90,12 +90,18 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.PipeW
             }
             catch (OperationCanceledException ex) when (outputAborter is object)
             {
+                outputAborter.OnInputOrOutputCompleted();
                 outputAborter.Abort(new ConnectionAbortedException(CoreStrings.ConnectionOrStreamAbortedByCancellationToken, ex));
             }
             catch (Exception ex)
             {
+                // ASP.NET Core has the expectation that write's don't throw unless canceled with a CancellationToken.
                 // A canceled token is the only reason flush should ever throw.
-                _log.LogError(0, ex, $"Unexpected exception in {nameof(TimingPipeFlusher)}.{nameof(FlushAsync)}.");
+                outputAborter?.OnInputOrOutputCompleted();
+
+                // REVIEW: Does this even warrant trace level logging? Should we expect this to just be logged by the transport?
+                // We still log exceptions thrown from PipeReader.ReadAsync regardless.
+                _log.LogTrace("Kestrel observed an exception thrown from the output PipeWriter", ex);
             }
             finally
             {

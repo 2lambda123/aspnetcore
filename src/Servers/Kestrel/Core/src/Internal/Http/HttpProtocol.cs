@@ -8,7 +8,6 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -441,6 +440,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             return false;
         }
 
+        protected virtual void MaybeThrowConnectionAbortedException()
+        {
+        }
+
         protected abstract string CreateRequestId();
 
         protected abstract MessageBody CreateMessageBody();
@@ -562,7 +565,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             {
                 // We run the request processing loop in a seperate async method so per connection
                 // exception handling doesn't complicate the generated asm for the loop.
-                await ProcessRequests(application);
+                try
+                {
+                    await ProcessRequests(application);
+                }
+                catch
+                {
+                    MaybeThrowConnectionAbortedException();
+                    throw;
+                }
             }
             catch (BadHttpRequestException ex)
             {

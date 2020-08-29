@@ -4,6 +4,7 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTransport;
@@ -74,10 +75,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
                     testContext.MockSystemClock.UtcNow += TimeSpan.FromSeconds(1);
                     heartbeatManager.OnHeartbeat(testContext.SystemClock.UtcNow);
 
-                    Assert.NotNull(transportConnection.AbortReason);
-                    Assert.Equal(CoreStrings.ConnectionTimedBecauseResponseMininumDataRateNotSatisfied, transportConnection.AbortReason.Message);
+                    //Assert.NotNull(transportConnection.AbortReason);
+                    //Assert.Equal(CoreStrings.ConnectionTimedBecauseResponseMininumDataRateNotSatisfied, transportConnection.AbortReason.Message);
 
                     Assert.Single(TestApplicationErrorLogger.Messages, w => w.EventId.Id == 28 && w.LogLevel <= LogLevel.Debug);
+                    Assert.Single(TestApplicationErrorLogger.Messages,
+                        w => w.Exception is ConnectionAbortedException &&
+                        w.Exception.Message == CoreStrings.ConnectionTimedBecauseResponseMininumDataRateNotSatisfied);
                 }
             }
         }

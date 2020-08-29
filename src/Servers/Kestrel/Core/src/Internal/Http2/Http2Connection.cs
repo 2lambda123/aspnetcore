@@ -13,7 +13,6 @@ using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net.Http;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -64,6 +63,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
         private readonly StreamCloseAwaitable _streamCompletionAwaitable = new StreamCloseAwaitable();
         private int _gracefulCloseInitiator;
         private int _isClosed;
+
+        private readonly object _abortLock = new object();
+        private ConnectionAbortedException _abortReason;
 
         // Internal for testing
         internal readonly Http2KeepAlive _keepAlive;
@@ -150,14 +152,25 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             _frameWriter.Abort(new ConnectionAbortedException(CoreStrings.ConnectionAbortedByClient));
         }
 
-        public void Abort(ConnectionAbortedException ex)
+        public void Abort(ConnectionAbortedException abortReason)
         {
-            if (TryClose())
+            lock (_abortLock)
             {
-                _frameWriter.WriteGoAwayAsync(int.MaxValue, Http2ErrorCode.INTERNAL_ERROR);
-            }
+                if (_abortReason != null)
+                {
+                    return;
+                }
 
-            _frameWriter.Abort(ex);
+                // abortReason should never be null in practice.
+                _abortReason = abortReason ?? new ConnectionAbortedException("The connection was aborted by the server with no reason provided.");
+
+                if (TryClose())
+                {
+                    _frameWriter.WriteGoAwayAsync(int.MaxValue, Http2ErrorCode.INTERNAL_ERROR);
+                }
+
+                _frameWriter.Abort(abortReason);
+            }
         }
 
         public void StopProcessingNextRequest()
@@ -1523,7 +1536,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             catch (Exception ex)
             {
                 // Don't rethrow the exception. It should be handled by the Pipeline consumer.
-                error = ex;
+                lock (_abortLock)
+                {
+                    error = _abortReason ?? ex;
+                }
             }
             finally
             {

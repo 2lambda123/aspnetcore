@@ -44,12 +44,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
         public override ValueTask<int> ReadAsync(Memory<byte> destination, CancellationToken cancellationToken = default)
         {
-            return ReadAsyncWrapper(destination, cancellationToken);
+            return ReadAsyncInternal(destination, cancellationToken);
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return ReadAsyncWrapper(new Memory<byte>(buffer, offset, count), cancellationToken).AsTask();
+            return ReadAsyncInternal(new Memory<byte>(buffer, offset, count), cancellationToken).AsTask();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -97,18 +97,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         public override int EndRead(IAsyncResult asyncResult)
         {
             return TaskToApm.End<int>(asyncResult);
-        }
-
-        private ValueTask<int> ReadAsyncWrapper(Memory<byte> destination, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return ReadAsyncInternal(destination, cancellationToken);
-            }
-            catch (ConnectionAbortedException ex)
-            {
-                throw new TaskCanceledException("The request was aborted", ex);
-            }
         }
 
         private async ValueTask<int> ReadAsyncInternal(Memory<byte> destination, CancellationToken cancellationToken)

@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
@@ -25,6 +26,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         private readonly Http1OutputProducer _http1Output;
         protected readonly long _keepAliveTicks;
         private readonly long _requestHeadersTimeoutTicks;
+
+        private readonly object _abortLock = new object();
+        private ExceptionDispatchInfo _abortReasonExInfo;
 
         private volatile bool _requestTimedOut;
         private uint _requestCount;
@@ -69,6 +73,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
         public bool RequestTimedOut => _requestTimedOut;
 
+        public Exception AbortReason => _abortReasonExInfo?.SourceException;
+
         public MinDataRate MinResponseDataRate { get; set; }
 
         public MemoryPool<byte> MemoryPool { get; }
@@ -101,9 +107,21 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         /// </summary>
         public void Abort(ConnectionAbortedException abortReason)
         {
-            _http1Output.Abort(abortReason);
-            CancelRequestAbortedToken();
-            PoisonBody(abortReason);
+            lock (_abortLock)
+            {
+                if (_abortReasonExInfo != null)
+                {
+                    return;
+                }
+
+                // abortReason should never be null in practice.
+                abortReason ??= new ConnectionAbortedException("The connection was aborted by the server with no reason provided.");
+                _abortReasonExInfo = ExceptionDispatchInfo.Capture(abortReason);
+
+                _http1Output.Abort(abortReason);
+                CancelRequestAbortedToken();
+                PoisonBody(abortReason);
+            }
         }
 
         protected override void ApplicationAbort()
@@ -548,7 +566,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         {
             // https://tools.ietf.org/html/rfc7230#section-5.4
             // A server MUST respond with a 400 (Bad Request) status code to any
-            // HTTP/1.1 request message that lacks a Host header field and to any
+            // HTTP/ExInfo1.1 request message that lacks a Host header field and to any
             // request message that contains more than one Host header field or a
             // Host header field with an invalid field-value.
 
@@ -707,6 +725,28 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             else
             {
                 return false;
+            }
+        }
+
+        protected override void MaybeThrowConnectionAbortedException()
+        {
+            lock (_abortLock)
+            {
+                _abortReasonExInfo?.Throw();
+            }
+        }
+
+        public void MaybeThrowConnectionAbortedTaskCanceledException()
+        {
+            lock (_abortLock)
+            {
+                var abortReason = _abortReasonExInfo?.SourceException;
+
+                if (abortReason != null)
+                {
+                    // REVIEW: Can we improve this message in .NET 5 and base it on the ConnectionAbortedException message?
+                    throw new TaskCanceledException("The request was aborted", abortReason);
+                }
             }
         }
 
