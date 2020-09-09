@@ -1,0 +1,61 @@
+﻿@using Microsoft.AspNetCore.Components.Web.Extensions
+
+<Drop TItem="Person" OnDrop="OnDropFirst">
+    @foreach (var item in firstItemList)
+    {
+        <Drag Item="item">
+            @item.Name
+        </Drag>
+        <br />
+    }
+</Drop>
+
+<hr />
+
+<Drop TItem="Person" OnDrop="OnDropSecond">
+    @foreach (var item in secondItemList)
+    {
+        <Drag Item="item">
+            @item.Name
+        </Drag>
+        <br />
+    }
+</Drop>
+
+@code {
+    private class Person
+    {
+        public string Name { get; }
+
+        public Person(string name)
+        {
+            Name = name;
+        }
+    }
+
+    readonly List<Person> firstItemList = new List<Person>()
+    {
+        new Person("Bob"),
+        new Person("Jenny"),
+        new Person("Christopher"),
+    };
+
+    readonly List<Person> secondItemList = new List<Person>()
+    {
+        new Person("Tom"),
+        new Person("Jasmine"),
+        new Person("Sarah"),
+    };
+
+    void OnDropFirst(Person item, DragEventArgs e)
+    {
+        firstItemList.Add(item);
+        secondItemList.Remove(item);
+    }
+
+    void OnDropSecond(Person item, DragEventArgs e)
+    {
+        secondItemList.Add(item);
+        firstItemList.Remove(item);
+    }
+}
