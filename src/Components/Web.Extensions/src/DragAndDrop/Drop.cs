@@ -19,7 +19,7 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         public RenderFragment? ChildContent { get; set; }
 
         [Parameter]
-        public Action<TItem, DragEventArgs>? OnDrop { get; set; }
+        public Action<DropInfo<TItem>>? OnDrop { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
@@ -36,10 +36,9 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
             builder.CloseElement();
         }
 
-        internal void OnDropCore()
+        internal void OnDropCore(MutableDragEventArgs eventArgs, TItem[] items)
         {
-            // TODO: Some manual state management might be required to track which object(s) are being dragged (target and currentTarget are not relevant)
-            //OnDrop?.Invoke(default, null);
+            OnDrop?.Invoke(new DropInfo<TItem>(eventArgs, items));
         }
 
         public ValueTask DisposeAsync()

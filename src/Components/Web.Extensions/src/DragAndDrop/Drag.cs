@@ -25,7 +25,7 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         public TItem Item { get; set; } = default!;
 
         [Parameter]
-        public Action<TItem, DragEventArgs>? OnDragStart { get; set; }
+        public Action<TItem, MutableDragEventArgs>? OnDragStart { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
@@ -45,15 +45,14 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         {
             builder.OpenElement(0, "div");
             builder.AddAttribute(1, "draggable", "true");
-            builder.AddContent(2, ChildContent);
+            builder.AddAttribute(2, "ondragstart", $"window._blazorDragAndDrop.onDragStart(event, {_id})");
+            builder.AddContent(3, ChildContent);
             builder.CloseElement();
         }
 
-        internal (DragEventArgs, TItem) OnDragStartCore(DragEventArgs e)
+        internal void OnDragStartCore(MutableDragEventArgs e)
         {
             OnDragStart?.Invoke(Item, e);
-
-            return (e, Item);
         }
 
         public ValueTask DisposeAsync()

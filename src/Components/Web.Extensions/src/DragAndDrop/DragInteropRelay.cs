@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Collections.Generic;
 using Microsoft.JSInterop;
 
 namespace Microsoft.AspNetCore.Components.Web.Extensions
@@ -9,19 +10,23 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
     {
         private readonly Drag<TItem> _drag;
 
+        public TItem Item => _drag.Item; // TODO: May want to decouple this class form Drag a little (component lifecycle concerns).
+
         public DragInteropRelay(Drag<TItem> drag)
         {
             _drag = drag;
         }
 
         [JSInvokable]
-        public DragEventArgs OnDragStart(DragEventArgs e)
+        public DataTransferStore OnDragStart(MutableDragEventArgs e, Dictionary<string, string> initialData)
         {
-            // This call may mutate the event args
+            // Initialize the DataTransferStore so the DataTranfser instance can be mutated.
+            e.DataTransfer.Store = new DataTransferStore(e.DataTransfer, initialData);
+
             _drag.OnDragStartCore(e);
 
-            // Mutated instance returned back to JS
-            return e;
+            // Updated DataTransferStore returned to JS.
+            return e.DataTransfer.Store;
         }
     }
 }

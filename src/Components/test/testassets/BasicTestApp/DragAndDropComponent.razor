@@ -3,7 +3,7 @@
 <Drop TItem="Person" OnDrop="OnDropFirst">
     @foreach (var item in firstItemList)
     {
-        <Drag Item="item">
+        <Drag Item="item" OnDragStart="OnDragStart">
             @item.Name
         </Drag>
         <br />
@@ -15,7 +15,7 @@
 <Drop TItem="Person" OnDrop="OnDropSecond">
     @foreach (var item in secondItemList)
     {
-        <Drag Item="item">
+        <Drag Item="item" OnDragStart="OnDragStart">
             @item.Name
         </Drag>
         <br />
@@ -47,15 +47,32 @@
         new Person("Sarah"),
     };
 
-    void OnDropFirst(Person item, DragEventArgs e)
+    void OnDragStart(Person person, MutableDragEventArgs e)
     {
-        firstItemList.Add(item);
-        secondItemList.Remove(item);
+        e.DataTransfer.SetData("text/plain", person.Name);
     }
 
-    void OnDropSecond(Person item, DragEventArgs e)
+    void OnDropFirst(DropInfo<Person> dropInfo)
     {
-        secondItemList.Add(item);
-        firstItemList.Remove(item);
+        Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
+
+        firstItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+        secondItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+
+        firstItemList.AddRange(dropInfo.Items);
+
+        StateHasChanged();
+    }
+
+    void OnDropSecond(DropInfo<Person> dropInfo)
+    {
+        Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
+
+        firstItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+        secondItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+
+        secondItemList.AddRange(dropInfo.Items);
+
+        StateHasChanged();
     }
 }

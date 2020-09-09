@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.JSInterop;
 
 namespace Microsoft.AspNetCore.Components.Web.Extensions
@@ -15,9 +17,10 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         }
 
         [JSInvokable]
-        public void OnDrop()
+        public void OnDrop(MutableDragEventArgs eventArgs, Dictionary<string, string> initialData, DotNetObjectReference<DragInteropRelay<TItem>>[] drags)
         {
-            _drop.OnDropCore();
+            eventArgs.DataTransfer.Store = new DataTransferStore(eventArgs.DataTransfer, initialData);
+            _drop.OnDropCore(eventArgs, drags.Select(d => d.Value.Item).ToArray());
         }
     }
 }
