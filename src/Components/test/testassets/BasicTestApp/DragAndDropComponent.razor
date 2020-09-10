@@ -1,9 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Web.Extensions
 
 <Drop TItem="Person" OnDrop="OnDropFirst">
-    @foreach (var item in firstItemList)
+    @foreach (var item in firstPersonList)
     {
-        <Drag Item="item" OnDragStart="OnDragStart">
+        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
             @item.Name
         </Drag>
         <br />
@@ -13,10 +13,22 @@
 <hr />
 
 <Drop TItem="Person" OnDrop="OnDropSecond">
-    @foreach (var item in secondItemList)
+    @foreach (var item in secondPersonList)
     {
-        <Drag Item="item" OnDragStart="OnDragStart">
+        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
             @item.Name
+        </Drag>
+        <br />
+    }
+</Drop>
+
+<hr />
+
+<Drop TItem="Animal">
+    @foreach (var item in animalList)
+    {
+        <Drag Item="item" @key="item">
+            @item.Type
         </Drag>
         <br />
     }
@@ -31,20 +43,48 @@
         {
             Name = name;
         }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 
-    readonly List<Person> firstItemList = new List<Person>()
+    private class Animal
+    {
+        public string Type { get; }
+
+        public Animal(string type)
+        {
+            Type = type;
+        }
+
+        public override string ToString()
+        {
+            return Type;
+        }
+    }
+
+    readonly List<Person> firstPersonList = new List<Person>()
     {
         new Person("Bob"),
         new Person("Jenny"),
         new Person("Christopher"),
     };
 
-    readonly List<Person> secondItemList = new List<Person>()
+    readonly List<Person> secondPersonList = new List<Person>()
     {
         new Person("Tom"),
         new Person("Jasmine"),
         new Person("Sarah"),
+    };
+
+    readonly List<Animal> animalList = new List<Animal>()
+    {
+        new Animal("Dog"),
+        new Animal("Cat"),
+        new Animal("Giraffe"),
+        new Animal("Horse"),
     };
 
     void OnDragStart(Person person, MutableDragEventArgs e)
@@ -52,14 +92,19 @@
         e.DataTransfer.SetData("text/plain", person.Name);
     }
 
+    void OnDragEnd(Person person, MutableDragEventArgs e)
+    {
+        Console.WriteLine($"Dragging ended: {person.Name}");
+    }
+
     void OnDropFirst(DropInfo<Person> dropInfo)
     {
         Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
 
-        firstItemList.RemoveAll(p => dropInfo.Items.Contains(p));
-        secondItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+        firstPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
+        secondPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
 
-        firstItemList.AddRange(dropInfo.Items);
+        firstPersonList.AddRange(dropInfo.Items);
 
         StateHasChanged();
     }
@@ -68,10 +113,10 @@
     {
         Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
 
-        firstItemList.RemoveAll(p => dropInfo.Items.Contains(p));
-        secondItemList.RemoveAll(p => dropInfo.Items.Contains(p));
+        firstPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
+        secondPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
 
-        secondItemList.AddRange(dropInfo.Items);
+        secondPersonList.AddRange(dropInfo.Items);
 
         StateHasChanged();
     }

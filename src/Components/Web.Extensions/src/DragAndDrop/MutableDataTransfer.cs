@@ -26,7 +26,7 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         {
             ThrowIfStoreIsNull();
 
-            Store.Data.Add(format, data);
+            Store.Data[format] = data;
         }
 
         public string GetData(string format)

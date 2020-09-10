@@ -19,6 +19,9 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         public RenderFragment? ChildContent { get; set; }
 
         [Parameter]
+        public Func<TItem, bool>? CanDrop { get; set; }
+
+        [Parameter]
         public Action<DropInfo<TItem>>? OnDrop { get; set; }
 
         protected override async Task OnInitializedAsync()
@@ -34,6 +37,11 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
             builder.AddAttribute(2, "ondragover", $"window._blazorDragAndDrop.onDragOver(event, {_id})");
             builder.AddContent(3, ChildContent);
             builder.CloseElement();
+        }
+
+        internal bool CanDropCore(TItem item)
+        {
+            return CanDrop?.Invoke(item) ?? true;
         }
 
         internal void OnDropCore(MutableDragEventArgs eventArgs, TItem[] items)

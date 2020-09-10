@@ -6,13 +6,13 @@ using Microsoft.JSInterop;
 
 namespace Microsoft.AspNetCore.Components.Web.Extensions
 {
-    internal class DragInteropRelay<TItem>
+    internal class DragInteropHandle<TItem>
     {
         private readonly Drag<TItem> _drag;
 
-        public TItem Item => _drag.Item; // TODO: May want to decouple this class form Drag a little (component lifecycle concerns).
+        public TItem Item => _drag.Item;
 
-        public DragInteropRelay(Drag<TItem> drag)
+        public DragInteropHandle(Drag<TItem> drag)
         {
             _drag = drag;
         }
@@ -27,6 +27,14 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
 
             // Updated DataTransferStore returned to JS.
             return e.DataTransfer.Store;
+        }
+
+        [JSInvokable]
+        public void OnDragEnd(MutableDragEventArgs e, Dictionary<string, string> initialData)
+        {
+            e.DataTransfer.Store = new DataTransferStore(e.DataTransfer, initialData);
+
+            _drag.OnDragEndCore(e);
         }
     }
 }

@@ -17,10 +17,22 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         }
 
         [JSInvokable]
-        public void OnDrop(MutableDragEventArgs eventArgs, Dictionary<string, string> initialData, DotNetObjectReference<DragInteropRelay<TItem>>[] drags)
+        public void OnDrop(MutableDragEventArgs eventArgs, Dictionary<string, string> initialData, DotNetObjectReference<object>[] drags)
         {
             eventArgs.DataTransfer.Store = new DataTransferStore(eventArgs.DataTransfer, initialData);
-            _drop.OnDropCore(eventArgs, drags.Select(d => d.Value.Item).ToArray());
+
+            var items = drags
+                .Select(d => d.Value)
+                .OfType<DragInteropHandle<TItem>>()
+                .Select(d => d.Item)
+                .Where(item => _drop.CanDropCore(item))
+                .ToArray();
+
+            if (items.Length > 0)
+            {
+                // TODO: Should this be invoked regardless of whether any items are accepted?
+                _drop.OnDropCore(eventArgs, items);
+            }
         }
     }
 }

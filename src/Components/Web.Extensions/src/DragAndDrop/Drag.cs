@@ -27,9 +27,12 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         [Parameter]
         public Action<TItem, MutableDragEventArgs>? OnDragStart { get; set; }
 
+        [Parameter]
+        public Action<TItem, MutableDragEventArgs>? OnDragEnd { get; set; }
+
         protected override async Task OnInitializedAsync()
         {
-            var interopRelayReference = DotNetObjectReference.Create(new DragInteropRelay<TItem>(this));
+            var interopRelayReference = DotNetObjectReference.Create<object>(new DragInteropHandle<TItem>(this));
             _id = await JSRuntime.InvokeAsync<long>("_blazorDragAndDrop.registerDrag", interopRelayReference);
         }
 
@@ -46,13 +49,19 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
             builder.OpenElement(0, "div");
             builder.AddAttribute(1, "draggable", "true");
             builder.AddAttribute(2, "ondragstart", $"window._blazorDragAndDrop.onDragStart(event, {_id})");
-            builder.AddContent(3, ChildContent);
+            builder.AddAttribute(3, "ondragend", $"window._blazorDragAndDrop.onDragEnd(event, {_id})");
+            builder.AddContent(4, ChildContent);
             builder.CloseElement();
         }
 
         internal void OnDragStartCore(MutableDragEventArgs e)
         {
             OnDragStart?.Invoke(Item, e);
+        }
+
+        internal void OnDragEndCore(MutableDragEventArgs e)
+        {
+            OnDragEnd?.Invoke(Item, e);
         }
 
         public ValueTask DisposeAsync()
