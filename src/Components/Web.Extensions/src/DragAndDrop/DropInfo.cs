@@ -7,12 +7,12 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
     {
         public MutableDragEventArgs EventArgs { get; }
 
-        public TItem[] Items { get; }
+        public TItem Item { get; }
 
-        public DropInfo(MutableDragEventArgs e, TItem[] items)
+        public DropInfo(MutableDragEventArgs e, TItem item)
         {
             EventArgs = e;
-            Items = items;
+            Item = item;
         }
     }
 }

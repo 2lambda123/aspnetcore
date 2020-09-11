@@ -1,7 +1,12 @@
 ﻿@using Microsoft.AspNetCore.Components.Web.Extensions
 
-<Drop TItem="Person" OnDrop="OnDropFirst">
-    @foreach (var item in firstPersonList)
+<Drop
+      TItem="Person"
+      OnDrop="(person, e) => OnDrop(person, e, personList)"
+      OnDragOver="(person, e) => OnDragOver(person, e, ref personDropStyle)"
+      style="@personDropStyle">
+    <h3>List of people</h3>
+    @foreach (var item in personList)
     {
         <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
             @item.Name
@@ -12,8 +17,14 @@
 
 <hr />
 
-<Drop TItem="Person" OnDrop="OnDropSecond">
-    @foreach (var item in secondPersonList)
+<Drop
+      TItem="Person"
+      OnDrop="(person, e) => OnDrop(person, e, personListFiltered)"
+      OnDragOver="(person, e) => OnDragOver(person, e, ref personFilteredDropStyle)"
+      CanDrop="(person) => person.Name.StartsWith('J')"
+      style="@personFilteredDropStyle">
+    <h3>List of people whose names start with 'J'</h3>
+    @foreach (var item in personListFiltered)
     {
         <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
             @item.Name
@@ -25,6 +36,7 @@
 <hr />
 
 <Drop TItem="Animal">
+    <h3>List of animals</h3>
     @foreach (var item in animalList)
     {
         <Drag Item="item" @key="item">
@@ -35,7 +47,7 @@
 </Drop>
 
 @code {
-    private class Person
+    class Person
     {
         public string Name { get; }
 
@@ -50,7 +62,7 @@
         }
     }
 
-    private class Animal
+    class Animal
     {
         public string Type { get; }
 
@@ -65,18 +77,18 @@
         }
     }
 
-    readonly List<Person> firstPersonList = new List<Person>()
+    readonly List<Person> personList = new List<Person>()
     {
         new Person("Bob"),
-        new Person("Jenny"),
         new Person("Christopher"),
+        new Person("Sarah"),
     };
 
-    readonly List<Person> secondPersonList = new List<Person>()
+    readonly List<Person> personListFiltered = new List<Person>()
     {
-        new Person("Tom"),
+        new Person("John"),
         new Person("Jasmine"),
-        new Person("Sarah"),
+        new Person("Jenny"),
     };
 
     readonly List<Animal> animalList = new List<Animal>()
@@ -87,36 +99,42 @@
         new Animal("Horse"),
     };
 
+    string personDropStyle;
+    string personFilteredDropStyle;
+
     void OnDragStart(Person person, MutableDragEventArgs e)
     {
-        e.DataTransfer.SetData("text/plain", person.Name);
+        e.DataTransfer.SetData("text/plain", $"We're moving {person.Name}");
     }
 
-    void OnDragEnd(Person person, MutableDragEventArgs e)
+    void OnDragEnd(Person person, MutableDragEventArgs e, Drop<Person> targetDrop)
     {
-        Console.WriteLine($"Dragging ended: {person.Name}");
-    }
+        Console.WriteLine($"Dragging ended: {person.Name}, {targetDrop?.ToString() ?? "<no drop target>"}");
 
-    void OnDropFirst(DropInfo<Person> dropInfo)
-    {
-        Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
-
-        firstPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
-        secondPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
-
-        firstPersonList.AddRange(dropInfo.Items);
+        personDropStyle = null;
+        personFilteredDropStyle = null;
 
         StateHasChanged();
     }
 
-    void OnDropSecond(DropInfo<Person> dropInfo)
+    void OnDrop(Person person, MutableDragEventArgs e, List<Person> targetList)
     {
-        Console.WriteLine($"Data from .NET: {dropInfo.EventArgs.DataTransfer.GetData("text/plain")}");
+        Console.WriteLine($"DataTransfer data: '{e.DataTransfer.GetData("text/plain")}'");
 
-        firstPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
-        secondPersonList.RemoveAll(p => dropInfo.Items.Contains(p));
+        personList.Remove(person);
+        personListFiltered.Remove(person);
 
-        secondPersonList.AddRange(dropInfo.Items);
+        targetList.Add(person);
+
+        StateHasChanged();
+    }
+
+    void OnDragOver(Person person, MutableDragEventArgs e, ref string targetStyle)
+    {
+        personDropStyle = null;
+        personFilteredDropStyle = null;
+
+        targetStyle = $"background-color: rgb(0, {e.ClientX}, {e.ClientY});";
 
         StateHasChanged();
     }

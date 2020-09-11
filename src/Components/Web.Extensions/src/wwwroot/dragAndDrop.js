@@ -1,121 +1,154 @@
 (function () {
     // TODO: No need to round-trip event data if no event handler is specified in .NET. Find a way to get this information to JS.
-    // TODO: Test with multiple items being dragged at once.
     // TODO: Do we need some sort of event queueing mechanism? (force changes to be applied in the correct order?)
+    // For example, onDragStart is async. onDragEnd could fire before onDragStart completes if the user is fast enough. We could extend
+    // the current waiting mechanism to support multiple states (right now, it's used only to delay tasks until after onDragEnd completes).
+    // TODO: Implement the rest of the drag events: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API
+    // TODO: implement the missing features, e.g. updateDataTransfer
 
-    // TODO: handle multiple drag items.
-    // Then, implement the missing features, e.g. updateDataTransfer
+    let nextDragHandleId = 0;
+    let nextDropHandleId = 0;
 
-    let nextDragId = 0;
-    let nextDropId = 0;
+    const dragHandlesById = {};
+    const dropHandlesById = {};
 
-    const dragsById = {};
-    const dropsById = {};
+    let activeDrag;
+    let lastTargetDropHandle;
 
-    const dragStatesById = {};
-
-    function registerDrag(dragObjectReference) {
-        dragsById[nextDragId] = dragObjectReference;
-        return nextDragId++;
+    function registerDragHandle(handle) {
+        dragHandlesById[nextDragHandleId] = handle;
+        return nextDragHandleId++;
     }
 
-    async function unregisterDrag(dragId) {
-        const drag = dragsById[dragId];
+    async function unregisterDragHandle(id) {
+        const handle = dragHandlesById[id];
 
-        if (drag) {
-            const dragState = dragStatesById[dragId];
-
-            if (dragState) {
-                // Drag has not yet completed - wait for it to complete before disposing.
-                await dragState.promise;
+        if (handle) {
+            if (activeDrag && activeDrag.handle === handle) {
+                // Don't want to dispose a drag reference when it's still being dragged
+                await waitForLastDrag();
             }
 
-            drag.dispose();
-            delete dragsById[dragId];
+            handle.dispose();
+            delete dragHandlesById[id];
         }
     }
 
-    function registerDrop(dropObjectReference) {
-        dropsById[nextDropId] = dropObjectReference;
-        return nextDropId++;
+    function registerDropHandle(handle) {
+        dropHandlesById[nextDropHandleId] = handle;
+        return nextDropHandleId++;
     }
 
-    function unregisterDrop(dropId) {
-        const drop = dropsById[dropId];
+    function unregisterDropHandle(id) {
+        const handle = dropHandlesById[id];
 
-        if (drop) {
-            drop.dispose();
-            delete dropsById[dropId];
+        if (handle) {
+            handle.dispose();
+            delete dropHandlesById[id];
         }
     }
 
-    async function onDragStart(event, dragId) {
-        const drag = getDragByIdOrThrow(dragId);
+    async function onDragStart(event, id) {
+        const handle = getDragHandleByIdOrThrow(id);
 
-        const dragState = {};
-        dragState.promise = new Promise(function (resolve) {
-            dragState.resolve = resolve;
-        });
+        // TODO: This will wait forever if the onDragEnd event doesn't fire. I was able to get that to happen by
+        // what seems to be a browser debugger glitch, so I'm not sure if it's a real scenario we have to cover.
+        // If necessary, we could employ some sort of short timeout here.
+        // It also looks like Firefox has a bug where dragend is not fired if the source node is moved or removed during
+        // the drag. This would lead me to think we can't just leave this as-is.
+        await waitForLastDrag();
 
-        dragStatesById[dragId] = dragState;
+        startNewDrag(handle);
 
         const initialData = getAllDataTransferData(event.dataTransfer);
-        const dataTransferStore = await drag.invokeMethodAsync('OnDragStart', parseDragEvent(event), initialData);
-
-        console.log(dataTransferStore);
+        const dataTransferStore = await handle.invokeMethodAsync('OnDragStart', parseDragEvent(event), initialData);
 
         updateDataTransfer(event.dataTransfer, dataTransferStore);
     }
 
-    async function onDragEnd(event, dragId) {
-        // TODO: Identify drop target and provide that info to the .NET callback.
-        const drag = getDragByIdOrThrow(dragId);
+    async function onDragEnd(event) {
+        if (!activeDrag) {
+            return;
+        }
 
         const initialData = getAllDataTransferData(event.dataTransfer);
-        await drag.invokeMethodAsync('OnDragEnd', parseDragEvent(event), initialData);
+        await activeDrag.handle.invokeMethodAsync('OnDragEnd', parseDragEvent(event), initialData, lastTargetDropHandle);
 
-        const unregistrationDeferrer = dragStatesById[dragId];
-
-        if (unregistrationDeferrer) {
-            unregistrationDeferrer.resolve();
-            delete dragStatesById[dragId];
-        }
-
-        console.log(Object.keys(dragStatesById).length);
+        lastTargetDropHandle = undefined;
+        completeCurrentDrag();
     }
 
-    async function onDrop(event, dropId) {
+    async function onDrop(event, id) {
         event.preventDefault();
 
+        if (!activeDrag) {
+            return;
+        }
+
+        lastTargetDropHandle = getDropHandleByIdOrThrow(id);
         const initialData = getAllDataTransferData(event.dataTransfer);
-        const drop = getDropByIdOrThrow(dropId);
-        const activeDrags = Object.keys(dragStatesById).map(id => getDragByIdOrThrow(id));
-        await drop.invokeMethodAsync('OnDrop', parseDragEvent(event), initialData, activeDrags);
+
+        await lastTargetDropHandle.invokeMethodAsync('OnDrop', parseDragEvent(event), initialData, activeDrag.handle);
     }
 
-    function onDragOver(event, dropId) {
-        // TODO
+    async function onDragOver(event, id) {
+        // TODO: This event is likely called way more frequently than necessary: https://developer.mozilla.org/en-US/docs/Web/API/DragEvent
+        // It would be nice to provide an option to throttle this callback.
+        // Furthermore, the ability to avoid making JS->.NET calls if there is no user-provided callback would be a big win for this.
+
         event.preventDefault();
-    }
 
-    function getDropByIdOrThrow(dropId) {
-        const drop = dropsById[dropId];
-
-        if (drop) {
-            return drop;
+        if (!activeDrag) {
+            return;
         }
 
-        throw new Error(`Drop with ID ${dropId} does not exist.`);
+        const dropHandle = getDropHandleByIdOrThrow(id);
+        const initialData = getAllDataTransferData(event.dataTransfer);
+
+        await dropHandle.invokeMethodAsync('OnDragOver', parseDragEvent(event), initialData, activeDrag.handle);
     }
 
-    function getDragByIdOrThrow(dragId) {
-        const drag = dragsById[dragId];
+    function getDropHandleByIdOrThrow(id) {
+        const handle = dropHandlesById[id];
 
-        if (drag) {
-            return drag;
+        if (handle) {
+            return handle;
         }
 
-        throw new Error(`Drag with ID ${dragId} does not exist.`);
+        throw new Error(`Drop with ID ${id} does not exist.`);
+    }
+
+    function getDragHandleByIdOrThrow(id) {
+        const handle = dragHandlesById[id];
+
+        if (handle) {
+            return handle;
+        }
+
+        throw new Error(`Drag with ID ${id} does not exist.`);
+    }
+
+    async function waitForLastDrag() {
+        if (activeDrag) {
+            await activeDrag.promise;
+        }
+    }
+
+    function startNewDrag(handle) {
+        activeDrag = {
+            handle,
+        };
+
+        activeDrag.promise = new Promise(function (resolve) {
+            activeDrag.complete = resolve;
+        });
+    }
+
+    function completeCurrentDrag() {
+        if (activeDrag) {
+            activeDrag.complete();
+            activeDrag = undefined;
+        }
     }
 
     function parseDragEvent(event) {
@@ -137,13 +170,17 @@
             metaKey: event.metaKey,
 
             // Drag event properties
-            dataTransfer: event.dataTransfer,
+            dataTransfer: {
+                dropEffect: event.dataTransfer.dropEffect,
+                effectAllowed: event.dataTransfer.effectAllowed,
+                files: [...event.dataTransfer.files],
+                items: [...event.dataTransfer.items],
+                types: event.dataTransfer.types,
+            },
         }
     }
 
     function updateDataTransfer(dataTransfer, dataTransferStore) {
-        // TODO: Update drop effect, etc.
-
         dataTransfer.clearData();
 
         Object.entries(dataTransferStore.data).forEach(function ([format, data]) {
@@ -153,6 +190,9 @@
         if (dataTransferStore.dragImage) {
             dataTransfer.setDragImage(dataTransferStore.dragImage, dataTransferStore.drageImageXOffset, dataTransferStore.dragImageYOffset);
         }
+
+        dataTransfer.dropEffect = dataTransferStore.dataTransfer.dropEffect;
+        dataTransfer.effectAllowed = dataTransferStore.dataTransfer.effectAllowed;
     }
 
     function getAllDataTransferData(dataTransfer) {
@@ -166,10 +206,10 @@
     }
 
     window._blazorDragAndDrop = {
-        registerDrag,
-        unregisterDrag,
-        registerDrop,
-        unregisterDrop,
+        registerDragHandle,
+        unregisterDragHandle,
+        registerDropHandle,
+        unregisterDropHandle,
         onDragStart,
         onDragEnd,
         onDrop,

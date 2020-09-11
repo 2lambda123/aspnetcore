@@ -28,12 +28,12 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         public Action<TItem, MutableDragEventArgs>? OnDragStart { get; set; }
 
         [Parameter]
-        public Action<TItem, MutableDragEventArgs>? OnDragEnd { get; set; }
+        public Action<TItem, MutableDragEventArgs, Drop<TItem>?>? OnDragEnd { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
-            var interopRelayReference = DotNetObjectReference.Create<object>(new DragInteropHandle<TItem>(this));
-            _id = await JSRuntime.InvokeAsync<long>("_blazorDragAndDrop.registerDrag", interopRelayReference);
+            var interopHandleReference = DotNetObjectReference.Create<object>(new DragInteropHandle<TItem>(this));
+            _id = await JSRuntime.InvokeAsync<long>(DragAndDropInterop.RegisterDragHandle, interopHandleReference);
         }
 
         protected override void OnParametersSet()
@@ -48,8 +48,8 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         {
             builder.OpenElement(0, "div");
             builder.AddAttribute(1, "draggable", "true");
-            builder.AddAttribute(2, "ondragstart", $"window._blazorDragAndDrop.onDragStart(event, {_id})");
-            builder.AddAttribute(3, "ondragend", $"window._blazorDragAndDrop.onDragEnd(event, {_id})");
+            builder.AddAttribute(2, "ondragstart", $"window.{DragAndDropInterop.OnDragStart}(event, {_id})");
+            builder.AddAttribute(3, "ondragend", $"window.{DragAndDropInterop.OnDragEnd}(event, {_id})");
             builder.AddContent(4, ChildContent);
             builder.CloseElement();
         }
@@ -59,12 +59,12 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
             OnDragStart?.Invoke(Item, e);
         }
 
-        internal void OnDragEndCore(MutableDragEventArgs e)
+        internal void OnDragEndCore(MutableDragEventArgs e, Drop<TItem>? targetDrop)
         {
-            OnDragEnd?.Invoke(Item, e);
+            OnDragEnd?.Invoke(Item, e, targetDrop);
         }
 
         public ValueTask DisposeAsync()
-            => JSRuntime.InvokeVoidAsync("_blazorDragAndDrop.unregisterDrag", _id);
+            => JSRuntime.InvokeVoidAsync(DragAndDropInterop.UnregisterDragHandle, _id);
     }
 }
