@@ -22,6 +22,8 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
         [Parameter]
         public Func<TItem, bool>? CanDrop { get; set; }
 
+        // TODO: These could be turned into EventCallbacks.
+
         [Parameter]
         public Action<TItem, MutableDragEventArgs>? OnDrop { get; set; }
 

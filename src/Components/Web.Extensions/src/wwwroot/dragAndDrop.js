@@ -4,7 +4,6 @@
     // For example, onDragStart is async. onDragEnd could fire before onDragStart completes if the user is fast enough. We could extend
     // the current waiting mechanism to support multiple states (right now, it's used only to delay tasks until after onDragEnd completes).
     // TODO: Implement the rest of the drag events: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API
-    // TODO: implement the missing features, e.g. updateDataTransfer
 
     let nextDragHandleId = 0;
     let nextDropHandleId = 0;

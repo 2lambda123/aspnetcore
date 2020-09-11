@@ -8,6 +8,7 @@
     <h3>List of people</h3>
     @foreach (var item in personList)
     {
+        @*TODO: avoid having to specify a @key here?*@
         <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
             @item.Name
         </Drag>

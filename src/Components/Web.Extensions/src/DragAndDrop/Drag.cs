@@ -10,9 +10,6 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
 {
     public class Drag<TItem> : ComponentBase, IAsyncDisposable
     {
-        // TODO: Could pass the item around via DotNetObjectReference, but that requires it to be a reference
-        // type, which is a rather limiting constraint.
-
         private long _id;
 
         [Inject]
@@ -23,6 +20,8 @@ namespace Microsoft.AspNetCore.Components.Web.Extensions
 
         [Parameter]
         public TItem Item { get; set; } = default!;
+
+        // TODO: These could be turned into EventCallbacks.
 
         [Parameter]
         public Action<TItem, MutableDragEventArgs>? OnDragStart { get; set; }
