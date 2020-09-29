@@ -41,7 +41,7 @@
     ],
 
     "containerEnv": {
-        "DOTNET_ROOT": "/home/codespace/workspace/aspnetcore/.dotnet",
+        "DOTNET_ROOT": "${containerEnv:HOME}/codespace/workspace/aspnetcore/.dotnet",
         "DOTNET_MULTILEVEL_LOOKUP": "0",
     },
 
