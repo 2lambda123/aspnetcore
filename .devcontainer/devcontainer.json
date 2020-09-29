@@ -42,7 +42,6 @@
 
     "containerEnv": {
         "DOTNET_ROOT": "/home/codespace/workspace/aspnetcore/.dotnet",
-        "DOTNET_ROOT(x86)": "/home/codespace/workspace/aspnetcore/.dotnet/x86",
         "DOTNET_MULTILEVEL_LOOKUP": "0",
     },
 
@@ -52,7 +51,7 @@
     },
 
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "git submodule init; git submodule update --recursive"
+    "postCreateCommand": "git submodule init; git submodule update --recursive; ./restore"
 
     // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
     // "remoteUser": "vscode"
