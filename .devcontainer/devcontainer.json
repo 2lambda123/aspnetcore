@@ -41,10 +41,9 @@
     ],
 
     "containerEnv": {
-        "DOTNET_ROOT": "${localEnv:HOME}/codespace/workspace/aspnetcore/.dotnet",
-        "DOTNET_ROOT(x86)": "${localEnv:HOME}/codespace/workspace/aspnetcore/.dotnet",
+        "DOTNET_ROOT": "/home/codespace/workspace/aspnetcore/.dotnet",
+        "DOTNET_ROOT(x86)": "/home/codespace/workspace/aspnetcore/.dotnet/x86",
         "DOTNET_MULTILEVEL_LOOKUP": "0",
-//        "PATH": "${localEnv:HOME}/codespace/workspace/aspnetcore/.dotnet:${localEnv:PATH}"
     },
 
     "remoteEnv": {
@@ -53,7 +52,7 @@
     },
 
     // Use 'postCreateCommand' to run commands after the container is created.
-    //"postCreateCommand": "/home/codespace/workspace/aspnetcore/restore.sh",
+    "postCreateCommand": "git submodule init --recursive"
 
     // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
     // "remoteUser": "vscode"
