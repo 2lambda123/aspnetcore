@@ -41,10 +41,10 @@
     ],
 
     "containerEnv": {
-        "DOTNET_ROOT": "/home/codespace/workspace/aspnetcore/.dotnet",
-        "DOTNET_ROOT(x86)": "/home/codespace/workspace/aspnetcore/.dotnet",
-        "DOTNET_MULTILEVEL_LOOKUP": "0",
-        "PATH": "$(DOTNET_ROOT):$(PATH)"
+//        "DOTNET_ROOT": "/home/codespace/workspace/aspnetcore/.dotnet",
+//        "DOTNET_ROOT(x86)": "/home/codespace/workspace/aspnetcore/.dotnet",
+//        "DOTNET_MULTILEVEL_LOOKUP": "0",
+//        "PATH": "$(DOTNET_ROOT):$(PATH)"
     },
 
     "remoteEnv": {
