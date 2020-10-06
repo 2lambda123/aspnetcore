@@ -1065,7 +1065,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             // The ExecutionContext must be captured after the RequestQueuedStart event for ActivityId tracking.
             // If KestrelEventSource is not enabled, reset to Http2Connection's initial ExecutionContext giving access
             // to the connection logging scope and any other AsyncLocals set by connection middleware.
-            _currentHeadersStream.InitialExecutionContext = KestrelEventSource.Log.IsEnabled() ?
+            _currentHeadersStream.RequestQueuedExecutionContext = KestrelEventSource.Log.IsEnabled() ?
                 ExecutionContext.Capture() :
                 _initialExecutionContext;
 

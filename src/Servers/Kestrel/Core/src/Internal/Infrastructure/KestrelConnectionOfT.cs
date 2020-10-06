@@ -42,10 +42,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             {
                 // The ExecutionContext must be restored before the ConnectionQueuedStop event for ActivityId tracking.
                 // If InitialExecutionContext is null, KestrelEventSource wasn't enabled when the connection was queued.
-                if (InitialExecutionContext != null)
+                if (ConnectionQueuedExecutionContext != null)
                 {
-                    ExecutionContext.Restore(InitialExecutionContext);
-                    InitialExecutionContext = null;
+                    ExecutionContext.Restore(ConnectionQueuedExecutionContext);
+                    ConnectionQueuedExecutionContext = null;
                 }
 
                 KestrelEventSource.Log.ConnectionQueuedStop(connectionContext);

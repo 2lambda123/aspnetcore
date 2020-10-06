@@ -27,7 +27,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         protected readonly long _keepAliveTicks;
         private readonly long _requestHeadersTimeoutTicks;
 
-        private ExecutionContext _initialExecutionContext;
+        private ExecutionContext _cleanExecutionContext;
 
         private volatile bool _requestTimedOut;
         private uint _requestCount;
@@ -644,15 +644,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             Reset();
             TimeoutControl.SetTimeout(_keepAliveTicks, TimeoutReason.KeepAlive);
 
-            if (_initialExecutionContext is null)
+            if (_cleanExecutionContext is null)
             {
                 // If this is a first request, capture a clean ExecutionContext.
-                _initialExecutionContext = ExecutionContext.Capture();
+                _cleanExecutionContext = ExecutionContext.Capture();
             }
             else
             {
                 // Clear any AsyncLocals set during the request; back to a clean state ready for next request
-                ExecutionContext.Restore(_initialExecutionContext);
+                ExecutionContext.Restore(_cleanExecutionContext);
             }
         }
 

@@ -88,7 +88,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
 
         public int StreamId => _context.StreamId;
 
-        public ExecutionContext InitialExecutionContext { get; set; }
+        public ExecutionContext RequestQueuedExecutionContext { get; set; }
 
         public long? InputRemaining { get; internal set; }
 

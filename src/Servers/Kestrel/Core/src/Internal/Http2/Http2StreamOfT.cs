@@ -21,8 +21,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
         public override void Execute()
         {
             // The ExecutionContext must be restored before the RequestQueuedStop event for ActivityId tracking.
-            ExecutionContext.Restore(InitialExecutionContext);
-            InitialExecutionContext = null;
+            ExecutionContext.Restore(RequestQueuedExecutionContext);
+            RequestQueuedExecutionContext = null;
 
             KestrelEventSource.Log.RequestQueuedStop(this, AspNetCore.Http.HttpProtocol.Http2);
 
