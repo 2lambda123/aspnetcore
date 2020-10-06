@@ -87,6 +87,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
             QPackDecoder = new QPackDecoder(_context.ServiceContext.ServerOptions.Limits.Http3.MaxRequestHeaderFieldSize);
         }
 
+        // Http3Stream needs 2 potentially-unique ECs because it gets dispatched via ThreadPool.UQUWI twice.
+        // The first time we might need the RequestQueuedExecutionContext that is tracking the RequestQueuedStart/Stop activity.
+        // The second time we need the ConnectionExecutionContext with ConnectionStart/Stop activity as its direct parent.
+        public ExecutionContext ConnectionExecutionContext { get; set; }
+        public ExecutionContext RequestQueuedExecutionContext { get; set; }
+
         public long? InputRemaining { get; internal set; }
 
         public QPackDecoder QPackDecoder { get; }

@@ -34,6 +34,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
         private readonly object _sync = new object();
         private readonly MultiplexedConnectionContext _multiplexedContext;
         private readonly Http3ConnectionContext _context;
+        private readonly ExecutionContext _initialExecutionContext;
         private readonly ISystemClock _systemClock;
         private readonly TimeoutControl _timeoutControl;
         private bool _aborted;
@@ -43,6 +44,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
         {
             _multiplexedContext = context.ConnectionContext;
             _context = context;
+
+            // Capture the ExecutionContext before dispatching HTTP/3 middleware. Will be restored by streams when processing request.
+            _initialExecutionContext = ExecutionContext.Capture();
+
             DynamicTable = new DynamicTable(0);
             _systemClock = context.ServiceContext.SystemClock;
             _timeoutControl = new TimeoutControl(this);
@@ -237,13 +242,28 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
                         var streamId = streamIdFeature.StreamId;
                         HighestStreamId = streamId;
 
-                        var http3Stream = new Http3Stream<TContext>(application, this, httpConnectionContext);
-                        var stream = http3Stream;
+                        // Http3Stream needs 2 potentially-unique ECs because it gets dispatched via ThreadPool.UQUWI twice.
+                        // The first time we might need the RequestQueuedExecutionContext that is tracking the RequestQueuedStart/Stop activity.
+                        // The second time we need the ConnectionExecutionContext with ConnectionStart/Stop activity as its direct parent.
+                        var stream = new Http3Stream<TContext>(application, this, httpConnectionContext)
+                        {
+                            ConnectionExecutionContext = _initialExecutionContext,
+                        };
+
                         lock (_streams)
                         {
-                            _streams[streamId] = http3Stream;
+                            _streams[streamId] = stream;
                         }
+
                         KestrelEventSource.Log.RequestQueuedStart(stream, AspNetCore.Http.HttpProtocol.Http3);
+
+                        // The ExecutionContext must be captured after the RequestQueuedStart event for ActivityId tracking.
+                        // If KestrelEventSource is not enabled, reset to Http3Connection's initial ExecutionContext giving
+                        // access to the connection logging scope and any other AsyncLocals set by connection middleware.
+                        stream.RequestQueuedExecutionContext = KestrelEventSource.Log.IsEnabled() ?
+                            ExecutionContext.Capture() :
+                            _initialExecutionContext;
+
                         ThreadPool.UnsafeQueueUserWorkItem(stream, preferLocal: false);
                     }
                 }
