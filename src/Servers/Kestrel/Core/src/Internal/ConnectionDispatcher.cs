@@ -63,6 +63,12 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
                         Log.ConnectionAccepted(connection.ConnectionId);
                         KestrelEventSource.Log.ConnectionQueuedStart(connection);
 
+                        // The ExecutionContext must be captured after the ConnectionQueuedStart event for ActivityId tracking.
+                        if (KestrelEventSource.Log.IsEnabled())
+                        {
+                            kestrelConnection.InitialExecutionContext = ExecutionContext.Capture();
+                        }
+
                         ThreadPool.UnsafeQueueUserWorkItem(kestrelConnection, preferLocal: false);
                     }
                 }

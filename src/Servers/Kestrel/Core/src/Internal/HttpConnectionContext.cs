@@ -23,6 +23,5 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         public IPEndPoint RemoteEndPoint { get; set; }
         public ITimeoutControl TimeoutControl { get; set; }
         public IDuplexPipe Transport { get; set; }
-        public ExecutionContext InitialExecutionContext { get; set; }
     }
 }

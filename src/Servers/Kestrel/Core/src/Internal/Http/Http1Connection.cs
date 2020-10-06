@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
@@ -25,6 +26,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         private readonly Http1OutputProducer _http1Output;
         protected readonly long _keepAliveTicks;
         private readonly long _requestHeadersTimeoutTicks;
+
+        private ExecutionContext _initialExecutionContext;
 
         private volatile bool _requestTimedOut;
         private uint _requestCount;
@@ -640,6 +643,17 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             // Reset the features and timeout.
             Reset();
             TimeoutControl.SetTimeout(_keepAliveTicks, TimeoutReason.KeepAlive);
+
+            if (_initialExecutionContext is null)
+            {
+                // If this is a first request, capture a clean ExecutionContext.
+                _initialExecutionContext = ExecutionContext.Capture();
+            }
+            else
+            {
+                // Clear any AsyncLocals set during the request; back to a clean state ready for next request
+                ExecutionContext.Restore(_initialExecutionContext);
+            }
         }
 
         protected override bool BeginRead(out ValueTask<ReadResult> awaitable)

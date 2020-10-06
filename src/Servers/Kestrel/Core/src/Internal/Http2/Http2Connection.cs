@@ -13,7 +13,6 @@ using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net.Http;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -34,6 +33,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             PseudoHeaderFields.Method | PseudoHeaderFields.Path | PseudoHeaderFields.Scheme;
 
         private readonly HttpConnectionContext _context;
+        private readonly ExecutionContext _initialExecutionContext;
         private readonly Http2FrameWriter _frameWriter;
         private readonly Pipe _input;
         private readonly Task _inputTask;
@@ -86,7 +86,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             _context = context;
 
             // Capture the ExecutionContext before dispatching HTTP/2 middleware. Will be restored by streams when processing request
-            _context.InitialExecutionContext = ExecutionContext.Capture();
+            _initialExecutionContext = ExecutionContext.Capture();
 
             _frameWriter = new Http2FrameWriter(
                 context.Transport.Output,
@@ -650,7 +650,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
                 ConnectionInputFlowControl = _inputFlowControl,
                 ConnectionOutputFlowControl = _outputFlowControl,
                 TimeoutControl = TimeoutControl,
-                InitialExecutionContext = _context.InitialExecutionContext,
             };
         }
 
@@ -1062,6 +1061,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
             }
 
             KestrelEventSource.Log.RequestQueuedStart(_currentHeadersStream, AspNetCore.Http.HttpProtocol.Http2);
+
+            // The ExecutionContext must be captured after the RequestQueuedStart event for ActivityId tracking.
+            // If KestrelEventSource is not enabled, reset to Http2Connection's initial ExecutionContext giving access
+            // to the connection logging scope and any other AsyncLocals set by connection middleware.
+            _currentHeadersStream.InitialExecutionContext = KestrelEventSource.Log.IsEnabled() ?
+                ExecutionContext.Capture() :
+                _initialExecutionContext;
+
             // Must not allow app code to block the connection handling loop.
             ThreadPool.UnsafeQueueUserWorkItem(_currentHeadersStream, preferLocal: false);
         }

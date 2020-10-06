@@ -610,19 +610,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         {
             while (_keepAlive)
             {
-                if (_context.InitialExecutionContext is null)
-                {
-                    // If this is a first request on a non-Http2Connection, capture a clean ExecutionContext.
-                    _context.InitialExecutionContext = ExecutionContext.Capture();
-                }
-                else
-                {
-                    // Clear any AsyncLocals set during the request; back to a clean state ready for next request
-                    // And/or reset to Http2Connection's ExecutionContext giving access to the connection logging scope
-                    // and any other AsyncLocals set by connection middleware.
-                    ExecutionContext.Restore(_context.InitialExecutionContext);
-                }
-
                 BeginRequestProcessing();
 
                 var result = default(ReadResult);

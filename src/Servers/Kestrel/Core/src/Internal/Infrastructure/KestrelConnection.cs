@@ -40,6 +40,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 
         protected IKestrelTrace Logger { get; }
 
+        public ExecutionContext InitialExecutionContext { get; set; }
+
         public CancellationToken ConnectionClosedRequested { get; set; }
         public Task ExecutionTask => _completionTcs.Task;
 

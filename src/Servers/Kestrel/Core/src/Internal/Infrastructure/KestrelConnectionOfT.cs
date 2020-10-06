@@ -40,8 +40,17 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
 
             try
             {
+                // The ExecutionContext must be restored before the ConnectionQueuedStop event for ActivityId tracking.
+                // If InitialExecutionContext is null, KestrelEventSource wasn't enabled when the connection was queued.
+                if (InitialExecutionContext != null)
+                {
+                    ExecutionContext.Restore(InitialExecutionContext);
+                    InitialExecutionContext = null;
+                }
+
                 KestrelEventSource.Log.ConnectionQueuedStop(connectionContext);
 
+                // REVIEW: Unrelated to this PR, but shouldn't we bug logging connection start/stop with the connection logging scope?
                 Logger.ConnectionStart(connectionContext.ConnectionId);
                 KestrelEventSource.Log.ConnectionStart(connectionContext);
 
