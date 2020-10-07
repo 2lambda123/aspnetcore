@@ -10,8 +10,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
@@ -40,7 +42,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
         }
 
         [Fact]
-        public async Task EmitsHttp1StartAndStopEventsWithActivityIds()
+        public async Task Http1_EmitsStartAndStopEventsWithActivityIds()
         {
             int port;
             string connectionId = null;
@@ -88,49 +90,99 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
 
             // Other tests executing in parallel may log events.
             var events = _listener.EventData.Where(e => e != null && GetProperty(e, "connectionId") == connectionId).ToList();
+            var eventIndex = 0;
 
-            var connectionQueuedStart = Assert.Single(events, e => e.EventName == "ConnectionQueuedStart");
+            var connectionQueuedStart = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStart", connectionQueuedStart.EventName);
+            Assert.Equal(6, connectionQueuedStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
             Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
 
-            var connectionQueuedStop = Assert.Single(events, e => e.EventName == "ConnectionQueuedStop");
+            var connectionQueuedStop = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
+            Assert.Equal(7, connectionQueuedStop.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
             Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
 
-            var connectionStart = Assert.Single(events, e => e.EventName == "ConnectionStart");
+            var connectionStart = events[eventIndex++];
+            Assert.Equal("ConnectionStart", connectionStart.EventName);
+            Assert.Equal(1, connectionStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
             Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
             Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
 
-            for (int i = 0; i < requestsToSend; i++)
-            {
-                var requestStart = Assert.Single(events, e => e.EventName == "RequestStart" && GetProperty(e, "requestId") == requestIds[i]);
-                Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestStart.PayloadNames));
-                Assert.Same(KestrelEventSource.Log, requestStart.EventSource);
-                Assert.NotEqual(Guid.Empty, requestStart.ActivityId);
-                Assert.Equal(connectionStart.ActivityId, requestStart.RelatedActivityId);
+            var firstRequestStart = events[eventIndex++];
+            Assert.Equal("RequestStart", firstRequestStart.EventName);
+            Assert.Equal(3, firstRequestStart.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, firstRequestStart.PayloadNames));
+            Assert.Equal(requestIds[0], GetProperty(firstRequestStart, "requestId"));
+            Assert.Same(KestrelEventSource.Log, firstRequestStart.EventSource);
+            Assert.NotEqual(Guid.Empty, firstRequestStart.ActivityId);
+            Assert.Equal(connectionStart.ActivityId, firstRequestStart.RelatedActivityId);
 
-                var requestStop = Assert.Single(events, e => e.EventName == "RequestStop" && GetProperty(e, "requestId") == requestIds[i]);
-                Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestStop.PayloadNames));
-                Assert.Same(KestrelEventSource.Log, requestStop.EventSource);
-                Assert.Equal(requestStart.ActivityId, requestStop.ActivityId);
-                Assert.Equal(Guid.Empty, requestStop.RelatedActivityId);
-            }
+            var firstRequestStop = events[eventIndex++];
+            Assert.Equal("RequestStop", firstRequestStop.EventName);
+            Assert.Equal(4, firstRequestStop.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, firstRequestStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, firstRequestStop.EventSource);
+            Assert.Equal(requestIds[0], GetProperty(firstRequestStop, "requestId"));
+            Assert.Equal(firstRequestStart.ActivityId, firstRequestStop.ActivityId);
+            Assert.Equal(Guid.Empty, firstRequestStop.RelatedActivityId);
 
-            var connectionStop = Assert.Single(events, e => e.EventName == "ConnectionStop");
+            var secondRequestStart = events[eventIndex++];
+            Assert.Equal("RequestStart", secondRequestStart.EventName);
+            Assert.Equal(3, secondRequestStart.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, secondRequestStart.PayloadNames));
+            Assert.Equal(requestIds[1], GetProperty(secondRequestStart, "requestId"));
+            Assert.Same(KestrelEventSource.Log, secondRequestStart.EventSource);
+            Assert.NotEqual(Guid.Empty, secondRequestStart.ActivityId);
+            Assert.Equal(connectionStart.ActivityId, secondRequestStart.RelatedActivityId);
+
+            var requestUpgradedStart = events[eventIndex++];
+            Assert.Equal("RequestUpgradedStart", requestUpgradedStart.EventName);
+            Assert.Equal(13, requestUpgradedStart.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestUpgradedStart.PayloadNames));
+            Assert.Equal(requestIds[1], GetProperty(requestUpgradedStart, "requestId"));
+            Assert.Same(KestrelEventSource.Log, requestUpgradedStart.EventSource);
+            Assert.NotEqual(Guid.Empty, requestUpgradedStart.ActivityId);
+            Assert.Equal(secondRequestStart.ActivityId, requestUpgradedStart.RelatedActivityId);
+
+            var requestUpgradedStop = events[eventIndex++];
+            Assert.Equal("RequestUpgradedStop", requestUpgradedStop.EventName);
+            Assert.Equal(14, requestUpgradedStop.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestUpgradedStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, requestUpgradedStop.EventSource);
+            Assert.Equal(requestIds[1], GetProperty(requestUpgradedStop, "requestId"));
+            Assert.Equal(requestUpgradedStart.ActivityId, requestUpgradedStop.ActivityId);
+            Assert.Equal(Guid.Empty, requestUpgradedStop.RelatedActivityId);
+
+            var secondRequestStop = events[eventIndex++];
+            Assert.Equal("RequestStop", secondRequestStop.EventName);
+            Assert.Equal(4, secondRequestStop.EventId);
+            Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, secondRequestStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, secondRequestStop.EventSource);
+            Assert.Equal(requestIds[1], GetProperty(secondRequestStop, "requestId"));
+            Assert.Equal(secondRequestStart.ActivityId, secondRequestStop.ActivityId);
+            Assert.Equal(Guid.Empty, secondRequestStop.RelatedActivityId);
+
+            var connectionStop = events[eventIndex++];
+            Assert.Equal("ConnectionStop", connectionStop.EventName);
+            Assert.Equal(2, connectionStop.EventId);
             Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, connectionStop.PayloadNames));
             Assert.Same(KestrelEventSource.Log, connectionStop.EventSource);
             Assert.Equal(connectionStart.ActivityId, connectionStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionStop.RelatedActivityId);
+
+            Assert.Equal(eventIndex, events.Count);
         }
 
         [Fact]
-        public async Task EmitsHttp2StartAndStopEventsWithActivityIds()
+        public async Task Http2_EmitsStartAndStopEventsWithActivityIds()
         {
             int port;
             string connectionId = null;
@@ -195,37 +247,43 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
 
             // Other tests executing in parallel may log events.
             var events = _listener.EventData.Where(e => e != null && GetProperty(e, "connectionId") == connectionId).ToList();
+            var eventIndex = 0;
 
-            var connectionQueuedStart = events[0];
+            var connectionQueuedStart = events[eventIndex++];
             Assert.Equal("ConnectionQueuedStart", connectionQueuedStart.EventName);
+            Assert.Equal(6, connectionQueuedStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
             Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
 
-            var connectionQueuedStop = events[1];
+            var connectionQueuedStop = events[eventIndex++];
             Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
+            Assert.Equal(7, connectionQueuedStop.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
             Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
 
-            var connectionStart = events[2];
+            var connectionStart = events[eventIndex++];
             Assert.Equal("ConnectionStart", connectionStart.EventName);
+            Assert.Equal(1, connectionStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
             Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
             Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
 
-            var tlsHandshakeStart = events[3];
+            var tlsHandshakeStart = events[eventIndex++];
             Assert.Equal("TlsHandshakeStart", tlsHandshakeStart.EventName);
+            Assert.Equal(8, tlsHandshakeStart.EventId);
             Assert.All(new[] { "connectionId" , "sslProtocols" }, p => Assert.Contains(p, tlsHandshakeStart.PayloadNames));
             Assert.Same(KestrelEventSource.Log, tlsHandshakeStart.EventSource);
             Assert.NotEqual(Guid.Empty, tlsHandshakeStart.ActivityId);
             Assert.Equal(connectionStart.ActivityId, tlsHandshakeStart.RelatedActivityId);
 
-            var tlsHandshakeStop = events[4];
+            var tlsHandshakeStop = events[eventIndex++];
             Assert.Equal("TlsHandshakeStop", tlsHandshakeStop.EventName);
+            Assert.Equal(9, tlsHandshakeStop.EventId);
             Assert.All(new[] { "connectionId", "sslProtocols", "applicationProtocol", "hostName" }, p => Assert.Contains(p, tlsHandshakeStop.PayloadNames));
             Assert.Equal("h2", GetProperty(tlsHandshakeStop, "applicationProtocol"));
             Assert.Same(KestrelEventSource.Log, tlsHandshakeStop.EventSource);
@@ -234,32 +292,36 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
 
             for (int i = 0; i < requestsToSend; i++)
             {
-                var requestQueuedStart = events[5 + (4 * i)];
+                var requestQueuedStart = events[eventIndex++];
                 Assert.Equal("RequestQueuedStart", requestQueuedStart.EventName);
+                Assert.Equal(11, requestQueuedStart.EventId);
                 Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestQueuedStart.PayloadNames));
                 Assert.Equal(requestIds[i], GetProperty(requestQueuedStart, "requestId"));
                 Assert.Same(KestrelEventSource.Log, requestQueuedStart.EventSource);
                 Assert.NotEqual(Guid.Empty, requestQueuedStart.ActivityId);
                 Assert.Equal(connectionStart.ActivityId, requestQueuedStart.RelatedActivityId);
 
-                var requestQueuedStop = events[6 + (4 * i)];
+                var requestQueuedStop = events[eventIndex++];
                 Assert.Equal("RequestQueuedStop", requestQueuedStop.EventName);
+                Assert.Equal(12, requestQueuedStop.EventId);
                 Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestQueuedStop.PayloadNames));
                 Assert.Same(KestrelEventSource.Log, requestQueuedStop.EventSource);
                 Assert.Equal(requestIds[i], GetProperty(requestQueuedStop, "requestId"));
                 Assert.Equal(requestQueuedStop.ActivityId, requestQueuedStop.ActivityId);
                 Assert.Equal(Guid.Empty, requestQueuedStop.RelatedActivityId);
 
-                var requestStart = events[7 + (4 * i)];
+                var requestStart = events[eventIndex++];
                 Assert.Equal("RequestStart", requestStart.EventName);
+                Assert.Equal(3, requestStart.EventId);
                 Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestStart.PayloadNames));
                 Assert.Equal(requestIds[i], GetProperty(requestStart, "requestId"));
                 Assert.Same(KestrelEventSource.Log, requestStart.EventSource);
                 Assert.NotEqual(Guid.Empty, requestStart.ActivityId);
                 Assert.Equal(connectionStart.ActivityId, requestStart.RelatedActivityId);
 
-                var requestStop = events[8 + (4 * i)];
+                var requestStop = events[eventIndex++];
                 Assert.Equal("RequestStop", requestStop.EventName);
+                Assert.Equal(4, requestStop.EventId);
                 Assert.All(new[] { "connectionId", "requestId" }, p => Assert.Contains(p, requestStop.PayloadNames));
                 Assert.Same(KestrelEventSource.Log, requestStop.EventSource);
                 Assert.Equal(requestIds[i], GetProperty(requestStop, "requestId"));
@@ -267,14 +329,120 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
                 Assert.Equal(Guid.Empty, requestStop.RelatedActivityId);
             }
 
-            var connectionStop = events[13];
+            var connectionStop = events[eventIndex++];
             Assert.Equal("ConnectionStop", connectionStop.EventName);
+            Assert.Equal(2, connectionStop.EventId);
             Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, connectionStop.PayloadNames));
             Assert.Same(KestrelEventSource.Log, connectionStop.EventSource);
             Assert.Equal(connectionStart.ActivityId, connectionStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionStop.RelatedActivityId);
 
-            Assert.Equal(14, events.Count);
+            Assert.Equal(eventIndex, events.Count);
+        }
+
+        [Fact]
+        public async Task TlsHandshakeFailure_EmitsStartAndStopEventsWithActivityIds()
+        {
+            int port;
+            string connectionId = null;
+
+            await using (var server = new TestServer(context => Task.CompletedTask, new TestServiceContext(LoggerFactory),
+            listenOptions =>
+            {
+                listenOptions.Use(next =>
+                {
+                    return connectionContext =>
+                    {
+                        connectionId = connectionContext.ConnectionId;
+                        return next(connectionContext);
+                    };
+                });
+
+                listenOptions.UseHttps(_x509Certificate2);
+            }))
+            {
+                port = server.Port;
+
+                using var connection = server.CreateConnection();
+                await using var sslStream = new SslStream(connection.Stream);
+
+                var clientAuthOptions = new SslClientAuthenticationOptions
+                {
+                    TargetHost = "localhost",
+
+                    // Only enabling SslProtocols.Ssl2 should cause a handshake failure on all platforms.
+#pragma warning disable CS0618 // Type or member is obsolete
+                    EnabledSslProtocols = SslProtocols.Ssl2,
+#pragma warning restore CS0618 // Type or member is obsolete
+                };
+
+                using var handshakeCts = new CancellationTokenSource(TestConstants.DefaultTimeout);
+                await Assert.ThrowsAnyAsync<Exception>(() => sslStream.AuthenticateAsClientAsync(clientAuthOptions, handshakeCts.Token));
+            }
+
+            Assert.NotNull(connectionId);
+
+            // Other tests executing in parallel may log events.
+            var events = _listener.EventData.Where(e => e != null && GetProperty(e, "connectionId") == connectionId).ToList();
+            var eventIndex = 0;
+
+            var connectionQueuedStart = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStart", connectionQueuedStart.EventName);
+            Assert.Equal(6, connectionQueuedStart.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
+            Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
+            Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
+
+            var connectionQueuedStop = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
+            Assert.Equal(7, connectionQueuedStop.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
+            Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
+            Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
+
+            var connectionStart = events[eventIndex++];
+            Assert.Equal("ConnectionStart", connectionStart.EventName);
+            Assert.Equal(1, connectionStart.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
+            Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
+            Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
+
+            var tlsHandshakeStart = events[eventIndex++];
+            Assert.Equal("TlsHandshakeStart", tlsHandshakeStart.EventName);
+            Assert.Equal(8, tlsHandshakeStart.EventId);
+            Assert.All(new[] { "connectionId", "sslProtocols" }, p => Assert.Contains(p, tlsHandshakeStart.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, tlsHandshakeStart.EventSource);
+            Assert.NotEqual(Guid.Empty, tlsHandshakeStart.ActivityId);
+            Assert.Equal(connectionStart.ActivityId, tlsHandshakeStart.RelatedActivityId);
+
+            var tlsHandshakeFailed = events[eventIndex++];
+            Assert.Equal("TlsHandshakeFailed", tlsHandshakeFailed.EventName);
+            Assert.Equal(10, tlsHandshakeFailed.EventId);
+            Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, tlsHandshakeFailed.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, tlsHandshakeFailed.EventSource);
+            Assert.NotEqual(tlsHandshakeStart.ActivityId, tlsHandshakeFailed.ActivityId);
+            Assert.Equal(Guid.Empty, tlsHandshakeFailed.RelatedActivityId);
+
+            var tlsHandshakeStop = events[eventIndex++];
+            Assert.Equal("TlsHandshakeStop", tlsHandshakeStop.EventName);
+            Assert.Equal(9, tlsHandshakeStop.EventId);
+            Assert.All(new[] { "connectionId", "sslProtocols", "applicationProtocol", "hostName" }, p => Assert.Contains(p, tlsHandshakeStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, tlsHandshakeStop.EventSource);
+            Assert.Equal(tlsHandshakeStart.ActivityId, tlsHandshakeStop.ActivityId);
+            Assert.Equal(Guid.Empty, tlsHandshakeStop.RelatedActivityId);
+
+            var connectionStop = events[eventIndex++];
+            Assert.Equal("ConnectionStop", connectionStop.EventName);
+            Assert.Equal(2, connectionStop.EventId);
+            Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, connectionStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, connectionStop.EventSource);
+            Assert.Equal(connectionStart.ActivityId, connectionStop.ActivityId);
+            Assert.Equal(Guid.Empty, connectionStop.RelatedActivityId);
+
+            Assert.Equal(eventIndex, events.Count);
         }
 
         private string GetProperty(EventWrittenEventArgs data, string propName)
