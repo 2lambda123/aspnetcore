@@ -298,6 +298,13 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
             KestrelEventSource.Log.RequestUpgradedStart(this);
 
+            // We must manually capture the EC for EventSource ActivityId tracking for RequestUpgradedStart/Stop
+            // because we start the activity inside middleware and stop it after we await middleware completion.
+            if (KestrelEventSource.Log.IsEnabled())
+            {
+                RequestUpgradedExecutionContext = ExecutionContext.Capture();
+            }
+
             ConnectionFeatures.Get<IDecrementConcurrentConnectionCountFeature>()?.ReleaseConnection();
 
             StatusCode = StatusCodes.Status101SwitchingProtocols;

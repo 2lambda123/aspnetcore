@@ -131,6 +131,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
         public bool IsUpgradableRequest { get; private set; }
         public bool IsUpgraded { get; set; }
+
+        // We must manually capture the EC for EventSource ActivityId tracking for RequestUpgradedStart/Stop
+        // because we start the activity inside middleware and stop it after we await middleware completion.
+        private ExecutionContext RequestUpgradedExecutionContext { get; set; }
+
         public IPAddress RemoteIpAddress { get; set; }
         public int RemotePort { get; set; }
         public IPAddress LocalIpAddress { get; set; }
@@ -638,7 +643,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
                 InitializeBodyControl(messageBody);
 
-
                 var context = application.CreateContext(this);
 
                 try
@@ -673,6 +677,22 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                 catch (Exception ex)
                 {
                     ReportApplicationError(ex);
+                }
+
+                // Ensure RequestUpgradedStop is logged before RequestStop because RequestUpgradedStart is logged
+                // after RequestStart.
+                if (IsUpgraded)
+                {
+                    // We must manually capture the EC for EventSource ActivityId tracking for RequestUpgradedStart/Stop
+                    // because we start the activity inside middleware and stop it after we await middleware completion.
+                    if (RequestUpgradedExecutionContext != null)
+                    {
+                        ExecutionContext.Restore(RequestUpgradedExecutionContext);
+                    }
+
+                    KestrelEventSource.Log.RequestUpgradedStop(this);
+
+                    ServiceContext.ConnectionManager.UpgradedConnectionCount.ReleaseOne();
                 }
 
                 KestrelEventSource.Log.RequestStop(this);
