@@ -15,9 +15,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTransport;
 using Microsoft.AspNetCore.Testing;
@@ -97,14 +99,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(6, connectionQueuedStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStart.EventSource);
             Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
 
             var connectionQueuedStop = events[eventIndex++];
             Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
             Assert.Equal(7, connectionQueuedStop.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStop.EventSource);
             Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
 
@@ -113,8 +116,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(1, connectionStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionStart.EventSource);
             Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
 
             var firstRequestStart = events[eventIndex++];
             Assert.Equal("RequestStart", firstRequestStart.EventName);
@@ -254,13 +257,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(6, connectionQueuedStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStart.EventSource);
             Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
 
             var connectionQueuedStop = events[eventIndex++];
             Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
             Assert.Equal(7, connectionQueuedStop.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStop.EventSource);
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
             Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
@@ -269,9 +273,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal("ConnectionStart", connectionStart.EventName);
             Assert.Equal(1, connectionStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, connectionStart.EventSource);
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
             Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
 
             var tlsHandshakeStart = events[eventIndex++];
             Assert.Equal("TlsHandshakeStart", tlsHandshakeStart.EventName);
@@ -391,14 +395,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(6, connectionQueuedStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStart.EventSource);
             Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionQueuedStart.RelatedActivityId);
 
             var connectionQueuedStop = events[eventIndex++];
             Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
             Assert.Equal(7, connectionQueuedStop.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStop.EventSource);
             Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
             Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
 
@@ -407,8 +412,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(1, connectionStart.EventId);
             Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
             Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionStart.EventSource);
             Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
-            Assert.Equal(Guid.Empty, connectionStart.RelatedActivityId);
 
             var tlsHandshakeStart = events[eventIndex++];
             Assert.Equal("TlsHandshakeStart", tlsHandshakeStart.EventName);
@@ -423,7 +428,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(10, tlsHandshakeFailed.EventId);
             Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, tlsHandshakeFailed.PayloadNames));
             Assert.Same(KestrelEventSource.Log, tlsHandshakeFailed.EventSource);
-            Assert.NotEqual(tlsHandshakeStart.ActivityId, tlsHandshakeFailed.ActivityId);
+            Assert.Equal(tlsHandshakeStart.ActivityId, tlsHandshakeFailed.ActivityId);
             Assert.Equal(Guid.Empty, tlsHandshakeFailed.RelatedActivityId);
 
             var tlsHandshakeStop = events[eventIndex++];
@@ -445,15 +450,93 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
             Assert.Equal(eventIndex, events.Count);
         }
 
-        private string GetProperty(EventWrittenEventArgs data, string propName)
+        [Fact]
+        public async Task ConnectionLimitExceeded_EmitsStartAndStopEventsWithActivityIds()
         {
-            var index = data.PayloadNames.IndexOf(propName);
-            return index >= 0 ? data.Payload[index] as string : null;
+            int port;
+            string connectionId = null;
+
+            var serviceContext = new TestServiceContext(LoggerFactory);
+
+            await using (var server = new TestServer(context => Task.CompletedTask, serviceContext,
+            listenOptions =>
+            {
+                listenOptions.Use(next =>
+                {
+                    return connectionContext =>
+                    {
+                        connectionId = connectionContext.ConnectionId;
+                        return next(connectionContext);
+                    };
+                });
+
+                listenOptions.Use(next =>
+                {
+                    return new ConnectionLimitMiddleware<ConnectionContext>(c => next(c), connectionLimit: 0, serviceContext.Log).OnConnectionAsync;
+                });
+            }))
+            {
+                port = server.Port;
+
+                using var connection = server.CreateConnection();
+                await connection.ReceiveEnd();
+            }
+
+            Assert.NotNull(connectionId);
+
+            // Other tests executing in parallel may log events.
+            var events = _listener.EventData.Where(e => e != null && GetProperty(e, "connectionId") == connectionId).ToList();
+            var eventIndex = 0;
+
+            var connectionQueuedStart = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStart", connectionQueuedStart.EventName);
+            Assert.Equal(6, connectionQueuedStart.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStart.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStart.EventSource);
+            Assert.NotEqual(Guid.Empty, connectionQueuedStart.ActivityId);
+
+            var connectionQueuedStop = events[eventIndex++];
+            Assert.Equal("ConnectionQueuedStop", connectionQueuedStop.EventName);
+            Assert.Equal(7, connectionQueuedStop.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionQueuedStop.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionQueuedStop, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionQueuedStop.EventSource);
+            Assert.Equal(connectionQueuedStart.ActivityId, connectionQueuedStop.ActivityId);
+            Assert.Equal(Guid.Empty, connectionQueuedStop.RelatedActivityId);
+
+            var connectionStart = events[eventIndex++];
+            Assert.Equal("ConnectionStart", connectionStart.EventName);
+            Assert.Equal(1, connectionStart.EventId);
+            Assert.All(new[] { "connectionId", "remoteEndPoint", "localEndPoint" }, p => Assert.Contains(p, connectionStart.PayloadNames));
+            Assert.Equal($"127.0.0.1:{port}", GetProperty(connectionStart, "localEndPoint"));
+            Assert.Same(KestrelEventSource.Log, connectionStart.EventSource);
+            Assert.NotEqual(Guid.Empty, connectionStart.ActivityId);
+
+            var connectionRejected = events[eventIndex++];
+            Assert.Equal("ConnectionRejected", connectionRejected.EventName);
+            Assert.Equal(5, connectionRejected.EventId);
+            Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, connectionRejected.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, connectionRejected.EventSource);
+            Assert.Equal(connectionStart.ActivityId, connectionRejected.ActivityId);
+            Assert.Equal(Guid.Empty, connectionRejected.RelatedActivityId);
+
+            var connectionStop = events[eventIndex++];
+            Assert.Equal("ConnectionStop", connectionStop.EventName);
+            Assert.Equal(2, connectionStop.EventId);
+            Assert.All(new[] { "connectionId" }, p => Assert.Contains(p, connectionStop.PayloadNames));
+            Assert.Same(KestrelEventSource.Log, connectionStop.EventSource);
+            Assert.Equal(connectionStart.ActivityId, connectionStop.ActivityId);
+            Assert.Equal(Guid.Empty, connectionStop.RelatedActivityId);
+
+            Assert.Equal(eventIndex, events.Count);
         }
+
+        private string GetProperty(EventSnapshot data, string propName) => data.Payload[propName];
 
         private class TestEventListener : EventListener
         {
-            private readonly ConcurrentQueue<EventWrittenEventArgs> _events = new ConcurrentQueue<EventWrittenEventArgs>();
+            private readonly ConcurrentQueue<EventSnapshot> _events = new ConcurrentQueue<EventSnapshot>();
             private readonly ILogger _logger;
             private volatile bool _disposed;
 
@@ -462,7 +545,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
                 _logger = logger;
             }
 
-            public IEnumerable<EventWrittenEventArgs> EventData => _events;
+            public IEnumerable<EventSnapshot> EventData => _events;
 
             protected override void OnEventSourceCreated(EventSource eventSource)
             {
@@ -482,7 +565,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
                         WriteIndented = true
                     }));
 
-                    _events.Enqueue(eventData);
+                    // EventWrittenEventArgs.ActivityId sometimes falls back to EventSource.CurrentThreadActivityId,
+                    // so we need to take a snapshot to verify the ActivityId later on a different thread.
+                    // https://github.com/dotnet/runtime/blob/85162fbf9ccdeb4fa1df357f27308ae96579c066/src/libraries/System.Private.CoreLib/src/System/Diagnostics/Tracing/EventSource.cs#L4551
+                    _events.Enqueue(new EventSnapshot(eventData));
                 }
             }
 
@@ -491,6 +577,33 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
                 _disposed = true;
                 base.Dispose();
             }
+        }
+
+        private class EventSnapshot
+        {
+            public EventSnapshot(EventWrittenEventArgs eventWrittenEventArgs)
+            {
+                EventName = eventWrittenEventArgs.EventName;
+                EventId = eventWrittenEventArgs.EventId;
+                EventSource = eventWrittenEventArgs.EventSource;
+                ActivityId = eventWrittenEventArgs.ActivityId;
+                RelatedActivityId = eventWrittenEventArgs.RelatedActivityId;
+                Payload = new Dictionary<string, string>(eventWrittenEventArgs.PayloadNames.Count);
+
+                for (int i = 0; i < eventWrittenEventArgs.PayloadNames.Count; i++)
+                {
+                    Payload[eventWrittenEventArgs.PayloadNames[i]] = eventWrittenEventArgs.Payload[i] as string;
+                }
+            }
+
+            public string EventName { get; }
+            public int EventId { get; }
+            public EventSource EventSource { get; }
+            public Guid ActivityId { get; }
+            public Guid RelatedActivityId { get; }
+            public Dictionary<string, string> Payload { get; }
+
+            public IEnumerable<string> PayloadNames => Payload.Keys;
         }
 
         public override void Dispose()
