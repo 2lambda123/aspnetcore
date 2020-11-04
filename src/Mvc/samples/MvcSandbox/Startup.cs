@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Core.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +41,8 @@ namespace MvcSandbox
             app.UseRouting();
             app.UseEndpoints(builder =>
             {
+                builder.MapAction("/EchoAction", (Person person) => person);
+
                 builder.MapGet(
                     requestDelegate: WriteEndpoints,
                     pattern: "/endpoints").WithDisplayName("Endpoints");
@@ -111,6 +115,19 @@ namespace MvcSandbox
                 .UseIISIntegration()
                 .UseKestrel()
                 .UseStartup<Startup>();
+    }
+
+
+    [ApiController]
+    public class EchoController : ControllerBase
+    {
+        [HttpPost("/EchoController")]
+        public Person Get(Person person) => person;
+    }
+
+    public class Person
+    {
+        public string Name { get; set; }
     }
 }
 

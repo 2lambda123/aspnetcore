@@ -203,6 +203,7 @@ Microsoft.AspNetCore.Mvc.Controllers.IControllerFactory
 Microsoft.AspNetCore.Mvc.Controllers.IControllerFactoryProvider
 Microsoft.AspNetCore.Mvc.Controllers.ServiceBasedControllerActivator
 Microsoft.AspNetCore.Mvc.Controllers.ServiceBasedControllerActivator.ServiceBasedControllerActivator() -> void
+Microsoft.AspNetCore.Mvc.Core.Builder.ActionEndpiontRouteBuilderExtensions
 Microsoft.AspNetCore.Mvc.Core.Infrastructure.IAntiforgeryValidationFailedResult
 Microsoft.AspNetCore.Mvc.CreatedAtActionResult
 Microsoft.AspNetCore.Mvc.CreatedAtRouteResult
@@ -2113,6 +2114,7 @@ virtual Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidationVisitor.Visit
 ~static Microsoft.AspNetCore.Mvc.ApplicationParts.DefaultApplicationPartFactory.GetDefaultApplicationParts(System.Reflection.Assembly assembly) -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.ApplicationParts.ApplicationPart>
 ~static Microsoft.AspNetCore.Mvc.ApplicationParts.DefaultApplicationPartFactory.Instance.get -> Microsoft.AspNetCore.Mvc.ApplicationParts.DefaultApplicationPartFactory
 ~static Microsoft.AspNetCore.Mvc.ApplicationParts.RelatedAssemblyAttribute.GetRelatedAssemblies(System.Reflection.Assembly assembly, bool throwOnError) -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly>
+~static Microsoft.AspNetCore.Mvc.Core.Builder.ActionEndpiontRouteBuilderExtensions.MapAction<TIn, TOut>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, string pattern, System.Func<TIn, TOut> action) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder
 ~static Microsoft.AspNetCore.Mvc.DefaultApiConventions.Create(object model) -> void
 ~static Microsoft.AspNetCore.Mvc.DefaultApiConventions.Delete(object id) -> void
 ~static Microsoft.AspNetCore.Mvc.DefaultApiConventions.Edit(object id, object model) -> void

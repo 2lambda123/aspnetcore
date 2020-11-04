@@ -13,12 +13,4 @@ namespace MvcSandbox.Controllers
             return View();
         }
     }
-
-    [ApiController]
-    [Route("[controller]")]
-    public class WeatherController : ControllerBase
-    {
-        [HttpGet("~/[controller]/{name?}")]
-        public string Get(string name) => $"{name}, Hello Sunny Days!";
-    }
 }
