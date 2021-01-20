@@ -73,13 +73,148 @@ namespace Microsoft.AspNetCore.Builder
         /// <param name="endpoints"></param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public static void MapAction(
+        private static void MapAction(
             this IEndpointRouteBuilder endpoints,
             Delegate action)
         {
-            var modelProvider = (MapActionModelProvider)endpoints.ServiceProvider.GetRequiredService<IApplicationModelProvider>();
+            var modelProviders = endpoints.ServiceProvider.GetService<IEnumerable<IApplicationModelProvider>>();
+            var modelProvider = modelProviders.OfType<MapActionModelProvider>().Single();
             modelProvider.Actions.Add(action);
         }
+
+        #region Public MapAction overloads
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction(
+            this IEndpointRouteBuilder endpoints,
+            Action action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T>(
+            this IEndpointRouteBuilder endpoints,
+            Action<T> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2>(
+            this IEndpointRouteBuilder endpoints,
+            Action<T1, T2> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2, T3>(
+            this IEndpointRouteBuilder endpoints,
+            Action<T1, T2, T3> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2, T3, T4>(
+            this IEndpointRouteBuilder endpoints,
+            Action<T1, T2, T3, T4> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<TResult>(
+            this IEndpointRouteBuilder endpoints,
+            Func<TResult> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T, TResult>(
+            this IEndpointRouteBuilder endpoints,
+            Func<T, TResult> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2, TResult>(
+            this IEndpointRouteBuilder endpoints,
+            Func<T1, T2, TResult> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2, T3, TResult>(
+            this IEndpointRouteBuilder endpoints,
+            Func<T1, T2, T3, TResult> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static void MapAction<T1, T2, T3, T4, TResult>(
+            this IEndpointRouteBuilder endpoints,
+            Func<T1, T2, T3, T4, TResult> action)
+        {
+            endpoints.MapAction((Delegate)action);
+        }
+
+        #endregion
 
         private class MapActionModelProvider : IApplicationModelProvider
         {

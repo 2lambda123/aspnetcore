@@ -155,6 +155,12 @@ namespace Microsoft.Extensions.Internal
         /// <returns>An object that you can "await" to get the method return value.</returns>
         public ObjectMethodExecutorAwaitable ExecuteAsync(object target, object?[]? parameters)
         {
+            if (_invoker is { })
+            {
+                var asyncStateMachineBox = _invoker.DynamicInvoke(parameters)!;
+                return new ObjectMethodExecutorAwaitable(asyncStateMachineBox);
+            }
+
             Debug.Assert(_executorAsync != null, "Async execution is not supported.");
             return _executorAsync(target, parameters);
         }

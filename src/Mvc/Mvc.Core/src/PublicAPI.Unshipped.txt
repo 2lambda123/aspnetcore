@@ -1,9 +1,18 @@
 Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions
 ~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.AddMapActionServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> void
-~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Delegate action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Action action) -> void
 ~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction2<T, TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<T, TResult> action) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder
 ~Microsoft.AspNetCore.Mvc.Controllers.ControllerActivatorProvider.CreateAsyncReleaser(Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor descriptor) -> System.Func<Microsoft.AspNetCore.Mvc.ControllerContext, object, System.Threading.Tasks.ValueTask>
 ~Microsoft.AspNetCore.Mvc.Controllers.IControllerActivator.ReleaseAsync(Microsoft.AspNetCore.Mvc.ControllerContext context, object controller) -> System.Threading.Tasks.ValueTask
 ~Microsoft.AspNetCore.Mvc.Controllers.IControllerActivatorProvider.CreateAsyncReleaser(Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor descriptor) -> System.Func<Microsoft.AspNetCore.Mvc.ControllerContext, object, System.Threading.Tasks.ValueTask>
 ~Microsoft.AspNetCore.Mvc.Controllers.IControllerFactory.ReleaseControllerAsync(Microsoft.AspNetCore.Mvc.ControllerContext context, object controller) -> System.Threading.Tasks.ValueTask
 ~Microsoft.AspNetCore.Mvc.Controllers.IControllerFactoryProvider.CreateAsyncControllerReleaser(Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor descriptor) -> System.Func<Microsoft.AspNetCore.Mvc.ControllerContext, object, System.Threading.Tasks.ValueTask>
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T, TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<T, TResult> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2, T3, T4, TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<T1, T2, T3, T4, TResult> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2, T3, T4>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Action<T1, T2, T3, T4> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2, T3, TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<T1, T2, T3, TResult> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2, T3>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Action<T1, T2, T3> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2, TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<T1, T2, TResult> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T1, T2>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Action<T1, T2> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<T>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Action<T> action) -> void
+~static Microsoft.AspNetCore.Builder.MapActionEndpointRouteBuilderExtensions.MapAction<TResult>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.Func<TResult> action) -> void

@@ -56,6 +56,16 @@ namespace Microsoft.Extensions.Internal
             _unsafeOnCompletedMethod = unsafeOnCompletedMethod;
         }
 
+        public ObjectMethodExecutorAwaitable(object task)
+        {
+            _customAwaitable = task;
+            _getAwaiterMethod = o => ((dynamic)o).GetAwaiter();
+            _isCompletedMethod = o => ((dynamic)o).IsCompleted;
+            _getResultMethod = o => ((dynamic)o).GetResult();
+            _onCompletedMethod = (o, a) => ((dynamic)o).OnCompleted(a);
+            _unsafeOnCompletedMethod = (o, a) => ((dynamic)o).UnsafeOnCompleted(a);
+        }
+
         public Awaiter GetAwaiter()
         {
             var customAwaiter = _getAwaiterMethod(_customAwaitable);

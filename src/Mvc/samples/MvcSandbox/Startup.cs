@@ -39,18 +39,30 @@ namespace MvcSandbox
             app.UseDeveloperExceptionPage();
             app.UseStaticFiles();
 
-            [HttpPost]
-            [Route("api/products/{routeParam}")]
-            Product Echo(string routeParam, [FromBody] Product product)
-            {
-                return product with { Name = $"{product.Name} ({routeParam})" };
-            }
 
             app.UseRouting();
             app.UseEndpoints(builder =>
             {
-                builder.MapAction((Func<string, Product, Product>)Echo);
-                //builder.MapAction2(Func<Product, Product>)Echo);
+                [HttpPost]
+                [Route("api/products/{routeParam}")]
+                async Task<Product> Echo(string routeParam, [FromBody] Product product)
+                {
+                    await Task.Yield();
+                    return product with { Name = $"{product.Name} ({routeParam})" };
+                }
+
+                //[HttpPost]
+                //[Route("api/products/{routeParam}/{routeParam2}")]
+                //async Task<Product> Echo(string routeParam, int routeParam2, [FromBody] Product product)
+                //{
+                //    await Task.Yield();
+                //    return product with { Name = $"{product.Name} ({routeParam}) #{routeParam2}" };
+                //}
+                //
+                //var task1 = Echo("routeParam", new Product(1,"Orange", 0.25));
+                //var task2 = Echo("routeParam", 2, new Product(1,"Orange", 0.25));
+
+                builder.MapAction((Func<string, Product, Task<Product>>)Echo);
 
                 builder.MapGet(
                     requestDelegate: WriteEndpoints,
