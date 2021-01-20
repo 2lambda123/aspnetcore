@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,8 @@ using Microsoft.Extensions.Logging;
 
 namespace MvcSandbox
 {
+    public record Product(int Id, string Name, double Price);
+
     public class Startup
     {
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -27,6 +30,7 @@ namespace MvcSandbox
             });
             services.AddServerSideBlazor();
             services.AddMvc();
+            services.AddMapActionServices();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -35,9 +39,19 @@ namespace MvcSandbox
             app.UseDeveloperExceptionPage();
             app.UseStaticFiles();
 
+            [HttpPost]
+            [Route("api/products/{routeParam}")]
+            Product Echo(string routeParam, [FromBody] Product product)
+            {
+                return product with { Name = $"{product.Name} ({routeParam})" };
+            }
+
             app.UseRouting();
             app.UseEndpoints(builder =>
             {
+                builder.MapAction((Func<string, Product, Product>)Echo);
+                //builder.MapAction2(Func<Product, Product>)Echo);
+
                 builder.MapGet(
                     requestDelegate: WriteEndpoints,
                     pattern: "/endpoints").WithDisplayName("Endpoints");

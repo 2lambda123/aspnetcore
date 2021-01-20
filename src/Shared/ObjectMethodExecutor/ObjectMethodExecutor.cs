@@ -16,6 +16,7 @@ namespace Microsoft.Extensions.Internal
         private readonly object?[]? _parameterDefaultValues;
         private readonly MethodExecutorAsync? _executorAsync;
         private readonly MethodExecutor? _executor;
+        private readonly Delegate? _invoker;
 
         private static readonly ConstructorInfo _objectMethodExecutorAwaitableConstructor =
             typeof(ObjectMethodExecutorAwaitable).GetConstructor(new[] {
@@ -27,7 +28,7 @@ namespace Microsoft.Extensions.Internal
                 typeof(Action<object, Action>)  // unsafeOnCompletedMethod
             })!;
 
-        private ObjectMethodExecutor(MethodInfo methodInfo, TypeInfo targetTypeInfo, object?[]? parameterDefaultValues)
+        private ObjectMethodExecutor(MethodInfo methodInfo, TypeInfo targetTypeInfo, object?[]? parameterDefaultValues, Delegate? invoker = null)
         {
             if (methodInfo == null)
             {
@@ -43,15 +44,19 @@ namespace Microsoft.Extensions.Internal
 
             IsMethodAsync = isAwaitable;
             AsyncResultType = isAwaitable ? coercedAwaitableInfo.AwaitableInfo.ResultType : null;
+            _invoker = invoker;
 
-            // Upstream code may prefer to use the sync-executor even for async methods, because if it knows
-            // that the result is a specific Task<T> where T is known, then it can directly cast to that type
-            // and await it without the extra heap allocations involved in the _executorAsync code path.
-            _executor = GetExecutor(methodInfo, targetTypeInfo);
-
-            if (IsMethodAsync)
+            if (invoker is null)
             {
-                _executorAsync = GetExecutorAsync(methodInfo, targetTypeInfo, coercedAwaitableInfo);
+                // Upstream code may prefer to use the sync-executor even for async methods, because if it knows
+                // that the result is a specific Task<T> where T is known, then it can directly cast to that type
+                // and await it without the extra heap allocations involved in the _executorAsync code path.
+                _executor = GetExecutor(methodInfo, targetTypeInfo);
+
+                if (IsMethodAsync)
+                {
+                    _executorAsync = GetExecutorAsync(methodInfo, targetTypeInfo, coercedAwaitableInfo);
+                }
             }
 
             _parameterDefaultValues = parameterDefaultValues;
@@ -91,6 +96,17 @@ namespace Microsoft.Extensions.Internal
             return new ObjectMethodExecutor(methodInfo, targetTypeInfo, parameterDefaultValues);
         }
 
+        internal static ObjectMethodExecutor Create(MethodInfo methodInfo, TypeInfo targetTypeInfo, object?[] parameterDefaultValues, Delegate invoker)
+        {
+            if (parameterDefaultValues == null)
+            {
+                throw new ArgumentNullException(nameof(parameterDefaultValues));
+            }
+
+            return new ObjectMethodExecutor(methodInfo, targetTypeInfo, parameterDefaultValues, invoker);
+        }
+
+
         /// <summary>
         /// Executes the configured method on <paramref name="target"/>. This can be used whether or not
         /// the configured method is asynchronous.
@@ -108,6 +124,11 @@ namespace Microsoft.Extensions.Internal
         /// <returns>The method return value.</returns>
         public object? Execute(object target, object?[]? parameters)
         {
+            if (_invoker is { })
+            {
+                return _invoker.DynamicInvoke(parameters);
+            }
+
             Debug.Assert(_executor != null, "Sync execution is not supported.");
             return _executor(target, parameters);
         }

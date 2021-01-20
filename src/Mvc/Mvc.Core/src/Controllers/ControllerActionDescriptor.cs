@@ -17,6 +17,8 @@ namespace Microsoft.AspNetCore.Mvc.Controllers
     [DebuggerDisplay("{DisplayName}")]
     public class ControllerActionDescriptor : ActionDescriptor
     {
+        internal Delegate Delegate { get; set; }
+
         /// <summary>
         /// The name of the controller.
         /// </summary>

@@ -79,6 +79,8 @@ namespace Microsoft.AspNetCore.Mvc.ApplicationModels
             Selectors = new List<SelectorModel>(other.Selectors.Select(s => new SelectorModel(s)));
         }
 
+        internal Delegate Delegate { get; set; }
+
         /// <summary>
         /// Gets the action <see cref="MethodInfo"/>.
         /// </summary>

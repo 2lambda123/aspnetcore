@@ -33,6 +33,7 @@ namespace Microsoft.AspNetCore.Mvc.ApplicationModels
         {
             var actionDescriptor = new ControllerActionDescriptor
             {
+                Delegate = action.Delegate,
                 ActionName = action.ActionName,
                 MethodInfo = action.ActionMethod,
             };

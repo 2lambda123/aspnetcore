@@ -278,7 +278,7 @@ namespace Microsoft.AspNetCore.Mvc.ApplicationModels
 
             if (!IsAction(typeInfo, methodInfo))
             {
-                return null;
+                //return null;
             }
 
             // CoreCLR returns IEnumerable<Attribute> from GetCustomAttributes - the OfType<object>

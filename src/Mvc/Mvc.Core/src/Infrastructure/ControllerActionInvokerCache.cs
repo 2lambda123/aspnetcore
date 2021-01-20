@@ -58,7 +58,8 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
                 var objectMethodExecutor = ObjectMethodExecutor.Create(
                     actionDescriptor.MethodInfo,
                     actionDescriptor.ControllerTypeInfo,
-                    parameterDefaultValues);
+                    parameterDefaultValues,
+                    actionDescriptor.Delegate);
 
                 var controllerFactory = _controllerFactoryProvider.CreateControllerFactory(actionDescriptor);
                 var controllerReleaser = _controllerFactoryProvider.CreateAsyncControllerReleaser(actionDescriptor);
