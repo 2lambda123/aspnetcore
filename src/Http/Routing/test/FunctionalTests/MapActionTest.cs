@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Api;
-using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,7 +23,7 @@ namespace Microsoft.AspNetCore.Routing.FunctionalTests
         [Fact]
         public async Task MapAction_FromBodyWorksWithJsonPayload()
         {
-            [HttpMethods(new[] { "POST" }, "/EchoTodo")]
+            [CustomRouteMetadata(Pattern = "/EchoTodo", Methods = new[] { "POST" })]
             Todo EchoTodo([FromBody] Todo todo) => todo;
 
             using var host = new HostBuilder()
@@ -40,7 +39,6 @@ namespace Microsoft.AspNetCore.Routing.FunctionalTests
                 })
                 .ConfigureServices(services =>
                 {
-                    services.AddAuthorization();
                     services.AddRouting();
                 })
                 .Build();
@@ -71,23 +69,25 @@ namespace Microsoft.AspNetCore.Routing.FunctionalTests
 
         private class FromBodyAttribute : Attribute, IFromBodyMetadata { }
 
-        private class HttpMethodsAttribute : Attribute, IRouteTemplateProvider, IHttpMethodMetadata
+        private class CustomRouteMetadataAttribute : Attribute, IRoutePatternMetadata, IHttpMethodMetadata, IRouteNameMetadata, IRouteOrderMetadata
         {
-            public HttpMethodsAttribute(string[] httpMethods, string? template)
-            {
-                HttpMethods = httpMethods;
-                Template = template;
-            }
+            public string Pattern { get; set; } = "/";
 
-            public string? Template { get; }
+            public string? Name { get; set; }
 
-            public IReadOnlyList<string> HttpMethods { get; }
+            public int Order { get; set; } = 0;
 
-            public int? Order => null;
+            public string[] Methods { get; set; } = new[] { "GET" };
 
-            public string? Name => null;
+            string? IRoutePatternMetadata.RoutePattern => Pattern;
 
-            public bool AcceptCorsPreflight => false;
+            string? IRouteNameMetadata.RouteName => Name;
+
+            int? IRouteOrderMetadata.RouteOrder => Order;
+
+            IReadOnlyList<string> IHttpMethodMetadata.HttpMethods => Methods;
+
+            bool IHttpMethodMetadata.AcceptCorsPreflight => false;
         }
     }
 }
