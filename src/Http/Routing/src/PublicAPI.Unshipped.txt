@@ -8,8 +8,13 @@
 Microsoft.AspNetCore.Builder.MinimalActionEndpointConventionBuilder
 Microsoft.AspNetCore.Builder.MinimalActionEndpointConventionBuilder.Add(System.Action<Microsoft.AspNetCore.Builder.EndpointBuilder!>! convention) -> void
 Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions
+Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata
+Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata.ActionMethodInfoMetadata(System.Reflection.MethodInfo! methodInfo) -> void
+Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata.MethodInfo.get -> System.Reflection.MethodInfo!
 Microsoft.AspNetCore.Routing.DataTokensMetadata.DataTokens.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
 Microsoft.AspNetCore.Routing.DataTokensMetadata.DataTokensMetadata(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! dataTokens) -> void
+Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata
+Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata.MethodInfo.get -> System.Reflection.MethodInfo!
 Microsoft.AspNetCore.Routing.IDataTokensMetadata.DataTokens.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
 Microsoft.AspNetCore.Routing.IRouteNameMetadata.RouteName.get -> string?
 Microsoft.AspNetCore.Routing.RouteNameMetadata.RouteName.get -> string?
