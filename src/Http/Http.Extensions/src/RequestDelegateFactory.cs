@@ -84,6 +84,32 @@ namespace Microsoft.AspNetCore.Http
         }
 
         /// <summary>
+        /// Creates a <see cref="RequestDelegate"/> implementation for <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">A request handler with any number of custom parameters that often produces a response with its return value.</param>
+        /// <returns>The <see cref="RequestDelegate"/>.</returns>
+        public static (RequestDelegate, ActionMethodMetadata) CreateWithMetadata(Delegate action)
+        {
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            var targetExpression = action.Target switch
+            {
+                object => Expression.Convert(TargetExpr, action.Target.GetType()),
+                null => null,
+            };
+
+            var targetableRequestDelegate = CreateTargetableRequestDelegate(action.Method, targetExpression);
+
+            RequestDelegate requestDelegate = httpContext =>
+            {
+                return targetableRequestDelegate(action.Target, httpContext);
+            };
+        }
+
+        /// <summary>
         /// Creates a <see cref="RequestDelegate"/> implementation for <paramref name="methodInfo"/>.
         /// </summary>
         /// <param name="methodInfo">A static request handler with any number of custom parameters that often produces a response with its return value.</param>
@@ -135,7 +161,7 @@ namespace Microsoft.AspNetCore.Http
             };
         }
 
-        private static Func<object?, HttpContext, Task> CreateTargetableRequestDelegate(MethodInfo methodInfo, Expression? targetExpression)
+        private static Func<object?, HttpContext, Task> CreateTargetableRequestDelegate(MethodInfo methodInfo, Expression? targetExpression, FactoryContext)
         {
             // Non void return type
 
@@ -779,6 +805,8 @@ namespace Microsoft.AspNetCore.Http
 
             public bool UsingTempSourceString { get; set; }
             public List<(ParameterExpression, Expression)> TryParseParams { get; } = new();
+
+            public List<string> ParameterSources = new();
         }
 
         private static class Log

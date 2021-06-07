@@ -11,10 +11,13 @@ Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions
 Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata
 Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata.ActionMethodInfoMetadata(System.Reflection.MethodInfo! methodInfo) -> void
 Microsoft.AspNetCore.Routing.ActionMethodInfoMetadata.MethodInfo.get -> System.Reflection.MethodInfo!
+Microsoft.AspNetCore.Routing.ActionParameterSources
 Microsoft.AspNetCore.Routing.DataTokensMetadata.DataTokens.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
 Microsoft.AspNetCore.Routing.DataTokensMetadata.DataTokensMetadata(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! dataTokens) -> void
 Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata
 Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata.MethodInfo.get -> System.Reflection.MethodInfo!
+Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata.ParameterSources.get -> System.Collections.Generic.IEnumerable<string!>!
+Microsoft.AspNetCore.Routing.IActionMethodInfoMetadata.ResponseBodyType.get -> System.Type!
 Microsoft.AspNetCore.Routing.IDataTokensMetadata.DataTokens.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
 Microsoft.AspNetCore.Routing.IRouteNameMetadata.RouteName.get -> string?
 Microsoft.AspNetCore.Routing.RouteNameMetadata.RouteName.get -> string?
@@ -26,3 +29,8 @@ static Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions.
 static Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions.MapMethods(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern, System.Collections.Generic.IEnumerable<string!>! httpMethods, System.Delegate! action) -> Microsoft.AspNetCore.Builder.MinimalActionEndpointConventionBuilder!
 static Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions.MapPost(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern, System.Delegate! action) -> Microsoft.AspNetCore.Builder.MinimalActionEndpointConventionBuilder!
 static Microsoft.AspNetCore.Builder.MinimalActionEndpointRouteBuilderExtensions.MapPut(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern, System.Delegate! action) -> Microsoft.AspNetCore.Builder.MinimalActionEndpointConventionBuilder!
+static readonly Microsoft.AspNetCore.Routing.ActionParameterSources.Body -> string!
+static readonly Microsoft.AspNetCore.Routing.ActionParameterSources.Query -> string!
+static readonly Microsoft.AspNetCore.Routing.ActionParameterSources.Route -> string!
+static readonly Microsoft.AspNetCore.Routing.ActionParameterSources.RouteOrQuery -> string!
+static readonly Microsoft.AspNetCore.Routing.ActionParameterSources.Services -> string!
