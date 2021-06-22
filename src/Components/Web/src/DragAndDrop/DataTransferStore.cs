@@ -11,7 +11,9 @@ namespace Microsoft.AspNetCore.Components.Web.DragAndDrop
 
         public Dictionary<string, string> Data { get; }
 
-        public ElementReference? DragImage { get; set; }
+        public ElementReference? DragImageElement { get; set; }
+
+        public string? DragImageSourceUrl { get; set; }
 
         public long DragImageXOffset { get; set; }
 

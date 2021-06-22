@@ -21,6 +21,8 @@ let nextDropDotNetHelperId = 0;
 const dragDotNetHelpersById = {};
 const dropDotNetHelpersById = {};
 
+const dragImagesBySourceUrl = {};
+
 class Drag {
   dotNetHelper: any;
 
@@ -164,10 +166,7 @@ function startNewDrag(dotNetHelper: any) {
 
 function completeCurrentDrag() {
   if (activeDrag !== undefined) {
-    // TODO: Use classes and give Drag a constructor.
-    if (activeDrag.complete !== undefined) {
-      activeDrag.complete();
-    }
+    activeDrag.complete?.();
     activeDrag = undefined;
   }
 }
@@ -201,19 +200,40 @@ function parseDragEvent(event) {
   };
 }
 
-function updateDataTransfer(dataTransfer, dataTransferStore) {
+function updateDataTransfer(dataTransfer: DataTransfer | null, dataTransferStore: any) {
+  if (dataTransfer === null) {
+    return;
+  }
+
   dataTransfer.clearData();
 
   Object.entries(dataTransferStore.data).forEach(function([format, data]) {
-    dataTransfer.setData(format, data);
+    dataTransfer.setData(format, data as string);
   });
-
-  if (dataTransferStore.dragImage) {
-    dataTransfer.setDragImage(dataTransferStore.dragImage, dataTransferStore.drageImageXOffset, dataTransferStore.dragImageYOffset);
-  }
 
   dataTransfer.dropEffect = dataTransferStore.dataTransfer.dropEffect;
   dataTransfer.effectAllowed = dataTransferStore.dataTransfer.effectAllowed;
+
+  const {
+    dragImageSourceUrl,
+    dragImageElement,
+    dragImageXOffset,
+    dragImageYOffset,
+  } = dataTransferStore;
+
+  if (dragImageSourceUrl) {
+    let dragImage = dragImagesBySourceUrl[dragImageSourceUrl];
+
+    if (!dragImage) {
+      dragImage = new Image();
+      dragImage.src = dragImageSourceUrl;
+      dragImagesBySourceUrl[dragImageSourceUrl] = dragImage;
+    }
+
+    dataTransfer.setDragImage(dragImage, dragImageXOffset, dragImageYOffset);
+  } else if (dragImageElement) {
+    dataTransfer.setDragImage(dragImageElement, dragImageXOffset, dragImageYOffset);
+  }
 }
 
 function getAllDataTransferData(dataTransfer) {

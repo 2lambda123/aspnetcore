@@ -1,6 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components.Web.DragAndDrop
 
-@*TODO: Add the DragAndDrop code to the typescript project.*@
+<img id="image-source" src="images/blazor_logo_1000x.png" @ref="ImageReference" style="display: none;"/>
 
 <Drop
       TItem="Person"
@@ -50,6 +50,8 @@
 </Drop>
 
 @code {
+    public ElementReference ImageReference { get; set; }
+
     class Person
     {
         public string Name { get; }
@@ -108,6 +110,8 @@
     void OnDragStart(Person person, MutableDragEventArgs e)
     {
         e.DataTransfer.SetData("text/plain", $"We're moving {person.Name}");
+        //e.DataTransfer.SetDragImage(ImageReference, 500, 500);
+        e.DataTransfer.SetDragImage("images/blazor_logo_1000x.png", 500, 500);
     }
 
     void OnDragEnd(Person person, MutableDragEventArgs e, Drop<Person> targetDrop)

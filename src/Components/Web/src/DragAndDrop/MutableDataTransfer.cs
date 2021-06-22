@@ -26,11 +26,22 @@ namespace Microsoft.AspNetCore.Components.Web.DragAndDrop
 
         public void SetDragImage(ElementReference imageReference, long xOffset, long yOffset)
         {
-            // TODO: Provide an overload accepting an image URL (the ElementReference overload might not even be necessary).
-            
             ThrowIfStoreIsNull();
 
-            Store.DragImage = imageReference;
+            Store.DragImageElement = imageReference;
+            Store.DragImageSourceUrl = null;
+
+            Store.DragImageXOffset = xOffset;
+            Store.DragImageYOffset = yOffset;
+        }
+
+        public void SetDragImage(string imageSourceUrl, long xOffset, long yOffset)
+        {
+            ThrowIfStoreIsNull();
+
+            Store.DragImageSourceUrl = imageSourceUrl;
+            Store.DragImageElement = null;
+
             Store.DragImageXOffset = xOffset;
             Store.DragImageYOffset = yOffset;
         }
