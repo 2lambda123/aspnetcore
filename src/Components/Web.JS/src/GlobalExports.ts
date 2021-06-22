@@ -1,6 +1,7 @@
 import { navigateTo, internalFunctions as navigationManagerInternalFunctions } from './Services/NavigationManager';
 import { domFunctions } from './DomWrapper';
 import { Virtualize } from './Virtualize';
+import { DragAndDrop } from './DragAndDrop';
 import { registerCustomEventType, EventTypeOptions } from './Rendering/Events/EventTypes';
 import { HubConnection } from '@microsoft/signalr';
 import { InputFile } from './InputFile';
@@ -23,6 +24,7 @@ interface IBlazor {
     navigationManager: typeof navigationManagerInternalFunctions | any,
     domWrapper: typeof domFunctions,
     Virtualize: typeof Virtualize,
+    DragAndDrop: typeof DragAndDrop,
     forceCloseConnection?: () => Promise<void>;
     InputFile?: typeof InputFile,
     invokeJSFromDotNet?: (callInfo: Pointer, arg0: any, arg1: any, arg2: any) => any;
@@ -62,6 +64,7 @@ export const Blazor: IBlazor = {
     navigationManager: navigationManagerInternalFunctions,
     domWrapper: domFunctions,
     Virtualize,
+    DragAndDrop,
   },
 };
 

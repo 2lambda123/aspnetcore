@@ -1,0 +1,144 @@
+﻿@using Microsoft.AspNetCore.Components.Web.DragAndDrop
+
+@*TODO: Add the DragAndDrop code to the typescript project.*@
+
+<Drop
+      TItem="Person"
+      OnDrop="(person, e) => OnDrop(person, e, personList)"
+      OnDragOver="(person, e) => OnDragOver(person, e, ref personDropStyle)"
+      style="@personDropStyle">
+    <h3>List of people</h3>
+    @foreach (var item in personList)
+    {
+        @*TODO: avoid having to specify a @key here?*@
+        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
+            @item.Name
+        </Drag>
+        <br />
+    }
+</Drop>
+
+<hr />
+
+<Drop
+      TItem="Person"
+      OnDrop="(person, e) => OnDrop(person, e, personListFiltered)"
+      OnDragOver="(person, e) => OnDragOver(person, e, ref personFilteredDropStyle)"
+      CanDrop="(person) => person.Name.StartsWith('J')"
+      style="@personFilteredDropStyle">
+    <h3>List of people whose names start with 'J'</h3>
+    @foreach (var item in personListFiltered)
+    {
+        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
+            @item.Name
+        </Drag>
+        <br />
+    }
+</Drop>
+
+<hr />
+
+<Drop TItem="Animal">
+    <h3>List of animals</h3>
+    @foreach (var item in animalList)
+    {
+        <Drag Item="item" @key="item">
+            @item.Type
+        </Drag>
+        <br />
+    }
+</Drop>
+
+@code {
+    class Person
+    {
+        public string Name { get; }
+
+        public Person(string name)
+        {
+            Name = name;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
+    class Animal
+    {
+        public string Type { get; }
+
+        public Animal(string type)
+        {
+            Type = type;
+        }
+
+        public override string ToString()
+        {
+            return Type;
+        }
+    }
+
+    readonly List<Person> personList = new List<Person>()
+    {
+        new Person("Bob"),
+        new Person("Christopher"),
+        new Person("Sarah"),
+    };
+
+    readonly List<Person> personListFiltered = new List<Person>()
+    {
+        new Person("John"),
+        new Person("Jasmine"),
+        new Person("Jenny"),
+    };
+
+    readonly List<Animal> animalList = new List<Animal>()
+    {
+        new Animal("Dog"),
+        new Animal("Cat"),
+        new Animal("Giraffe"),
+        new Animal("Horse"),
+    };
+
+    string personDropStyle;
+    string personFilteredDropStyle;
+
+    void OnDragStart(Person person, MutableDragEventArgs e)
+    {
+        e.DataTransfer.SetData("text/plain", $"We're moving {person.Name}");
+    }
+
+    void OnDragEnd(Person person, MutableDragEventArgs e, Drop<Person> targetDrop)
+    {
+        Console.WriteLine($"Dragging ended: {person.Name}, {targetDrop?.ToString() ?? "<no drop target>"}");
+
+        personDropStyle = null;
+        personFilteredDropStyle = null;
+
+        StateHasChanged();
+    }
+
+    void OnDrop(Person person, MutableDragEventArgs e, List<Person> targetList)
+    {
+        Console.WriteLine($"DataTransfer data: '{e.DataTransfer.GetData("text/plain")}'");
+
+        personList.Remove(person);
+        personListFiltered.Remove(person);
+
+        targetList.Add(person);
+
+        StateHasChanged();
+    }
+
+    void OnDragOver(Person person, MutableDragEventArgs e, ref string targetStyle)
+    {
+        personDropStyle = null;
+        personFilteredDropStyle = null;
+
+        targetStyle = $"background-color: rgb(0, {e.ClientX}, {e.ClientY});";
+
+        StateHasChanged();
+    }
+}
