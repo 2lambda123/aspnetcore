@@ -77,6 +77,11 @@ function unregisterDropDotNetHelper(id: number): void {
 async function onDragStart(event: DragEvent, id: number): Promise<void> {
   const dotNetHelper = getDragDotNetHelperByIdOrThrow(id);
 
+  // TODO: Ok, I think problems are arising because onDragStart is async.
+  // This might cause problems when running in Blazor Server. Definitely worth investigating.
+  // In fact, we might want to attach some "fake" data to the data transfer just for identification purposes
+  // and have a separate mechanism for reading/updating the data.
+
   // TODO: This will wait forever if the onDragEnd event doesn't fire. I was able to get that to happen by
   // what seems to be a browser debugger glitch, so I'm not sure if it's a real scenario we have to cover.
   // If necessary, we could employ some sort of short timeout here.
@@ -84,10 +89,20 @@ async function onDragStart(event: DragEvent, id: number): Promise<void> {
   // the drag. This would lead me to think we can't just leave this as-is.
   await waitForLastDrag();
 
-  startNewDrag(dotNetHelper);
+  activeDrag = new Drag(dotNetHelper);
 
   const initialData = getAllDataTransferData(event.dataTransfer);
-  const dataTransferStore = await dotNetHelper.invokeMethodAsync('OnDragStart', parseDragEvent(event), initialData);
+  const dragEvent = parseDragEvent(event);
+  const dataTransferStore = await dotNetHelper.invokeMethodAsync('OnDragStart', dragEvent, initialData);
+
+  // Firefox does not invoke the dragend event if the target node was deleted during the dragstart callback.
+  // To work around this, we complete the current drag if the target node was removed from the DOM.
+  if ((event.target as Node).parentNode === null) {
+    await dotNetHelper.invokeMethodAsync('OnDragEnd', dragEvent, dataTransferStore.data, null);
+    completeCurrentDrag();
+
+    return;
+  }
 
   updateDataTransfer(event.dataTransfer, dataTransferStore);
 }
@@ -112,9 +127,11 @@ async function onDrop(event: DragEvent, id: number): Promise<void> {
   }
 
   lastTargetDropDotNetHelper = getDropDotNetHelperByIdOrThrow(id);
-  const initialData = getAllDataTransferData(event.dataTransfer);
 
-  await lastTargetDropDotNetHelper.invokeMethodAsync('OnDrop', parseDragEvent(event), initialData, activeDrag.dotNetHelper);
+  if ((event.currentTarget as Element).hasAttribute('_blazorhasondropcallback')) {
+    const initialData = getAllDataTransferData(event.dataTransfer);
+    await lastTargetDropDotNetHelper.invokeMethodAsync('OnDrop', parseDragEvent(event), initialData, activeDrag.dotNetHelper);
+  }
 }
 
 async function onDragOver(event: DragEvent, id: number): Promise<void> {
@@ -128,10 +145,12 @@ async function onDragOver(event: DragEvent, id: number): Promise<void> {
     return;
   }
 
-  const dotNetHelper = getDropDotNetHelperByIdOrThrow(id);
-  const initialData = getAllDataTransferData(event.dataTransfer);
+  if ((event.target as Element).hasAttribute('_blazorhasondragovercallback')) {
+    const dotNetHelper = getDropDotNetHelperByIdOrThrow(id);
+    const initialData = getAllDataTransferData(event.dataTransfer);
 
-  await dotNetHelper.invokeMethodAsync('OnDragOver', parseDragEvent(event), initialData, activeDrag.dotNetHelper);
+    await dotNetHelper.invokeMethodAsync('OnDragOver', parseDragEvent(event), initialData, activeDrag.dotNetHelper);
+  }
 }
 
 function getDropDotNetHelperByIdOrThrow(id) {
@@ -158,10 +177,6 @@ async function waitForLastDrag() {
   if (activeDrag) {
     await activeDrag.promise;
   }
-}
-
-function startNewDrag(dotNetHelper: any) {
-  activeDrag = new Drag(dotNetHelper);
 }
 
 function completeCurrentDrag() {

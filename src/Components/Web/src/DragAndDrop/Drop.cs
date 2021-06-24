@@ -42,10 +42,22 @@ namespace Microsoft.AspNetCore.Components.Web.DragAndDrop
         protected override void BuildRenderTree(RenderTreeBuilder builder)
         {
             builder.OpenElement(0, "div");
+
             builder.AddAttribute(1, "ondrop", $"window.{DragAndDropInterop.OnDrop}(event, {_id})");
             builder.AddAttribute(2, "ondragover", $"window.{DragAndDropInterop.OnDragOver}(event, {_id})");
-            builder.AddMultipleAttributes(3, AdditionalAttributes);
-            builder.AddContent(4, ChildContent);
+
+            if (OnDrop is not null)
+            {
+                builder.AddAttribute(3, "_blazorhasondropcallback");
+            }
+
+            if (OnDragOver is not null)
+            {
+                builder.AddAttribute(4, "_blazorhasondragovercallback");
+            }
+
+            builder.AddMultipleAttributes(5, AdditionalAttributes);
+            builder.AddContent(6, ChildContent);
             builder.CloseElement();
         }
 

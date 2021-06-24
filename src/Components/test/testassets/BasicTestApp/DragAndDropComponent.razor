@@ -1,64 +1,54 @@
 ﻿@using Microsoft.AspNetCore.Components.Web.DragAndDrop
 
-<img id="image-source" src="images/blazor_logo_1000x.png" @ref="ImageReference" style="display: none;"/>
+@foreach (var dropCategory in dropCategories)
+{
+    <Drop
+            TItem="Person"
+            CanDrop="(person) => person.Filter.HasFlag(dropCategory)"
+            OnDrop="(person, e) => OnDrop(person, e, dropCategory)"
+            OnDragOver="(person, e) => OnDragOver(person, e, dropCategory)"
+            style=@(lastDraggedOverDropCategory == dropCategory ? draggedOverStyle : null)>
+        <h3>@dropCategory</h3>
+        @foreach (var item in people.Where(p => p.CurrentCategory == dropCategory))
+        {
+            <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
+                @item.Name
+            </Drag>
+            <br />
+        }
+    </Drop>
 
-<Drop
-      TItem="Person"
-      OnDrop="(person, e) => OnDrop(person, e, personList)"
-      OnDragOver="(person, e) => OnDragOver(person, e, ref personDropStyle)"
-      style="@personDropStyle">
-    <h3>List of people</h3>
-    @foreach (var item in personList)
-    {
-        @*TODO: avoid having to specify a @key here?*@
-        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
-            @item.Name
-        </Drag>
-        <br />
-    }
-</Drop>
-
-<hr />
-
-<Drop
-      TItem="Person"
-      OnDrop="(person, e) => OnDrop(person, e, personListFiltered)"
-      OnDragOver="(person, e) => OnDragOver(person, e, ref personFilteredDropStyle)"
-      CanDrop="(person) => person.Name.StartsWith('J')"
-      style="@personFilteredDropStyle">
-    <h3>List of people whose names start with 'J'</h3>
-    @foreach (var item in personListFiltered)
-    {
-        <Drag Item="item" OnDragStart="OnDragStart" OnDragEnd="OnDragEnd" @key="item">
-            @item.Name
-        </Drag>
-        <br />
-    }
-</Drop>
-
-<hr />
-
-<Drop TItem="Animal">
-    <h3>List of animals</h3>
-    @foreach (var item in animalList)
-    {
-        <Drag Item="item" @key="item">
-            @item.Type
-        </Drag>
-        <br />
-    }
-</Drop>
+    <hr /> 
+}
 
 @code {
-    public ElementReference ImageReference { get; set; }
+    [Flags]
+    enum Filter
+    {
+        None = 0,
+        NameStartsWithJ = 1,
+        NameIsFeminine = 2,
+        ExcludeFromEverything = ~0,
+    }
+
+    readonly List<Filter> dropCategories = new()
+    {
+        Filter.None,
+        Filter.NameStartsWithJ,
+        Filter.NameIsFeminine,
+    };
 
     class Person
     {
         public string Name { get; }
+        public Filter Filter { get; }
+        public Filter CurrentCategory { get; set; }
 
-        public Person(string name)
+        public Person(string name, Filter filter)
         {
             Name = name;
+            Filter = filter;
+            CurrentCategory = Filter.None;
         }
 
         public override string ToString()
@@ -67,81 +57,63 @@
         }
     }
 
-    class Animal
+    readonly List<Person> people = new()
     {
-        public string Type { get; }
-
-        public Animal(string type)
-        {
-            Type = type;
-        }
-
-        public override string ToString()
-        {
-            return Type;
-        }
-    }
-
-    readonly List<Person> personList = new List<Person>()
-    {
-        new Person("Bob"),
-        new Person("Christopher"),
-        new Person("Sarah"),
+        new Person("Bob", Filter.None),
+        new Person("Christopher", Filter.None),
+        new Person("Sarah", Filter.NameIsFeminine),
+        new Person("John", Filter.NameStartsWithJ),
+        new Person("Jasmine", Filter.NameStartsWithJ | Filter.NameIsFeminine),
+        new Person("Jenny", Filter.NameStartsWithJ | Filter.NameIsFeminine),
     };
 
-    readonly List<Person> personListFiltered = new List<Person>()
-    {
-        new Person("John"),
-        new Person("Jasmine"),
-        new Person("Jenny"),
-    };
-
-    readonly List<Animal> animalList = new List<Animal>()
-    {
-        new Animal("Dog"),
-        new Animal("Cat"),
-        new Animal("Giraffe"),
-        new Animal("Horse"),
-    };
-
-    string personDropStyle;
-    string personFilteredDropStyle;
+    Filter? lastDraggedOverDropCategory;
+    string draggedOverStyle = string.Empty;
 
     void OnDragStart(Person person, MutableDragEventArgs e)
     {
+        // Remove the person from all lists while dragging.
+        person.CurrentCategory = Filter.ExcludeFromEverything;
+
         e.DataTransfer.SetData("text/plain", $"We're moving {person.Name}");
-        //e.DataTransfer.SetDragImage(ImageReference, 500, 500);
         e.DataTransfer.SetDragImage("images/blazor_logo_1000x.png", 500, 500);
+
+        // Don't call StateHasChanged() in OnDragStart() if it would remove the node being dragged.
+        // This would immediately invoke OnDragEnd(), terminating the drag operation.
+
+        // This is intended browser behavior - if the target DOM node is removed during the dragstart
+        // event, the drag operation terminates.
+
+        // You can instead use the OnDragOver() event to call StateHasChanged() and apply the changes.
     }
 
     void OnDragEnd(Person person, MutableDragEventArgs e, Drop<Person> targetDrop)
     {
         Console.WriteLine($"Dragging ended: {person.Name}, {targetDrop?.ToString() ?? "<no drop target>"}");
 
-        personDropStyle = null;
-        personFilteredDropStyle = null;
+        if (targetDrop is null)
+        {
+            person.CurrentCategory = Filter.None;
+        }
+
+        lastDraggedOverDropCategory = null;
 
         StateHasChanged();
     }
 
-    void OnDrop(Person person, MutableDragEventArgs e, List<Person> targetList)
+    void OnDrop(Person person, MutableDragEventArgs e, Filter category)
     {
         Console.WriteLine($"DataTransfer data: '{e.DataTransfer.GetData("text/plain")}'");
 
-        personList.Remove(person);
-        personListFiltered.Remove(person);
-
-        targetList.Add(person);
+        person.CurrentCategory = category;
 
         StateHasChanged();
     }
 
-    void OnDragOver(Person person, MutableDragEventArgs e, ref string targetStyle)
+    void OnDragOver(Person person, MutableDragEventArgs e, Filter category)
     {
-        personDropStyle = null;
-        personFilteredDropStyle = null;
-
-        targetStyle = $"background-color: rgb(0, {e.ClientX}, {e.ClientY});";
+        lastDraggedOverDropCategory = category;
+        draggedOverStyle = $"background-color: rgb(0, {e.ClientX}, {e.ClientY});";
 
         StateHasChanged();
     }
