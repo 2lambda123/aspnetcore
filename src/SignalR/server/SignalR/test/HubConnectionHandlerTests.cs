@@ -2788,7 +2788,10 @@ namespace Microsoft.AspNetCore.SignalR.Tests
                 var clock = new MockSystemClock();
                 var serviceProvider = HubConnectionHandlerTestUtils.CreateServiceProvider(services =>
                     services.Configure<HubOptions>(options =>
-                        options.ClientTimeoutInterval = TimeSpan.FromMilliseconds(timeout)), LoggerFactory);
+                    {
+                        options.ClientTimeoutInterval = TimeSpan.FromMilliseconds(timeout);
+                        options.EnableDetailedErrors = true;
+                    }), LoggerFactory);
                 var connectionHandler = serviceProvider.GetService<HubConnectionHandler<MethodHub>>();
                 connectionHandler.SystemClock = clock;
 
@@ -2801,7 +2804,45 @@ namespace Microsoft.AspNetCore.SignalR.Tests
                     clock.UtcNow = clock.UtcNow.AddMilliseconds(timeout + 1);
                     client.TickHeartbeat();
 
+                    var closeMessage = Assert.IsType<CloseMessage>(await client.ReadAsync().DefaultTimeout());
+                    Assert.True(closeMessage.AllowReconnect);
+                    Assert.Equal("Connection closed with an error. TimeoutException: Client timeout elapsed without receiving a message from the client.", closeMessage.Error);
                     await connectionHandlerTask.DefaultTimeout();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TimeoutPassesExceptionToOnDisconnectedAsync()
+        {
+            using (StartVerifiableLog())
+            {
+                var timeout = 100;
+                var clock = new MockSystemClock();
+                var state = new ConnectionLifetimeState();
+                var serviceProvider = HubConnectionHandlerTestUtils.CreateServiceProvider(services =>
+                {
+                    services.Configure<HubOptions>(options =>
+                    {
+                        options.ClientTimeoutInterval = TimeSpan.FromMilliseconds(timeout);
+                        options.EnableDetailedErrors = true;
+                    });
+                    services.AddSingleton(state);
+                }, LoggerFactory);
+                var connectionHandler = serviceProvider.GetService<HubConnectionHandler<ConnectionLifetimeHub>>();
+                connectionHandler.SystemClock = clock;
+
+                using (var client = new TestClient())
+                {
+                    var connectionHandlerTask = await client.ConnectAsync(connectionHandler);
+                    await client.SendHubMessageAsync(PingMessage.Instance);
+
+                    clock.UtcNow = clock.UtcNow.AddMilliseconds(timeout + 1);
+                    client.TickHeartbeat();
+
+                    await connectionHandlerTask.DefaultTimeout();
+
+                    Assert.IsType<TimeoutException>(state.DisconnectedException);
                 }
             }
         }

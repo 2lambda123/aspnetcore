@@ -520,9 +520,9 @@ namespace Microsoft.AspNetCore.Http.Connections.Tests
                         return async connectionContext =>
                         {
                             // Ensure both sides of the pipe are ok
-                            var result = await connectionContext.Transport.Input.ReadAsync();
-                            Assert.True(result.IsCompleted);
-                            await connectionContext.Transport.Output.WriteAsync(result.Buffer.First);
+                            var ex = await Assert.ThrowsAsync<TimeoutException>(async () => await connectionContext.Transport.Input.ReadAsync());
+                            Assert.Equal("Connection timed out.", ex.Message);
+                            await connectionContext.Transport.Output.WriteAsync(new ReadOnlyMemory<byte>());
                         };
                     });
 

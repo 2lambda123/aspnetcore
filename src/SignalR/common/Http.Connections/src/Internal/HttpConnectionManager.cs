@@ -156,8 +156,10 @@ namespace Microsoft.AspNetCore.Http.Connections.Internal
                     HttpConnectionsEventSource.Log.ConnectionTimedOut(connection.ConnectionId);
 
                     // This is most likely a long polling connection. The transport here ends because
-                    // a poll completed and has been inactive for > 5 seconds so we wait for the
+                    // a poll completed and has been inactive for > 15 seconds so we wait for the
                     // application to finish gracefully
+                    Debug.Assert(connection.TransportTask?.IsCompleted ?? true);
+                    connection.TransportTask = Task.FromException(new TimeoutException("Connection timed out."));
                     _ = DisposeAndRemoveAsync(connection, closeGracefully: true);
                 }
                 else

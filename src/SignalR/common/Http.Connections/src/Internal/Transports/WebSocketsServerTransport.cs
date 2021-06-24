@@ -180,6 +180,7 @@ namespace Microsoft.AspNetCore.Http.Connections.Internal.Transports
             {
                 // Client has closed the WebSocket connection without completing the close handshake
                 Log.ClosedPrematurely(_logger, ex);
+                _application.Output.Complete(ex);
             }
             catch (OperationCanceledException)
             {

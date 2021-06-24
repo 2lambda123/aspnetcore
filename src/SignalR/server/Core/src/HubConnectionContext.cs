@@ -664,6 +664,7 @@ namespace Microsoft.AspNetCore.SignalR
                     if (_receivedMessageElapsedTicks >= _clientTimeoutInterval)
                     {
                         Log.ClientTimeout(_logger, TimeSpan.FromTicks(_clientTimeoutInterval));
+                        CloseException = new TimeoutException("Client timeout elapsed without receiving a message from the client.");
                         AbortAllowReconnect();
                     }
                 }
