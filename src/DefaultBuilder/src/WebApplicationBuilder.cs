@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Builder
 {
@@ -307,12 +308,43 @@ namespace Microsoft.AspNetCore.Builder
 
             public ConfigurationProviderSource(IConfigurationProvider configurationProvider)
             {
-                _configurationProvider = configurationProvider;
+                // ConfigurationManager has already loaded its IConfigurationProviders, so we do not need to load it again
+                // during WebApplicationBuilder.Build(). See https://github.com/dotnet/aspnetcore/issues/37030
+                _configurationProvider = new IgnoreFirstLoadConfigurationProvider(configurationProvider);
             }
 
-            public IConfigurationProvider Build(IConfigurationBuilder builder)
+            public IConfigurationProvider Build(IConfigurationBuilder builder) => _configurationProvider;
+
+            private sealed class IgnoreFirstLoadConfigurationProvider : IConfigurationProvider
             {
-                return _configurationProvider;
+                private readonly IConfigurationProvider _configurationProvider;
+
+                private bool _hasIgnoredFirstLoad;
+
+                public IgnoreFirstLoadConfigurationProvider(IConfigurationProvider configurationProvider)
+                {
+                    _configurationProvider = configurationProvider;
+                }
+
+                public void Load()
+                {
+                    if (!_hasIgnoredFirstLoad)
+                    {
+                        _hasIgnoredFirstLoad = true;
+                        return;
+                    }
+
+                    _configurationProvider.Load();
+                }
+
+                public IChangeToken GetReloadToken() => _configurationProvider.GetReloadToken();
+
+                public IEnumerable<string> GetChildKeys(IEnumerable<string> earlierKeys, string parentPath) =>
+                    _configurationProvider.GetChildKeys(earlierKeys, parentPath);
+
+                public void Set(string key, string value) => _configurationProvider.Set(key, value);
+
+                public bool TryGet(string key, out string value) => _configurationProvider.TryGet(key, out value);
             }
         }
     }
