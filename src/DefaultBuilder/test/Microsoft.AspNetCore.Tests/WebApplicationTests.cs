@@ -1516,6 +1516,22 @@ namespace Microsoft.AspNetCore.Tests
         }
 
         [Fact]
+        public void ConfigurationGetDebugViewWorks()
+        {
+            var builder = WebApplication.CreateBuilder();
+
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["foo"] = "bar",
+            });
+
+            var app = builder.Build();
+
+            // Make sure we don't lose "MemoryConfigurationProvider" from GetDebugView() when wrapping the provider.
+            Assert.Contains("foo=bar (MemoryConfigurationProvider)", ((IConfigurationRoot)app.Configuration).GetDebugView());
+        }
+
+        [Fact]
         public void ConfigurationCanBeReloaded()
         {
             var builder = WebApplication.CreateBuilder();

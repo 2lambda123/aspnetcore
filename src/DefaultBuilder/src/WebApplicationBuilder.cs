@@ -345,6 +345,12 @@ namespace Microsoft.AspNetCore.Builder
                 public void Set(string key, string value) => _configurationProvider.Set(key, value);
 
                 public bool TryGet(string key, out string value) => _configurationProvider.TryGet(key, out value);
+
+                public override string ToString() => _configurationProvider.ToString()!;
+
+                public override bool Equals(object? obj) => _configurationProvider.Equals(obj);
+
+                public override int GetHashCode() => _configurationProvider.GetHashCode();
             }
         }
     }
