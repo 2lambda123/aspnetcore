@@ -117,7 +117,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <summary>
         /// A collection of configuration providers for the application to compose. This is useful for adding new configuration sources and providers.
         /// </summary>
-        public ConfigurationManager Configuration { get; }
+        public ConfigurationManager Configuration { get; private set; }
 
         /// <summary>
         /// A collection of logging providers for the application to compose. This is useful for adding new logging providers.
@@ -215,7 +215,7 @@ namespace Microsoft.AspNetCore.Builder
 
             // Make builder.Configuration match the final configuration. To do that
             // we clear the sources and add the built configuration as a source
-            ((IConfigurationBuilder)Configuration).Sources.Clear();
+            Configuration = new ConfigurationManager();
             Configuration.AddConfiguration(_builtApplication.Configuration);
 
             // Mark the service collection as read-only to prevent future modifications
@@ -315,7 +315,7 @@ namespace Microsoft.AspNetCore.Builder
 
             public IConfigurationProvider Build(IConfigurationBuilder builder) => _configurationProvider;
 
-            private sealed class IgnoreFirstLoadConfigurationProvider : IConfigurationProvider
+            private sealed class IgnoreFirstLoadConfigurationProvider : IConfigurationProvider, IDisposable
             {
                 private readonly IConfigurationProvider _configurationProvider;
 
@@ -345,6 +345,8 @@ namespace Microsoft.AspNetCore.Builder
                 public void Set(string key, string value) => _configurationProvider.Set(key, value);
 
                 public bool TryGet(string key, out string value) => _configurationProvider.TryGet(key, out value);
+
+                public void Dispose() => (_configurationProvider as IDisposable)?.Dispose();
 
                 public override string ToString() => _configurationProvider.ToString()!;
 

@@ -1573,10 +1573,28 @@ namespace Microsoft.AspNetCore.Tests
             Assert.Equal(1, configSource.ProvidersLoaded);
         }
 
+        [Fact]
+        public void ConfigurationProvidersAreDisposedWithWebApplication()
+        {
+            var builder = WebApplication.CreateBuilder();
+
+            var configSource = new RandomConfigurationSource();
+            ((IConfigurationBuilder)builder.Configuration).Sources.Add(configSource);
+
+            {
+                using var app = builder.Build();
+
+                Assert.Equal(0, configSource.ProvidersDisposed);
+            }
+
+            Assert.Equal(1, configSource.ProvidersDisposed);
+        }
+
         public class RandomConfigurationSource : IConfigurationSource
         {
             public int ProvidersBuilt { get; set; }
             public int ProvidersLoaded { get; set; }
+            public int ProvidersDisposed { get; set; }
 
             public IConfigurationProvider Build(IConfigurationBuilder builder)
             {
@@ -1585,7 +1603,7 @@ namespace Microsoft.AspNetCore.Tests
             }
         }
 
-        public class RandomConfigurationProvider : ConfigurationProvider
+        public class RandomConfigurationProvider : ConfigurationProvider, IDisposable
         {
             private readonly RandomConfigurationSource _source;
 
@@ -1599,6 +1617,8 @@ namespace Microsoft.AspNetCore.Tests
                 _source.ProvidersLoaded++;
                 Data["Random"] = Guid.NewGuid().ToString();
             }
+
+            public void Dispose() => _source.ProvidersDisposed++;
         }
 
         class ThrowingStartupFilter : IStartupFilter
