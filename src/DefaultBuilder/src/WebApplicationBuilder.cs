@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -16,11 +17,13 @@ namespace Microsoft.AspNetCore.Builder
     /// </summary>
     public sealed class WebApplicationBuilder
     {
+        private const string EndpointRouteBuilderKey = "__EndpointRouteBuilder";
+
         private readonly HostBuilder _hostBuilder = new();
         private readonly BootstrapHostBuilder _bootstrapHostBuilder;
         private readonly WebApplicationServiceCollection _services = new();
         private readonly List<KeyValuePair<string, string>> _hostConfigurationValues;
-        private const string EndpointRouteBuilderKey = "__EndpointRouteBuilder";
+        private readonly Func<IServiceProvider, IConfiguration> _configurationFactory;
 
         private WebApplication? _builtApplication;
 
@@ -101,7 +104,8 @@ namespace Microsoft.AspNetCore.Builder
             Host = new ConfigureHostBuilder(hostContext, Configuration, Services);
             WebHost = new ConfigureWebHostBuilder(webHostContext, Configuration, Services);
 
-            Services.AddSingleton<IConfiguration>(Configuration);
+            _configurationFactory = _ => Configuration;
+            Services.AddSingleton(_configurationFactory);
         }
 
         /// <summary>
@@ -168,6 +172,25 @@ namespace Microsoft.AspNetCore.Builder
             // Copy the services that were added via WebApplicationBuilder.Services into the final IServiceCollection
             _hostBuilder.ConfigureServices((context, services) =>
             {
+                // Unwrap the IgnoreFirstLoadConfigurationProviders in IConfigurationRoot.Providers and expose the originals.
+                ServiceDescriptor? configDescriptor = null;
+
+                foreach (var s in services)
+                {
+                    if (s.ServiceType == typeof(IConfiguration) && s.ImplementationFactory is not null)
+                    {
+                        configDescriptor = s;
+                        break;
+                    }
+                }
+
+                if (configDescriptor is not null)
+                {
+                    services.Remove(configDescriptor);
+                    services.AddSingleton<IConfiguration>(sp =>
+                        new ConfigurationUnwrapper((IConfigurationRoot)configDescriptor.ImplementationFactory!(sp)));
+                }
+
                 // We've only added services configured by the GenericWebHostBuilder and WebHost.ConfigureWebDefaults
                 // at this point. HostBuilder news up a new ServiceCollection in HostBuilder.Build() we haven't seen
                 // until now, so we cannot clear these services even though some are redundant because
@@ -180,7 +203,7 @@ namespace Microsoft.AspNetCore.Builder
                     // this as well but we still need to remove it from the final configuration
                     // to avoid cycles in the configuration graph
                     if (s.ServiceType == typeof(IConfiguration) &&
-                        s.ImplementationInstance == Configuration)
+                        s.ImplementationFactory == _configurationFactory)
                     {
                         continue;
                     }
@@ -310,50 +333,11 @@ namespace Microsoft.AspNetCore.Builder
             {
                 // ConfigurationManager has already loaded its IConfigurationProviders, so we do not need to load it again
                 // during WebApplicationBuilder.Build(). See https://github.com/dotnet/aspnetcore/issues/37030
+                // ConfigurationUnwrapper will return the original ConfigurationProvider from IConfigurationRoot.Providers.
                 _configurationProvider = new IgnoreFirstLoadConfigurationProvider(configurationProvider);
             }
 
             public IConfigurationProvider Build(IConfigurationBuilder builder) => _configurationProvider;
-
-            private sealed class IgnoreFirstLoadConfigurationProvider : IConfigurationProvider, IDisposable
-            {
-                private readonly IConfigurationProvider _configurationProvider;
-
-                private bool _hasIgnoredFirstLoad;
-
-                public IgnoreFirstLoadConfigurationProvider(IConfigurationProvider configurationProvider)
-                {
-                    _configurationProvider = configurationProvider;
-                }
-
-                public void Load()
-                {
-                    if (!_hasIgnoredFirstLoad)
-                    {
-                        _hasIgnoredFirstLoad = true;
-                        return;
-                    }
-
-                    _configurationProvider.Load();
-                }
-
-                public IChangeToken GetReloadToken() => _configurationProvider.GetReloadToken();
-
-                public IEnumerable<string> GetChildKeys(IEnumerable<string> earlierKeys, string parentPath) =>
-                    _configurationProvider.GetChildKeys(earlierKeys, parentPath);
-
-                public void Set(string key, string value) => _configurationProvider.Set(key, value);
-
-                public bool TryGet(string key, out string value) => _configurationProvider.TryGet(key, out value);
-
-                public void Dispose() => (_configurationProvider as IDisposable)?.Dispose();
-
-                public override string ToString() => _configurationProvider.ToString()!;
-
-                public override bool Equals(object? obj) => _configurationProvider.Equals(obj);
-
-                public override int GetHashCode() => _configurationProvider.GetHashCode();
-            }
         }
     }
 }

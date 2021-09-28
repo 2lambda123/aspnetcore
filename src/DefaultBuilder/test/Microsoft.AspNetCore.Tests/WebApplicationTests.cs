@@ -1590,6 +1590,18 @@ namespace Microsoft.AspNetCore.Tests
             Assert.Equal(1, configSource.ProvidersDisposed);
         }
 
+        [Fact]
+        public void ConfigurationProviderTypesArePreserved()
+        {
+            var builder = WebApplication.CreateBuilder();
+
+            ((IConfigurationBuilder)builder.Configuration).Sources.Add(new RandomConfigurationSource());
+
+            var app = builder.Build();
+
+            Assert.Single(((IConfigurationRoot)app.Configuration).Providers.OfType<RandomConfigurationProvider>());
+        }
+
         public class RandomConfigurationSource : IConfigurationSource
         {
             public int ProvidersBuilt { get; set; }
