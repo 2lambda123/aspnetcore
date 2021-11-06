@@ -3,7 +3,6 @@
 
 using System.Text;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Testing;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTransport;
@@ -11,7 +10,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTrans
 internal class InMemoryConnection : StreamBackedTestConnection
 {
     public InMemoryConnection(InMemoryTransportConnection transportConnection, Encoding encoding)
-        : base(new DuplexPipeStream(transportConnection.Output, transportConnection.Input), encoding)
+        : base(transportConnection.GetClientStream(leaveOpen: true), encoding)
     {
         TransportConnection = transportConnection;
     }

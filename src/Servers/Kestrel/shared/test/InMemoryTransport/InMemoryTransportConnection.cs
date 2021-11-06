@@ -1,12 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
@@ -49,6 +46,8 @@ internal class InMemoryTransportConnection : TransportConnection
     public ConnectionAbortedException AbortReason { get; private set; }
 
     public Task WaitForCloseTask => _waitForCloseTcs.Task;
+
+    public Stream GetClientStream(bool leaveOpen = false) => new InMemoryClientStream(this, leaveOpen);
 
     public override void Abort(ConnectionAbortedException abortReason)
     {
@@ -202,5 +201,66 @@ internal class InMemoryTransportConnection : TransportConnection
                 }
             }
         }
+    }
+
+    private class InMemoryClientStream : Stream
+    {
+        private readonly InMemoryTransportConnection _connection;
+        private readonly bool _leaveOpen;
+
+        private readonly Stream _readStream;
+        private readonly Stream _writeStream;
+
+        public InMemoryClientStream(InMemoryTransportConnection connection, bool leaveOpen = false)
+        {
+            _connection = connection;
+            _leaveOpen = leaveOpen;
+
+            _readStream = connection.Output.AsStream(leaveOpen: true);
+            _writeStream = connection.Input.AsStream(leaveOpen: true);
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!_leaveOpen)
+            {
+                _connection.Input.Complete();
+                _connection.Output.Complete();
+                _connection.OnClosed();
+            }
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            _readStream.ReadAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask<int> ReadAsync(Memory<byte> destination, CancellationToken cancellationToken) =>
+            _readStream.ReadAsync(destination, cancellationToken);
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state) =>
+            _readStream.BeginRead(buffer, offset, count, callback, state);
+        public override int EndRead(IAsyncResult asyncResult) => _readStream.EndRead(asyncResult);
+        public override int Read(byte[] buffer, int offset, int count) => _readStream.Read(buffer, offset, count);
+        public override int ReadByte() =>_readStream.ReadByte();
+        public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) =>
+            _readStream.CopyToAsync(destination, bufferSize, cancellationToken);
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            _writeStream.WriteAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> source, CancellationToken cancellationToken) =>
+            _writeStream.WriteAsync(source, cancellationToken);
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state) =>
+            _writeStream.BeginWrite(buffer, offset, count, callback, state);
+        public override void EndWrite(IAsyncResult asyncResult) => _writeStream.EndWrite(asyncResult);
+        public override void Write(byte[] buffer, int offset, int count) => _writeStream.Write(buffer, offset, count);
+        public override void WriteByte(byte value) => _writeStream.WriteByte(value);
+        public override Task FlushAsync(CancellationToken cancellationToken) => _writeStream.FlushAsync(cancellationToken);
+        public override void Flush() => _writeStream.Flush();
     }
 }
