@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTransport;
 using Microsoft.AspNetCore.Testing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Testing;
@@ -45,6 +46,9 @@ public class HttpClientHttp2InteropTests : LoggedTest
             return list;
         }
     }
+
+    private IHost _host;
+    private TestServer _testServer;
 
     [Theory]
     [MemberData(nameof(SupportedSchemes))]
@@ -1682,6 +1686,26 @@ public class HttpClientHttp2InteropTests : LoggedTest
         Assert.Equal(HttpVersion.Version20, response.Version);
         Assert.Equal("Hello World", await response.Content.ReadAsStringAsync());
         await host.StopAsync().DefaultTimeout();
+    }
+
+    private async Task<IDisposable> CreateHost(bool inMemory, string scheme, Action<IApplicationBuilder> configureApp)
+    {
+        if (inMemory)
+        {
+            return null;
+        }
+        else
+        {
+            var hostBuilder = new HostBuilder()
+                .ConfigureWebHost(webHostBuilder =>
+                {
+                    ConfigureKestrel(webHostBuilder, scheme);
+                    webHostBuilder.ConfigureServices(AddTestLogging)
+                    .Configure(app => app.Run(context => context.Response.WriteAsync(context.Request.Path.Value)));
+                });
+
+            return _host = await hostBuilder.StartAsync().DefaultTimeout();
+        }
     }
 
     private static HttpClient CreateClient()
