@@ -48,7 +48,7 @@ public class HttpClientHttp2InteropTests : LoggedTest
     }
 
     private IHost _host;
-    private TestServer _testServer;
+    //private TestServer _testServer;
 
     [Theory]
     [MemberData(nameof(SupportedSchemes))]
