@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections.Features;
@@ -78,6 +79,73 @@ public class Http2EndToEndTests : TestApplicationErrorLoggerLoggedTest
         Assert.Equal(connectionIdFromFeature, mockScopeLoggerProvider.ConnectionLogScope[0].Value);
     }
 
+    // Concurrency testing
+    [Fact]
+    public async Task MultiplexGet()
+    {
+        var requestsReceived = 0;
+        var requestCount = 10;
+        var allRequestsReceived = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using var server = new TestServer(async context =>
+        {
+            if (Interlocked.Increment(ref requestsReceived) == requestCount)
+            {
+                allRequestsReceived.SetResult(0);
+            }
+            await allRequestsReceived.Task;
+            var content = new BulkContent();
+            await content.CopyToAsync(context.Response.Body).DefaultTimeout();
+        },
+        new TestServiceContext(LoggerFactory),
+        listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http2;
+        });
+
+        var connectionCount = 0;
+        using var connection = server.CreateConnection();
+
+        using var socketsHandler = new SocketsHttpHandler()
+        {
+            ConnectCallback = (_, _) =>
+            {
+                if (connectionCount != 0)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                connectionCount++;
+                return new ValueTask<Stream>(connection.Stream);
+            },
+        };
+
+        using var client = new HttpClient(socketsHandler)
+        {
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact,
+        };
+
+        var url = "http://localhost/";
+
+        var requestTasks = new List<Task>(requestCount);
+        for (var i = 0; i < requestCount; i++)
+        {
+            requestTasks.Add(RunRequest(url));
+        }
+
+        async Task RunRequest(string url)
+        {
+            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).DefaultTimeout();
+
+            Assert.Equal(HttpVersion.Version20, response.Version);
+            await BulkContent.VerifyContent(await response.Content.ReadAsStreamAsync()).DefaultTimeout();
+        };
+
+        await Task.WhenAll(requestTasks);
+    }
+
+
     private class MockScopeLoggerProvider : ILoggerProvider, ISupportExternalScope
     {
         private readonly string _expectedLogMessage;
@@ -137,6 +205,68 @@ public class Http2EndToEndTests : TestApplicationErrorLoggerLoggedTest
                     },
                     _loggerProvider);
             }
+        }
+    }
+
+    private class BulkContent : HttpContent
+    {
+        private static readonly byte[] Content;
+        private static readonly int Repetitions = 200;
+
+        static BulkContent()
+        {
+            Content = new byte[999]; // Intentionally not matching normal memory page sizes to ensure we stress boundaries.
+            for (var i = 0; i < Content.Length; i++)
+            {
+                Content[i] = (byte)i;
+            }
+        }
+
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            for (var i = 0; i < Repetitions; i++)
+            {
+                using (var timer = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                {
+                    await stream.WriteAsync(Content, 0, Content.Length, timer.Token).DefaultTimeout();
+                }
+                await Task.Yield(); // Intermix writes
+            }
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        public static async Task VerifyContent(Stream stream)
+        {
+            byte[] buffer = new byte[1024];
+            var totalRead = 0;
+            var patternOffset = 0;
+            int read = 0;
+            using (var timer = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            {
+                read = await stream.ReadAsync(buffer, 0, buffer.Length, timer.Token).DefaultTimeout();
+            }
+
+            while (read > 0)
+            {
+                totalRead += read;
+                Assert.True(totalRead <= Repetitions * Content.Length, "Too Long");
+
+                for (var offset = 0; offset < read; offset++)
+                {
+                    Assert.Equal(Content[patternOffset % Content.Length], buffer[offset]);
+                    patternOffset++;
+                }
+
+                using var timer = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                read = await stream.ReadAsync(buffer, 0, buffer.Length, timer.Token).DefaultTimeout();
+            }
+
+            Assert.True(totalRead == Repetitions * Content.Length, "Too Short");
         }
     }
 }
