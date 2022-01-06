@@ -1,26 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Interop.FunctionalTests.TestServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests.TestTransport;
 using Microsoft.AspNetCore.Testing;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging.Testing;
-using Xunit;
 
 namespace Interop.FunctionalTests;
 
@@ -29,6 +21,8 @@ namespace Interop.FunctionalTests;
 /// </summary>
 public class HttpClientHttp2InteropTests : LoggedTest
 {
+    //private TestServer _testServer;
+
     public static IEnumerable<object[]> SupportedSchemes
     {
         get
@@ -46,9 +40,6 @@ public class HttpClientHttp2InteropTests : LoggedTest
             return list;
         }
     }
-
-    private IHost _host;
-    //private TestServer _testServer;
 
     [Theory]
     [MemberData(nameof(SupportedSchemes))]
@@ -99,6 +90,43 @@ public class HttpClientHttp2InteropTests : LoggedTest
         Assert.Equal(HttpVersion.Version20, response.Version);
         await BulkContent.VerifyContent(await response.Content.ReadAsStreamAsync().DefaultTimeout());
         await host.StopAsync().DefaultTimeout();
+    }
+
+    [Fact]
+    public async Task Echo2()
+    {
+        await using var server = new InteropTestServer(new InteropTestServerContext
+        {
+            TransportType = TransportType.InMemory,
+            ConfigureApp = (app => app.Run(async context =>
+            {
+                await context.Request.BodyReader.CopyToAsync(context.Response.BodyWriter).DefaultTimeout();
+            })),
+            LoggerFactory = LoggerFactory,
+            UseHttps = false
+        });
+
+        using var socketsHandler = new SocketsHttpHandler()
+        {
+            ConnectCallback = (_, _) =>
+            {
+                return new ValueTask<Stream>(server.CreateInMemoryConnection().GetClientStream());
+            },
+        };
+
+        using var client = new HttpClient(socketsHandler)
+        {
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact,
+        };
+
+        client.DefaultRequestHeaders.ExpectContinue = true;
+
+        using var request = CreateRequestMessage(HttpMethod.Post, "http://localhost/", new BulkContent());
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).DefaultTimeout();
+
+        Assert.Equal(HttpVersion.Version20, response.Version);
+        await BulkContent.VerifyContent(await response.Content.ReadAsStreamAsync().DefaultTimeout());
     }
 
     // Concurrency testing
