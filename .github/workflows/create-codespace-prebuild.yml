@@ -24,3 +24,4 @@ jobs:
           sku_name: premiumLinux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPERIMENTAL_CODESPACE_CACHE_TOKEN: ${{ secrets.EXPERIMENTAL_CODESPACE_CACHE_TOKEN }}
