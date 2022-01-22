@@ -2090,6 +2090,75 @@ public class HubConnectionTests : FunctionalTestBase
         }
     }
 
+    [Theory]
+    [MemberData(nameof(TransportTypes))]
+    public async Task CanBlockOnAsyncOperationsWithOneAtATimeSynchronizationContext(HttpTransportType transportType)
+    {
+        const int DefaultTimeout = Testing.TaskExtensions.DefaultTimeoutDuration;
+
+        await using var server = await StartServer<Startup>();
+        await using var connection = CreateHubConnection(server.Url, "/default", transportType, HubProtocols["json"], LoggerFactory);
+        using var oneAtATimeSynchronizationContext = new OneAtATimeSynchronizationContext();
+
+        var originalSynchronizationContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(oneAtATimeSynchronizationContext);
+
+        try
+        {
+            Assert.True(connection.StartAsync().Wait(DefaultTimeout));
+
+            var invokeTask = connection.InvokeAsync<string>(nameof(TestHub.HelloWorld));
+            Assert.True(invokeTask.Wait(DefaultTimeout));
+            Assert.Equal("Hello World!", invokeTask.Result);
+
+            Assert.True(connection.DisposeAsync().AsTask().Wait(DefaultTimeout));
+        }
+        catch (Exception ex)
+        {
+            LoggerFactory.CreateLogger<HubConnectionTests>().LogError(ex, "{ExceptionType} from test", ex.GetType().FullName);
+            throw;
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(originalSynchronizationContext);
+        }
+    }
+
+    private class OneAtATimeSynchronizationContext : SynchronizationContext, IDisposable
+    {
+        private Channel<(SendOrPostCallback, object)> _taskQueue = Channel.CreateUnbounded<(SendOrPostCallback, object)>();
+
+        public OneAtATimeSynchronizationContext()
+        {
+            _ = Run();
+        }
+
+        public override void Post(SendOrPostCallback d, object state)
+        {
+            _taskQueue.Writer.TryWrite((d, state));
+        }
+
+        public void Dispose()
+        {
+            _taskQueue.Writer.Complete();
+        }
+
+        private async Task Run()
+        {
+            while (await _taskQueue.Reader.WaitToReadAsync())
+            {
+                SetSynchronizationContext(this);
+                while (_taskQueue.Reader.TryRead(out var tuple))
+                {
+                    var (callback, state) = tuple;
+                    callback(state);
+                }
+                SetSynchronizationContext(null);
+            }
+        }
+    }
+
+
     private class PollTrackingMessageHandler : DelegatingHandler
     {
         public Task<HttpResponseMessage> ActivePoll { get; private set; }
