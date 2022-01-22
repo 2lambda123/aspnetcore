@@ -2153,14 +2153,14 @@ public class HubConnectionTests : FunctionalTestBase
     }
 
     // This list excludes "special" hub paths like "default-nowebsockets" which exist for specific tests.
-    public static string[] HubPaths = new[] { "/default", "/dynamic", "/hubT" };
+    public static string[] HubPaths = new[] { "/default" };//, "/dynamic", "/hubT" };
 
     public static Dictionary<string, IHubProtocol> HubProtocols =>
         new Dictionary<string, IHubProtocol>
         {
                 { "json", new JsonHubProtocol() },
-                { "newtonsoft-json", new NewtonsoftJsonHubProtocol() },
-                { "messagepack", new MessagePackHubProtocol() },
+                //{ "newtonsoft-json", new NewtonsoftJsonHubProtocol() },
+                //{ "messagepack", new MessagePackHubProtocol() },
         };
 
     public static IEnumerable<object[]> TransportTypes()

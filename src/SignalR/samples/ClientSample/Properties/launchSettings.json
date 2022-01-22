@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ClientSample": {
+      "commandName": "Project",
+      "commandLineArgs": "raw http://localhost:5000/chat"
+    }
+  }
+}

@@ -7,6 +7,8 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
@@ -40,6 +42,8 @@ internal class RawSample
             DefaultTransferFormat = TransferFormat.Text,
         };
 
+        SynchronizationContext.SetSynchronizationContext(new TestSynchronizationContext());
+
         var connection = new HttpConnection(connectionOptions, loggerFactory: null);
 
         try
@@ -67,7 +71,7 @@ internal class RawSample
         }
         finally
         {
-            await connection.DisposeAsync();
+            connection.DisposeAsync().GetAwaiter().GetResult();
         }
         return 0;
     }
@@ -104,6 +108,35 @@ internal class RawSample
         {
             var result = await input.ReadLineAsync();
             await output.WriteAsync(Encoding.UTF8.GetBytes(result));
+        }
+    }
+
+    private class TestSynchronizationContext : SynchronizationContext
+    {
+        private Channel<(SendOrPostCallback, object)> _taskQueue = Channel.CreateUnbounded<(SendOrPostCallback, object)>();
+
+        public TestSynchronizationContext()
+        {
+            _ = Run();
+        }
+
+        public override void Post(SendOrPostCallback d, object state)
+        {
+            _taskQueue.Writer.TryWrite((d, state));
+        }
+
+        private async Task Run()
+        {
+            while (await _taskQueue.Reader.WaitToReadAsync())
+            {
+                SetSynchronizationContext(this);
+                while (_taskQueue.Reader.TryRead(out var tuple))
+                {
+                    var (callback, state) = tuple;
+                    callback(state);
+                }
+                SetSynchronizationContext(null);
+            }
         }
     }
 }
