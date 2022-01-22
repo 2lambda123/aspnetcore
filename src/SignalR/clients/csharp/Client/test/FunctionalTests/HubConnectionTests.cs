@@ -67,7 +67,7 @@ public class HubConnectionTests : FunctionalTestBase
         return hubConnectionBuilder.Build();
     }
 
-    private Func<EndPoint, ValueTask<ConnectionContext>> GetHttpConnectionFactory(string url, ILoggerFactory loggerFactory, string path, HttpTransportType transportType, TransferFormat transferFormat)
+    private static Func<EndPoint, ValueTask<ConnectionContext>> GetHttpConnectionFactory(string url, ILoggerFactory loggerFactory, string path, HttpTransportType transportType, TransferFormat transferFormat)
     {
         return async endPoint =>
         {
@@ -75,7 +75,8 @@ public class HubConnectionTests : FunctionalTestBase
             var options = new HttpConnectionOptions { Url = httpEndpoint.Uri, Transports = transportType, DefaultTransferFormat = transferFormat };
             var connection = new HttpConnection(options, loggerFactory);
 
-            await connection.StartAsync();
+            // This is used by CanBlockOnAsyncOperationsWithOneAtATimeSynchronizationContext, so the ConfigureAwait(false) is important.
+            await connection.StartAsync().ConfigureAwait(false);
 
             return connection;
         };
@@ -2105,6 +2106,9 @@ public class HubConnectionTests : FunctionalTestBase
 
         try
         {
+            // Yield first so the rest of the test runs in the OneAtATimeSynchronizationContext.Run loop
+            await Task.Yield();
+
             Assert.True(connection.StartAsync().Wait(DefaultTimeout));
 
             var invokeTask = connection.InvokeAsync<string>(nameof(TestHub.HelloWorld));
@@ -2126,20 +2130,31 @@ public class HubConnectionTests : FunctionalTestBase
 
     private class OneAtATimeSynchronizationContext : SynchronizationContext, IDisposable
     {
-        private Channel<(SendOrPostCallback, object)> _taskQueue = Channel.CreateUnbounded<(SendOrPostCallback, object)>();
+        private readonly Channel<(SendOrPostCallback, object)> _taskQueue = Channel.CreateUnbounded<(SendOrPostCallback, object)>();
+        private bool _disposed;
 
         public OneAtATimeSynchronizationContext()
         {
-            _ = Run();
+            // Task.Run to avoid running with xUnit's AsyncTestSyncContext as well
+            _ = Task.Run(Run);
         }
 
         public override void Post(SendOrPostCallback d, object state)
         {
+            if (_disposed)
+            {
+                // There should be no other calls to Post() after dispose. If there are calls,
+                // the test has most likely failed with a timeout. Let the callbacks run so the
+                // timeout exception gets reported accurately instead of as a long-running test.
+                d(state);
+            }
+
             _taskQueue.Writer.TryWrite((d, state));
         }
 
         public void Dispose()
         {
+            _disposed = true;
             _taskQueue.Writer.Complete();
         }
 
@@ -2157,7 +2172,6 @@ public class HubConnectionTests : FunctionalTestBase
             }
         }
     }
-
 
     private class PollTrackingMessageHandler : DelegatingHandler
     {
