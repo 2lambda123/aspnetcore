@@ -263,7 +263,7 @@ internal class HttpConnectionContext : ConnectionContext,
             ServiceScope?.Dispose();
         }
 
-        await disposeTask;
+        await disposeTask.ConfigureAwait(false);
     }
 
     private async Task WaitOnTasks(Task applicationTask, Task transportTask, bool closeGracefully)
@@ -292,7 +292,7 @@ internal class HttpConnectionContext : ConnectionContext,
                     // 2. About to write and see that there is a pending cancel from the CancelPendingFlush, go to 1 to see what happens
                     // 3. Enters the Send and sees the Dispose state from DisposeAndRemoveAsync and releases the lock
                     // 4. No Send in progress
-                    await WriteLock.WaitAsync();
+                    await WriteLock.WaitAsync().ConfigureAwait(false);
                     try
                     {
                         // Complete the applications read loop
@@ -308,7 +308,7 @@ internal class HttpConnectionContext : ConnectionContext,
             }
 
             // Wait for either to finish
-            var result = await Task.WhenAny(applicationTask, transportTask);
+            var result = await Task.WhenAny(applicationTask, transportTask).ConfigureAwait(false);
 
             // If the application is complete, complete the transport pipe (it's the pipe to the transport)
             if (result == applicationTask)
@@ -321,7 +321,7 @@ internal class HttpConnectionContext : ConnectionContext,
                     Log.WaitingForTransport(_logger, TransportType);
 
                     // Transports are written by us and are well behaved, wait for them to drain
-                    await transportTask;
+                    await transportTask.ConfigureAwait(false);
                 }
                 finally
                 {
@@ -349,7 +349,7 @@ internal class HttpConnectionContext : ConnectionContext,
                     // A poorly written application *could* in theory get stuck forever and it'll show up as a memory leak
                     Log.WaitingForApplication(_logger);
 
-                    await applicationTask;
+                    await applicationTask.ConfigureAwait(false);
                 }
                 finally
                 {
@@ -519,7 +519,7 @@ internal class HttpConnectionContext : ConnectionContext,
             try
             {
                 // Wait for the previous request to drain
-                await PreviousPollTask;
+                await PreviousPollTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -555,7 +555,7 @@ internal class HttpConnectionContext : ConnectionContext,
         await Task.Yield();
 
         // Running this in an async method turns sync exceptions into async ones
-        await connectionDelegate(this);
+        await connectionDelegate(this).ConfigureAwait(false);
     }
 
     internal void StartSendCancellation()

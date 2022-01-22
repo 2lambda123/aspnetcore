@@ -3,11 +3,9 @@
 
 using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Client;
 

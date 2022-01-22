@@ -115,7 +115,7 @@ internal partial class HttpConnectionManager
         using (_nextHeartbeat)
         {
             // The TimerAwaitable will return true until Stop is called
-            while (await _nextHeartbeat.WaitForNextTickAsync())
+            while (await _nextHeartbeat.WaitForNextTickAsync().ConfigureAwait(false))
             {
                 try
                 {
@@ -197,7 +197,7 @@ internal partial class HttpConnectionManager
     {
         try
         {
-            await connection.DisposeAsync(closeGracefully);
+            await connection.DisposeAsync(closeGracefully).ConfigureAwait(false);
         }
         catch (IOException ex)
         {

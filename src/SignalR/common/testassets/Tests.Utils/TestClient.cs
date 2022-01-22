@@ -72,7 +72,7 @@ internal
     {
         if (sendHandshakeRequestMessage)
         {
-            await Connection.Application.Output.WriteAsync(GetHandshakeRequestMessage());
+            await Connection.Application.Output.WriteAsync(GetHandshakeRequestMessage()).ConfigureAwait(false);
         }
 
         var connection = handler.OnConnectedAsync(Connection);
@@ -82,7 +82,7 @@ internal
             // note that the handshake response might not immediately be readable
             // e.g. server is waiting for request, times out after configured duration,
             // and sends response with timeout error
-            HandshakeResponseMessage = (HandshakeResponseMessage)await ReadAsync(true).DefaultTimeout();
+            HandshakeResponseMessage = (HandshakeResponseMessage)await ReadAsync(true).DefaultTimeout().ConfigureAwait(false);
         }
 
         return connection;
@@ -95,8 +95,8 @@ internal
 
     public async Task<IList<HubMessage>> StreamAsync(string methodName, string[] streamIds, params object[] args)
     {
-        var invocationId = await SendStreamInvocationAsync(methodName, streamIds, args);
-        return await ListenAllAsync(invocationId);
+        var invocationId = await SendStreamInvocationAsync(methodName, streamIds, args).ConfigureAwait(false);
+        return await ListenAllAsync(invocationId).ConfigureAwait(false);
     }
 
     public async Task<IList<HubMessage>> ListenAllAsync(string invocationId)
@@ -113,7 +113,7 @@ internal
     {
         while (true)
         {
-            var message = await ReadAsync();
+            var message = await ReadAsync().ConfigureAwait(false);
 
             if (message == null)
             {
@@ -142,11 +142,11 @@ internal
 
     public async Task<CompletionMessage> InvokeAsync(string methodName, params object[] args)
     {
-        var invocationId = await SendInvocationAsync(methodName, nonBlocking: false, args: args);
+        var invocationId = await SendInvocationAsync(methodName, nonBlocking: false, args: args).ConfigureAwait(false);
 
         while (true)
         {
-            var message = await ReadAsync();
+            var message = await ReadAsync().ConfigureAwait(false);
 
             if (message == null)
             {
@@ -206,7 +206,7 @@ internal
     {
         var payload = _protocol.GetMessageBytes(message);
 
-        await Connection.Application.Output.WriteAsync(payload);
+        await Connection.Application.Output.WriteAsync(payload).ConfigureAwait(false);
         return message is HubInvocationMessage hubMessage ? hubMessage.InvocationId : null;
     }
 
@@ -218,7 +218,7 @@ internal
 
             if (message == null)
             {
-                var result = await Connection.Application.Input.ReadAsync();
+                var result = await Connection.Application.Input.ReadAsync().ConfigureAwait(false);
                 var buffer = result.Buffer;
 
                 try

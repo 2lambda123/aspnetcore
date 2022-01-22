@@ -76,17 +76,17 @@ internal partial class HttpConnectionDispatcher
             if (HttpMethods.IsPost(context.Request.Method))
             {
                 // POST /{path}
-                await ProcessSend(context, options);
+                await ProcessSend(context, options).ConfigureAwait(false);
             }
             else if (HttpMethods.IsGet(context.Request.Method))
             {
                 // GET /{path}
-                await ExecuteAsync(context, connectionDelegate, options, logScope);
+                await ExecuteAsync(context, connectionDelegate, options, logScope).ConfigureAwait(false);
             }
             else if (HttpMethods.IsDelete(context.Request.Method))
             {
                 // DELETE /{path}
-                await ProcessDeleteAsync(context);
+                await ProcessDeleteAsync(context).ConfigureAwait(false);
             }
             else
             {
@@ -105,7 +105,7 @@ internal partial class HttpConnectionDispatcher
             if (HttpMethods.IsPost(context.Request.Method))
             {
                 // POST /{path}/negotiate
-                await ProcessNegotiate(context, options, logScope);
+                await ProcessNegotiate(context, options, logScope).ConfigureAwait(false);
             }
             else
             {
@@ -129,14 +129,14 @@ internal partial class HttpConnectionDispatcher
         if (headers.Accept?.Contains(new Net.Http.Headers.MediaTypeHeaderValue("text/event-stream")) == true)
         {
             // Connection must already exist
-            var connection = await GetConnectionAsync(context);
+            var connection = await GetConnectionAsync(context).ConfigureAwait(false);
             if (connection == null)
             {
                 // No such connection, GetConnection already set the response status code
                 return;
             }
 
-            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.ServerSentEvents, supportedTransports, logScope, options))
+            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.ServerSentEvents, supportedTransports, logScope, options).ConfigureAwait(false))
             {
                 // Bad connection state. It's already set the response status code.
                 return;
@@ -150,19 +150,19 @@ internal partial class HttpConnectionDispatcher
             // We only need to provide the Input channel since writing to the application is handled through /send.
             var sse = new ServerSentEventsServerTransport(connection.Application.Input, connection.ConnectionId, connection, _loggerFactory);
 
-            await DoPersistentConnection(connectionDelegate, sse, context, connection);
+            await DoPersistentConnection(connectionDelegate, sse, context, connection).ConfigureAwait(false);
         }
         else if (context.WebSockets.IsWebSocketRequest)
         {
             // Connection can be established lazily
-            var connection = await GetOrCreateConnectionAsync(context, options);
+            var connection = await GetOrCreateConnectionAsync(context, options).ConfigureAwait(false);
             if (connection == null)
             {
                 // No such connection, GetOrCreateConnection already set the response status code
                 return;
             }
 
-            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.WebSockets, supportedTransports, logScope, options))
+            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.WebSockets, supportedTransports, logScope, options).ConfigureAwait(false))
             {
                 // Bad connection state. It's already set the response status code.
                 return;
@@ -175,7 +175,7 @@ internal partial class HttpConnectionDispatcher
 
             var ws = new WebSocketsServerTransport(options.WebSockets, connection.Application, connection, _loggerFactory);
 
-            await DoPersistentConnection(connectionDelegate, ws, context, connection);
+            await DoPersistentConnection(connectionDelegate, ws, context, connection).ConfigureAwait(false);
         }
         else
         {
@@ -184,20 +184,20 @@ internal partial class HttpConnectionDispatcher
             AddNoCacheHeaders(context.Response);
 
             // Connection must already exist
-            var connection = await GetConnectionAsync(context);
+            var connection = await GetConnectionAsync(context).ConfigureAwait(false);
             if (connection == null)
             {
                 // No such connection, GetConnection already set the response status code
                 return;
             }
 
-            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.LongPolling, supportedTransports, logScope, options))
+            if (!await EnsureConnectionStateAsync(connection, context, HttpTransportType.LongPolling, supportedTransports, logScope, options).ConfigureAwait(false))
             {
                 // Bad connection state. It's already set the response status code.
                 return;
             }
 
-            if (!await connection.CancelPreviousPoll(context))
+            if (!await connection.CancelPreviousPoll(context).ConfigureAwait(false))
             {
                 // Connection closed. It's already set the response status code.
                 return;
@@ -213,7 +213,7 @@ internal partial class HttpConnectionDispatcher
                 return;
             }
 
-            var resultTask = await Task.WhenAny(connection.ApplicationTask!, connection.TransportTask!);
+            var resultTask = await Task.WhenAny(connection.ApplicationTask!, connection.TransportTask!).ConfigureAwait(false);
 
             try
             {
@@ -226,7 +226,7 @@ internal partial class HttpConnectionDispatcher
                     // Wait for the transport to run
                     // Ignore exceptions, it has been logged if there is one and the application has finished
                     // So there is no one to give the exception to
-                    await connection.TransportTask!.NoThrow();
+                    await connection.TransportTask!.NoThrow().ConfigureAwait(false);
 
                     // If the status code is a 204 it means the connection is done
                     if (context.Response.StatusCode == StatusCodes.Status204NoContent)
@@ -236,7 +236,7 @@ internal partial class HttpConnectionDispatcher
 
                         // We should be able to safely dispose because there's no more data being written
                         // We don't need to wait for close here since we've already waited for both sides
-                        await _manager.DisposeAndRemoveAsync(connection, closeGracefully: false);
+                        await _manager.DisposeAndRemoveAsync(connection, closeGracefully: false).ConfigureAwait(false);
                     }
                     else
                     {
@@ -250,7 +250,7 @@ internal partial class HttpConnectionDispatcher
                     currentRequestTcs.TrySetCanceled();
                     // We should be able to safely dispose because there's no more data being written
                     // We don't need to wait for close here since we've already waited for both sides
-                    await _manager.DisposeAndRemoveAsync(connection, closeGracefully: false);
+                    await _manager.DisposeAndRemoveAsync(connection, closeGracefully: false).ConfigureAwait(false);
                 }
                 else
                 {
@@ -275,9 +275,9 @@ internal partial class HttpConnectionDispatcher
         if (connection.TryActivatePersistentConnection(connectionDelegate, transport, context, _logger))
         {
             // Wait for any of them to end
-            await Task.WhenAny(connection.ApplicationTask!, connection.TransportTask!);
+            await Task.WhenAny(connection.ApplicationTask!, connection.TransportTask!).ConfigureAwait(false);
 
-            await _manager.DisposeAndRemoveAsync(connection, closeGracefully: true);
+            await _manager.DisposeAndRemoveAsync(connection, closeGracefully: true).ConfigureAwait(false);
         }
     }
 
@@ -335,7 +335,7 @@ internal partial class HttpConnectionDispatcher
 
             // Write it out to the response with the right content length
             context.Response.ContentLength = writer.Length;
-            await writer.CopyToAsync(context.Response.Body);
+            await writer.CopyToAsync(context.Response.Body).ConfigureAwait(false);
         }
         finally
         {
@@ -387,7 +387,7 @@ internal partial class HttpConnectionDispatcher
 
     private async Task ProcessSend(HttpContext context, HttpConnectionDispatcherOptions options)
     {
-        var connection = await GetConnectionAsync(context);
+        var connection = await GetConnectionAsync(context).ConfigureAwait(false);
         if (connection == null)
         {
             // No such connection, GetConnection already set the response status code
@@ -400,13 +400,13 @@ internal partial class HttpConnectionDispatcher
         {
             Log.PostNotAllowedForWebSockets(_logger);
             context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-            await context.Response.WriteAsync("POST requests are not allowed for WebSocket connections.");
+            await context.Response.WriteAsync("POST requests are not allowed for WebSocket connections.").ConfigureAwait(false);
             return;
         }
 
         const int bufferSize = 4096;
 
-        await connection.WriteLock.WaitAsync();
+        await connection.WriteLock.WaitAsync().ConfigureAwait(false);
 
         try
         {
@@ -424,7 +424,7 @@ internal partial class HttpConnectionDispatcher
             {
                 try
                 {
-                    await context.Request.Body.CopyToAsync(connection.ApplicationStream, bufferSize);
+                    await context.Request.Body.CopyToAsync(connection.ApplicationStream, bufferSize).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -480,7 +480,7 @@ internal partial class HttpConnectionDispatcher
 
     private async Task ProcessDeleteAsync(HttpContext context)
     {
-        var connection = await GetConnectionAsync(context);
+        var connection = await GetConnectionAsync(context).ConfigureAwait(false);
         if (connection == null)
         {
             // No such connection, GetConnection already set the response status code
@@ -493,7 +493,7 @@ internal partial class HttpConnectionDispatcher
             Log.ReceivedDeleteRequestForUnsupportedTransport(_logger, connection.TransportType);
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Cannot terminate this connection using the DELETE endpoint.");
+            await context.Response.WriteAsync("Cannot terminate this connection using the DELETE endpoint.").ConfigureAwait(false);
             return;
         }
 
@@ -513,7 +513,7 @@ internal partial class HttpConnectionDispatcher
             context.Response.ContentType = "text/plain";
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             Log.TransportNotSupported(_logger, transportType);
-            await context.Response.WriteAsync($"{transportType} transport not supported by this end point type");
+            await context.Response.WriteAsync($"{transportType} transport not supported by this end point type").ConfigureAwait(false);
             return false;
         }
 
@@ -529,7 +529,7 @@ internal partial class HttpConnectionDispatcher
             context.Response.ContentType = "text/plain";
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             Log.CannotChangeTransport(_logger, connection.TransportType, transportType);
-            await context.Response.WriteAsync("Cannot change transports mid-connection");
+            await context.Response.WriteAsync("Cannot change transports mid-connection").ConfigureAwait(false);
             return false;
         }
 
@@ -697,7 +697,7 @@ internal partial class HttpConnectionDispatcher
             // There's no connection ID: bad request
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Connection ID required");
+            await context.Response.WriteAsync("Connection ID required").ConfigureAwait(false);
             return null;
         }
 
@@ -707,7 +707,7 @@ internal partial class HttpConnectionDispatcher
             // No connection with that ID: Not Found
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("No Connection with that ID");
+            await context.Response.WriteAsync("No Connection with that ID").ConfigureAwait(false);
             return null;
         }
 
@@ -730,7 +730,7 @@ internal partial class HttpConnectionDispatcher
         {
             // No connection with that ID: Not Found
             context.Response.StatusCode = StatusCodes.Status404NotFound;
-            await context.Response.WriteAsync("No Connection with that ID");
+            await context.Response.WriteAsync("No Connection with that ID").ConfigureAwait(false);
             return null;
         }
 

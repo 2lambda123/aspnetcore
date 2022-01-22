@@ -4,7 +4,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Microsoft.AspNetCore.SignalR.Client.Internal;
 

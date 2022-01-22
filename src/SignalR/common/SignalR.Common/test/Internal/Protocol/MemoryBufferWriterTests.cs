@@ -237,7 +237,7 @@ public class MemoryBufferWriterTests
             Assert.Equal(input.Length, bufferWriter.Length);
 
             var ms = new MemoryStream();
-            await bufferWriter.CopyToAsync(ms);
+            await bufferWriter.CopyToAsync(ms).ConfigureAwait(false);
             var data = ms.ToArray();
             Assert.Equal(input, data);
         }
@@ -256,7 +256,7 @@ public class MemoryBufferWriterTests
             Assert.Equal(input.Length, bufferWriter.Length);
 
             var ms = new MemoryStream();
-            await bufferWriter.CopyToAsync(ms);
+            await bufferWriter.CopyToAsync(ms).ConfigureAwait(false);
             var data = ms.ToArray();
             Assert.Equal(input, data);
         }

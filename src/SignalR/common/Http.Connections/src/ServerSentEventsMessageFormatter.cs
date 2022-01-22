@@ -19,22 +19,22 @@ internal static class ServerSentEventsMessageFormatter
         {
             if (payload.Length > 0)
             {
-                await output.WriteAsync(DataPrefix, token);
-                await output.WriteAsync(payload, token);
-                await output.WriteAsync(Newline, token);
+                await output.WriteAsync(DataPrefix, token).ConfigureAwait(false);
+                await output.WriteAsync(payload, token).ConfigureAwait(false);
+                await output.WriteAsync(Newline, token).ConfigureAwait(false);
             }
 
-            await output.WriteAsync(Newline, token);
+            await output.WriteAsync(Newline, token).ConfigureAwait(false);
             return;
         }
 
         var ms = new MemoryStream();
 
         // Parse payload and write formatted output to memory
-        await WriteMessageToMemory(ms, payload);
+        await WriteMessageToMemory(ms, payload).ConfigureAwait(false);
         ms.Position = 0;
 
-        await ms.CopyToAsync(output, token);
+        await ms.CopyToAsync(output, token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -96,11 +96,11 @@ internal static class ServerSentEventsMessageFormatter
             }
 
             // Write line
-            await output.WriteAsync(DataPrefix);
-            await output.WriteAsync(lineSegment);
-            await output.WriteAsync(Newline);
+            await output.WriteAsync(DataPrefix).ConfigureAwait(false);
+            await output.WriteAsync(lineSegment).ConfigureAwait(false);
+            await output.WriteAsync(Newline).ConfigureAwait(false);
         }
 
-        await output.WriteAsync(Newline);
+        await output.WriteAsync(Newline).ConfigureAwait(false);
     }
 }

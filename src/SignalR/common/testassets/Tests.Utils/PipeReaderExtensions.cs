@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Buffers;
@@ -11,7 +11,7 @@ public static class PipeReaderExtensions
     {
         while (true)
         {
-            var result = await pipeReader.ReadAsync();
+            var result = await pipeReader.ReadAsync().ConfigureAwait(false);
 
             try
             {
@@ -37,7 +37,7 @@ public static class PipeReaderExtensions
     {
         while (true)
         {
-            var result = await pipeReader.ReadAsync();
+            var result = await pipeReader.ReadAsync().ConfigureAwait(false);
 
             try
             {
@@ -54,7 +54,7 @@ public static class PipeReaderExtensions
     {
         while (true)
         {
-            var result = await pipeReader.ReadAsync();
+            var result = await pipeReader.ReadAsync().ConfigureAwait(false);
             if (result.Buffer.Length < numBytes)
             {
                 pipeReader.AdvanceTo(result.Buffer.Start, result.Buffer.End);
@@ -70,7 +70,7 @@ public static class PipeReaderExtensions
     {
         while (true)
         {
-            var result = await pipeReader.ReadAsync();
+            var result = await pipeReader.ReadAsync().ConfigureAwait(false);
 
             if (result.IsCompleted)
             {
@@ -86,7 +86,7 @@ public static class PipeReaderExtensions
     {
         while (true)
         {
-            var result = await pipeReader.ReadAsync();
+            var result = await pipeReader.ReadAsync().ConfigureAwait(false);
             if (result.Buffer.Length < numBytes)
             {
                 pipeReader.AdvanceTo(result.Buffer.Start, result.Buffer.End);

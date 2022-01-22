@@ -48,13 +48,13 @@ internal partial class WebSocketsServerTransport : IHttpTransport
 
         var subProtocol = _options.SubProtocolSelector?.Invoke(context.WebSockets.WebSocketRequestedProtocols);
 
-        using (var ws = await context.WebSockets.AcceptWebSocketAsync(subProtocol))
+        using (var ws = await context.WebSockets.AcceptWebSocketAsync(subProtocol).ConfigureAwait(false))
         {
             Log.SocketOpened(_logger, subProtocol);
 
             try
             {
-                await ProcessSocketAsync(ws);
+                await ProcessSocketAsync(ws).ConfigureAwait(false);
             }
             finally
             {
@@ -70,7 +70,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
         var sending = StartSending(socket);
 
         // Wait for send or receive to complete
-        var trigger = await Task.WhenAny(receiving, sending);
+        var trigger = await Task.WhenAny(receiving, sending).ConfigureAwait(false);
 
         if (trigger == receiving)
         {
@@ -85,7 +85,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
 
             using (var delayCts = new CancellationTokenSource())
             {
-                var resultTask = await Task.WhenAny(sending, Task.Delay(_options.CloseTimeout, delayCts.Token));
+                var resultTask = await Task.WhenAny(sending, Task.Delay(_options.CloseTimeout, delayCts.Token)).ConfigureAwait(false);
 
                 if (resultTask != sending)
                 {
@@ -113,7 +113,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
 
             using (var delayCts = new CancellationTokenSource())
             {
-                var resultTask = await Task.WhenAny(receiving, Task.Delay(_options.CloseTimeout, delayCts.Token));
+                var resultTask = await Task.WhenAny(receiving, Task.Delay(_options.CloseTimeout, delayCts.Token)).ConfigureAwait(false);
 
                 if (resultTask != receiving)
                 {
@@ -142,7 +142,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
             while (!token.IsCancellationRequested)
             {
                 // Do a 0 byte read so that idle connections don't allocate a buffer when waiting for a read
-                var result = await socket.ReceiveAsync(Memory<byte>.Empty, token);
+                var result = await socket.ReceiveAsync(Memory<byte>.Empty, token).ConfigureAwait(false);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -151,7 +151,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
 
                 var memory = _application.Output.GetMemory();
 
-                var receiveResult = await socket.ReceiveAsync(memory, token);
+                var receiveResult = await socket.ReceiveAsync(memory, token).ConfigureAwait(false);
 
                 // Need to check again for netcoreapp3.0 and later because a close can happen between a 0-byte read and the actual read
                 if (receiveResult.MessageType == WebSocketMessageType.Close)
@@ -163,7 +163,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
 
                 _application.Output.Advance(receiveResult.Count);
 
-                var flushResult = await _application.Output.FlushAsync();
+                var flushResult = await _application.Output.FlushAsync().ConfigureAwait(false);
 
                 // We canceled in the middle of applying back pressure
                 // or if the consumer is done
@@ -204,7 +204,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
         {
             while (true)
             {
-                var result = await _application.Input.ReadAsync();
+                var result = await _application.Input.ReadAsync().ConfigureAwait(false);
                 var buffer = result.Buffer;
 
                 // Get a frame from the application
@@ -229,7 +229,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
                             if (WebSocketCanSend(socket))
                             {
                                 _connection.StartSendCancellation();
-                                await socket.SendAsync(buffer, webSocketMessageType, _connection.SendingToken);
+                                await socket.SendAsync(buffer, webSocketMessageType, _connection.SendingToken).ConfigureAwait(false);
                             }
                             else
                             {
@@ -269,7 +269,7 @@ internal partial class WebSocketsServerTransport : IHttpTransport
                 try
                 {
                     // We're done sending, send the close frame to the client if the websocket is still open
-                    await socket.CloseOutputAsync(error != null ? WebSocketCloseStatus.InternalServerError : WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+                    await socket.CloseOutputAsync(error != null ? WebSocketCloseStatus.InternalServerError : WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

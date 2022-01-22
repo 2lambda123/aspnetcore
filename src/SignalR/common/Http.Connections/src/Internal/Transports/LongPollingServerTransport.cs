@@ -33,7 +33,7 @@ internal class LongPollingServerTransport : IHttpTransport
     {
         try
         {
-            var result = await _application.ReadAsync(token);
+            var result = await _application.ReadAsync(token).ConfigureAwait(false);
             var buffer = result.Buffer;
 
             try
@@ -55,7 +55,7 @@ internal class LongPollingServerTransport : IHttpTransport
                 context.Response.ContentType = "application/octet-stream";
 
                 _connection?.StartSendCancellation();
-                await context.Response.Body.WriteAsync(buffer, _connection?.SendingToken ?? default);
+                await context.Response.Body.WriteAsync(buffer, _connection?.SendingToken ?? default).ConfigureAwait(false);
             }
             finally
             {

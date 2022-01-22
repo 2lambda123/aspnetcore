@@ -10,7 +10,7 @@ public static class ChannelExtensions
         var list = new List<T>();
         try
         {
-            while (await channel.WaitToReadAsync())
+            while (await channel.WaitToReadAsync().ConfigureAwait(false))
             {
                 while (channel.TryRead(out var item))
                 {
@@ -21,7 +21,7 @@ public static class ChannelExtensions
             // Manifest any error from channel.Completion (which should be completed now)
             if (!suppressExceptions)
             {
-                await channel.Completion;
+                await channel.Completion.ConfigureAwait(false);
             }
         }
         catch (Exception) when (suppressExceptions)

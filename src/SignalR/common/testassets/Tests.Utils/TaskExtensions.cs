@@ -11,7 +11,7 @@ internal
 {
     public static async Task OrThrowIfOtherFails(this Task task, Task otherTask)
     {
-        var completed = await Task.WhenAny(task, otherTask);
+        var completed = await Task.WhenAny(task, otherTask).ConfigureAwait(false);
         if (completed == otherTask && otherTask.IsFaulted)
         {
             // Manifest the exception
@@ -21,13 +21,13 @@ internal
         else
         {
             // Await the task we were asked to await. Either it's finished, or the otherTask finished successfully, and it's not our job to check that
-            await task;
+            await task.ConfigureAwait(false);
         }
     }
 
     public static async Task<T> OrThrowIfOtherFails<T>(this Task<T> task, Task otherTask)
     {
-        await OrThrowIfOtherFails((Task)task, otherTask);
+        await OrThrowIfOtherFails((Task)task, otherTask).ConfigureAwait(false);
 
         // If we get here, 'task' is finished and succeeded.
         return task.GetAwaiter().GetResult();

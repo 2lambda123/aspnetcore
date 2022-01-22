@@ -44,11 +44,11 @@ internal class ServerSentEventsServerTransport : IHttpTransport
         {
             // Workaround for a Firefox bug where EventSource won't fire the open event
             // until it receives some data
-            await context.Response.WriteAsync(":\r\n", cancellationToken);
-            await context.Response.Body.FlushAsync(cancellationToken);
+            await context.Response.WriteAsync(":\r\n", cancellationToken).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
             while (true)
             {
-                var result = await _application.ReadAsync(cancellationToken);
+                var result = await _application.ReadAsync(cancellationToken).ConfigureAwait(false);
                 var buffer = result.Buffer;
 
                 try
@@ -63,7 +63,7 @@ internal class ServerSentEventsServerTransport : IHttpTransport
                         Log.SSEWritingMessage(_logger, buffer.Length);
 
                         _connection?.StartSendCancellation();
-                        await ServerSentEventsMessageFormatter.WriteMessageAsync(buffer, context.Response.Body, _connection?.SendingToken ?? default);
+                        await ServerSentEventsMessageFormatter.WriteMessageAsync(buffer, context.Response.Body, _connection?.SendingToken ?? default).ConfigureAwait(false);
                     }
                     else if (result.IsCompleted)
                     {
