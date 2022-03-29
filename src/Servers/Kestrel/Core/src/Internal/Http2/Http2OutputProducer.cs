@@ -548,7 +548,7 @@ internal class Http2OutputProducer : IHttpOutputProducer, IHttpOutputAborter, IV
 
             _streamCompleted = true;
 
-            var enqueue = Enqueue(_pipeWriter.UnflushedBytes) || EnqueueForObservation(State.Cancelled);
+            var enqueue = Enqueue(_pipeWriter.UnflushedBytes) || EnqueueForObservation(State.Canceled);
 
             _pipeReader.CancelPendingRead();
 
@@ -685,7 +685,7 @@ internal class Http2OutputProducer : IHttpOutputProducer, IHttpOutputAborter, IV
     {
         None = 0,
         FlushHeaders = 1,
-        Cancelled = 2,
+        Canceled = 2,
         Completed = 4
     }
 }
