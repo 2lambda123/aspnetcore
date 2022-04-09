@@ -93,7 +93,10 @@ internal class Http2FrameWriter
 
     public void Schedule(Http2OutputProducer producer)
     {
-        _channel.Writer.TryWrite(producer);
+        if (!_channel.Writer.TryWrite(producer))
+        {
+            Environment.FailFast("Http2FrameWriter._channel exceeded limit!");
+        }
     }
 
     private async Task WriteToOutputPipe()
