@@ -90,6 +90,7 @@ internal partial class Http2Connection : IHttp2StreamLifetimeHandler, IHttpStrea
             context.ConnectionContext,
             this,
             Http2PeerSettings.DefaultInitialWindowSize,
+            http2Limits.MaxStreamsPerConnection,
             context.TimeoutControl,
             httpLimits.MinResponseDataRate,
             context.ConnectionId,

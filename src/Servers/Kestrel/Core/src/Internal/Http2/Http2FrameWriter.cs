@@ -46,7 +46,7 @@ internal class Http2FrameWriter
     private bool _aborted;
 
     private readonly object _windowUpdateLock = new();
-    private long _window;
+    private long _connectionWindow;
     private readonly Queue<Http2OutputProducer> _waitingForMoreWindow = new();
     private readonly Task _writeQueueTask;
 
@@ -54,7 +54,8 @@ internal class Http2FrameWriter
         PipeWriter outputPipeWriter,
         BaseConnectionContext connectionContext,
         Http2Connection http2Connection,
-        long initialWindowSize,
+        long initialConnectionWindowSize,
+        int maxStreamsPerConnection,
         ITimeoutControl timeoutControl,
         MinDataRate? minResponseDataRate,
         string connectionId,
@@ -78,14 +79,14 @@ internal class Http2FrameWriter
 
         _hpackEncoder = new DynamicHPackEncoder(serviceContext.ServerOptions.AllowResponseHeaderCompression);
 
-        // In practice, this is bounded by the number of concurrent streams allowed + whatever overflow we allow
-        _channel = Channel.CreateUnbounded<Http2OutputProducer>(new UnboundedChannelOptions()
+        // This is bounded by the maximum number of concurrent streams allowed over a single connection.
+        _channel = Channel.CreateBounded<Http2OutputProducer>(new BoundedChannelOptions(maxStreamsPerConnection)
         {
             AllowSynchronousContinuations = _scheduleInline,
             SingleReader = true
         });
 
-        _window = initialWindowSize;
+        _connectionWindow = initialConnectionWindowSize;
 
         _writeQueueTask = Task.Run(WriteToOutputPipe);
     }
@@ -232,7 +233,7 @@ internal class Http2FrameWriter
                     else if (remainingStream > 0)
                     {
                         // Move this stream to the back of the queue so we're being fair to the other streams that have data
-                        Schedule(producer);
+                        producer.Schedule();
                     }
                     else
                     {
@@ -249,7 +250,7 @@ internal class Http2FrameWriter
                 }
                 else if (reschedule)
                 {
-                    Schedule(producer);
+                    producer.Schedule();
                 }
             }
             catch (Exception ex)
@@ -834,8 +835,8 @@ internal class Http2FrameWriter
     {
         lock (_windowUpdateLock)
         {
-            var actual = Math.Min(bytes, _window);
-            var remaining = _window -= actual;
+            var actual = Math.Min(bytes, _connectionWindow);
+            var remaining = _connectionWindow -= actual;
 
             return (actual, remaining);
         }
@@ -860,14 +861,14 @@ internal class Http2FrameWriter
     {
         lock (_windowUpdateLock)
         {
-            var maxUpdate = Http2PeerSettings.MaxWindowSize - _window;
+            var maxUpdate = Http2PeerSettings.MaxWindowSize - _connectionWindow;
 
             if (bytes > maxUpdate)
             {
                 return false;
             }
 
-            _window += bytes;
+            _connectionWindow += bytes;
 
             while (_waitingForMoreWindow.TryDequeue(out var producer))
             {
@@ -876,7 +877,7 @@ internal class Http2FrameWriter
                     // We're no longer waiting for the update
                     producer.MarkWaitingForWindowUpdates(false);
 
-                    Schedule(producer);
+                    producer.Schedule();
                 }
             }
         }
