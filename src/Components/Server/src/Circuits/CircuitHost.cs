@@ -57,6 +57,9 @@ internal partial class CircuitHost : IAsyncDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         Services = scope.ServiceProvider;
+        CircuitContext = new CircuitContext();
+
+        CircuitContext.Set<IServiceProvider>(Services);
 
         Circuit = new Circuit(this);
         Handle = new CircuitHandle() { CircuitHost = this, };
@@ -80,6 +83,8 @@ internal partial class CircuitHost : IAsyncDisposable
 
     public RemoteRenderer Renderer { get; }
 
+    public CircuitContext CircuitContext { get; set; }
+
     public IReadOnlyList<ComponentDescriptor> Descriptors { get; }
 
     public IServiceProvider Services { get; }
@@ -99,6 +104,7 @@ internal partial class CircuitHost : IAsyncDisposable
 
             try
             {
+                CircuitLocal._hostContext.Value = this;
                 _initialized = true; // We're ready to accept incoming JSInterop calls from here on
 
                 await OnCircuitOpenedAsync(cancellationToken);
@@ -130,6 +136,10 @@ internal partial class CircuitHost : IAsyncDisposable
                 Log.InitializationFailed(_logger, ex);
                 UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
                 await TryNotifyClientErrorAsync(Client, GetClientErrorMessage(ex), ex);
+            }
+            finally
+            {
+                CircuitLocal._hostContext.Value = null;
             }
         });
     }
@@ -317,7 +327,8 @@ internal partial class CircuitHost : IAsyncDisposable
 
         try
         {
-            _ = Renderer.OnRenderCompletedAsync(renderId, errorMessageOrNull);
+            CircuitLocal._hostContext.Value = this;
+            await Renderer.OnRenderCompletedAsync(renderId, errorMessageOrNull);
         }
         catch (Exception e)
         {
@@ -326,6 +337,10 @@ internal partial class CircuitHost : IAsyncDisposable
             Log.OnRenderCompletedFailed(_logger, renderId, CircuitId, e);
             await TryNotifyClientErrorAsync(Client, GetClientErrorMessage(e, $"Failed to complete render batch '{renderId}'."));
             UnhandledException(this, new UnhandledExceptionEventArgs(e, isTerminating: false));
+        }
+        finally
+        {
+            CircuitLocal._hostContext.Value = null;
         }
     }
 
@@ -340,6 +355,7 @@ internal partial class CircuitHost : IAsyncDisposable
         {
             await Renderer.Dispatcher.InvokeAsync(() =>
             {
+                CircuitLocal._hostContext.Value = this;
                 Log.BeginInvokeDotNet(_logger, callId, assemblyName, methodIdentifier, dotNetObjectId);
                 var invocationInfo = new DotNetInvocationInfo(assemblyName, methodIdentifier, dotNetObjectId, callId);
                 DotNetDispatcher.BeginInvokeDotNet(JSRuntime, invocationInfo, argsJson);
@@ -352,6 +368,10 @@ internal partial class CircuitHost : IAsyncDisposable
             Log.BeginInvokeDotNetFailed(_logger, callId, assemblyName, methodIdentifier, dotNetObjectId, ex);
             await TryNotifyClientErrorAsync(Client, GetClientErrorMessage(ex, "Interop call failed."));
             UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
+        }
+        finally
+        {
+            CircuitLocal._hostContext.Value = null;
         }
     }
 
@@ -366,6 +386,7 @@ internal partial class CircuitHost : IAsyncDisposable
         {
             await Renderer.Dispatcher.InvokeAsync(() =>
             {
+                CircuitLocal._hostContext.Value = this;
                 if (!succeeded)
                 {
                     // We can log the arguments here because it is simply the JS error with the call stack.
@@ -386,6 +407,10 @@ internal partial class CircuitHost : IAsyncDisposable
             Log.EndInvokeDispatchException(_logger, ex);
             await TryNotifyClientErrorAsync(Client, GetClientErrorMessage(ex, "Invalid interop arguments."));
             UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
+        }
+        finally
+        {
+            CircuitLocal._hostContext.Value = null;
         }
     }
 
@@ -500,6 +525,7 @@ internal partial class CircuitHost : IAsyncDisposable
         {
             await Renderer.Dispatcher.InvokeAsync(() =>
             {
+                CircuitLocal._hostContext.Value = this;
                 Log.LocationChange(_logger, uri, CircuitId);
                 var navigationManager = (RemoteNavigationManager)Services.GetRequiredService<NavigationManager>();
                 navigationManager.NotifyLocationChanged(uri, intercepted);
@@ -531,6 +557,10 @@ internal partial class CircuitHost : IAsyncDisposable
             Log.LocationChangeFailed(_logger, uri, CircuitId, ex);
             await TryNotifyClientErrorAsync(Client, GetClientErrorMessage(ex, $"Location change to '{uri}' failed."));
             UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
+        }
+        finally
+        {
+            CircuitLocal._hostContext.Value = null;
         }
     }
 

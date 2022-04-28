@@ -1,5 +1,6 @@
 ﻿@page "/fetchdata"
-
+@inject IHttpClientFactory Factory
+@inject ILogger<FetchData> Logger
 <PageTitle>Weather forecast</PageTitle>
 
 @using BlazorServerApp.Data
@@ -43,6 +44,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var client = Factory.CreateClient("Auth");
+        for (int i = 0; i < 10000; i++)
+        {
+            await client.GetAsync("https://localhost:5001/bogus");
+            Logger.LogInformation($"Thread ID: {Thread.CurrentThread.ManagedThreadId}");
+        }
         forecasts = await ForecastService.GetForecastAsync(DateTime.Now);
     }
 }

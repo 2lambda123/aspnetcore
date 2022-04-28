@@ -66,6 +66,7 @@ public static class ComponentServiceCollectionExtensions
         services.TryAddSingleton<ComponentParameterDeserializer>();
         services.TryAddSingleton<ComponentParametersTypeCache>();
         services.TryAddSingleton<CircuitIdFactory>();
+        services.AddSingleton<IAuthenticationStateProviderAccessor, AuthenticationStateProviderAccessor>();
         services.TryAddScoped<IErrorBoundaryLogger, RemoteErrorBoundaryLogger>();
 
         services.TryAddScoped(s => s.GetRequiredService<ICircuitAccessor>().Circuit);

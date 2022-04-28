@@ -8,6 +8,8 @@ namespace Microsoft.AspNetCore.Components.Authorization;
 /// </summary>
 public abstract class AuthenticationStateProvider
 {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
     /// <summary>
     /// Asynchronously gets an <see cref="AuthenticationState"/> that describes the current user.
     /// </summary>
