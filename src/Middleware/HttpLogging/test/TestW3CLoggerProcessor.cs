@@ -7,12 +7,11 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.HttpLogging;
 
-internal sealed class TestW3CLoggerProcessor : W3CLoggerProcessor
+internal sealed class TestW3CLoggerProcessor : W3CLogger
 {
     private int _writeCount = 0;
     private int _expectedWrites;
     private TaskCompletionSource _tcs;
-    private bool _hasWritten;
     private readonly object _writeCountLock = new object();
 
     public TestW3CLoggerProcessor(IOptionsMonitor<W3CLoggerOptions> options, IHostEnvironment environment, ILoggerFactory factory) : base(options, environment, factory)
@@ -52,14 +51,5 @@ internal sealed class TestW3CLoggerProcessor : W3CLoggerProcessor
             _tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
         return _tcs.Task;
-    }
-
-    public override async Task OnFirstWrite(StreamWriter streamWriter, W3CLoggingFields loggingFields, CancellationToken cancellationToken)
-    {
-        if (!_hasWritten)
-        {
-            await base.OnFirstWrite(streamWriter, loggingFields, cancellationToken);
-            _hasWritten = true;
-        }
     }
 }

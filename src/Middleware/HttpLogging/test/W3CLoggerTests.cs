@@ -30,7 +30,7 @@ public class W3CLoggerTests
                 AddToList(elements, W3CLoggingMiddleware._dateIndex, _timestampOne.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                 AddToList(elements, W3CLoggingMiddleware._timeIndex, _timestampOne.ToString("HH:mm:ss", CultureInfo.InvariantCulture));
 
-                logger.Log(elements, options.LoggingFields);
+                logger.LogElements(elements, options.LoggingFields);
                 await logger.WaitForWrites(4).DefaultTimeout();
 
                 var lines = logger.Lines;
@@ -73,7 +73,7 @@ public class W3CLoggerTests
                 AddToList(elements, W3CLoggingMiddleware._hostIndex, null);
                 AddToList(elements, W3CLoggingMiddleware._protocolStatusIndex, null);
 
-                logger.Log(elements, options.LoggingFields);
+                logger.LogElements(elements, options.LoggingFields);
                 await logger.WaitForWrites(4).DefaultTimeout();
 
                 var lines = logger.Lines;

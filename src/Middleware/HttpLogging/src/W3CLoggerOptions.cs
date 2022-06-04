@@ -4,7 +4,7 @@
 namespace Microsoft.AspNetCore.HttpLogging;
 
 /// <summary>
-/// Options for the <see cref="W3CLoggerProcessor"/>.
+/// Options for the <see cref="W3CLogger"/>.
 /// </summary>
 public sealed class W3CLoggerOptions
 {

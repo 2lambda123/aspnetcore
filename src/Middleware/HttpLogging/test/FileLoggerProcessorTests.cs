@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Testing;
 
 namespace Microsoft.AspNetCore.HttpLogging;
 
-public class W3CLoggerProcessorTests
+public class FileLoggerProcessorTests : LoggedTest
 {
     private const string _versionLine = "#Version: 1.0";
     private const string _defaultFieldsDirective = "#Fields: date time c-ip s-computername s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status time-taken cs-version cs-host cs(User-Agent) cs(Referer)";
@@ -37,7 +37,7 @@ public class W3CLoggerProcessorTests
             {
                 LogDirectory = path
             };
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -74,7 +74,7 @@ public class W3CLoggerProcessorTests
             string fileNameToday;
             string fileNameTomorrow;
 
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -118,7 +118,7 @@ public class W3CLoggerProcessorTests
                 LogDirectory = path,
                 FileSizeLimit = 5
             };
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -158,7 +158,7 @@ public class W3CLoggerProcessorTests
                 RetainedFileCountLimit = 3,
                 FileSizeLimit = 5
             };
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 10; i++)
@@ -214,7 +214,7 @@ public class W3CLoggerProcessorTests
             };
             var testSink = new TestSink();
             var testLogger = new TestLoggerFactory(testSink, enabled:true);
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 10000; i++)
@@ -240,7 +240,7 @@ public class W3CLoggerProcessorTests
             // restarting the logger should do nothing since the folder is still full
             var testSink2 = new TestSink();
             var testLogger2 = new TestLoggerFactory(testSink2, enabled:true);
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger2))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger2))
             {
                 Assert.Equal(0, testSink2.Writes.Count);
 
@@ -274,7 +274,7 @@ public class W3CLoggerProcessorTests
                 RetainedFileCountLimit = 10,
                 FileSizeLimit = 5
             };
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 3; i++)
@@ -287,7 +287,7 @@ public class W3CLoggerProcessorTests
             }
 
             // Second instance should pick up where first one left off
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 3; i++)
@@ -313,7 +313,7 @@ public class W3CLoggerProcessorTests
 
             // Third instance should roll to 5 most recent files
             options.RetainedFileCountLimit = 5;
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -363,7 +363,7 @@ public class W3CLoggerProcessorTests
             var fileName2 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0001.txt"));
             var fileName3 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0002.txt"));
 
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -375,7 +375,7 @@ public class W3CLoggerProcessorTests
             // Even with a big enough FileSizeLimit, we still won't try to write to files from a previous instance.
             options.FileSizeLimit = 10000;
 
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageThree, options.LoggingFields);
@@ -424,7 +424,7 @@ public class W3CLoggerProcessorTests
             var fileName3 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0002.txt"));
             var fileName4 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0003.txt"));
 
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -437,7 +437,7 @@ public class W3CLoggerProcessorTests
             // Even with a big enough FileSizeLimit, we still won't try to write to files from a previous instance.
             options.FileSizeLimit = 10000;
 
-            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageFour, options.LoggingFields);
@@ -490,7 +490,7 @@ public class W3CLoggerProcessorTests
             var fileName2 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0001.txt"));
             var monitor = new OptionsWrapperMonitor<W3CLoggerOptions>(options);
 
-            await using (var logger = new W3CLoggerProcessor(monitor, new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(monitor, new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
@@ -542,7 +542,7 @@ public class W3CLoggerProcessorTests
             var fileName2 = Path.Combine(path2, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
             var monitor = new OptionsWrapperMonitor<W3CLoggerOptions>(options);
 
-            await using (var logger = new W3CLoggerProcessor(monitor, new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLogger(monitor, new HostingEnvironment(), LoggerFactory))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 logger.EnqueueMessage(_messageOne, options.LoggingFields);
