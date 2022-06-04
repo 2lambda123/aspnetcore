@@ -20,14 +20,14 @@ public class W3CLoggingMiddlewareTests
         Assert.Throws<ArgumentNullException>(() => new W3CLoggingMiddleware(
             null,
             options,
-            new TestW3CLogger(options, new HostingEnvironment(), NullLoggerFactory.Instance)));
+            new TestW3CLoggerProcessor(options, new HostingEnvironment(), NullLoggerFactory.Instance)));
 
         Assert.Throws<ArgumentNullException>(() => new W3CLoggingMiddleware(c =>
             {
                 return Task.CompletedTask;
             },
             null,
-            new TestW3CLogger(options, new HostingEnvironment(), NullLoggerFactory.Instance)));
+            new TestW3CLoggerProcessor(options, new HostingEnvironment(), NullLoggerFactory.Instance)));
 
         Assert.Throws<ArgumentNullException>(() => new W3CLoggingMiddleware(c =>
             {
@@ -42,7 +42,7 @@ public class W3CLoggingMiddlewareTests
     {
         var options = CreateOptionsAccessor();
         options.CurrentValue.LoggingFields = W3CLoggingFields.None;
-        var logger = new TestW3CLogger(options, new HostingEnvironment(), NullLoggerFactory.Instance);
+        var logger = new TestW3CLoggerProcessor(options, new HostingEnvironment(), NullLoggerFactory.Instance);
 
         var middleware = new W3CLoggingMiddleware(
             c =>
@@ -62,14 +62,14 @@ public class W3CLoggingMiddlewareTests
 
         await middleware.Invoke(httpContext);
 
-        Assert.Empty(logger.Processor.Lines);
+        Assert.Empty(logger.Lines);
     }
 
     [Fact]
     public async Task DefaultDoesNotLogOptionalFields()
     {
         var options = CreateOptionsAccessor();
-        var logger = new TestW3CLogger(options, new HostingEnvironment(), NullLoggerFactory.Instance);
+        var logger = new TestW3CLoggerProcessor(options, new HostingEnvironment(), NullLoggerFactory.Instance);
 
         var middleware = new W3CLoggingMiddleware(
             c =>
@@ -87,9 +87,9 @@ public class W3CLoggingMiddlewareTests
 
         var now = DateTime.UtcNow;
         await middleware.Invoke(httpContext);
-        await logger.Processor.WaitForWrites(4).DefaultTimeout();
+        await logger.WaitForWrites(4).DefaultTimeout();
 
-        var lines = logger.Processor.Lines;
+        var lines = logger.Lines;
         Assert.Equal("#Version: 1.0", lines[0]);
 
         Assert.StartsWith("#Start-Date: ", lines[1]);
@@ -108,7 +108,7 @@ public class W3CLoggingMiddlewareTests
     {
         var options = CreateOptionsAccessor();
         options.CurrentValue.LoggingFields = W3CLoggingFields.TimeTaken;
-        var logger = new TestW3CLogger(options, new HostingEnvironment(), NullLoggerFactory.Instance);
+        var logger = new TestW3CLoggerProcessor(options, new HostingEnvironment(), NullLoggerFactory.Instance);
 
         var middleware = new W3CLoggingMiddleware(
             c =>
@@ -123,9 +123,9 @@ public class W3CLoggingMiddlewareTests
 
         var now = DateTime.UtcNow;
         await middleware.Invoke(httpContext);
-        await logger.Processor.WaitForWrites(4).DefaultTimeout();
+        await logger.WaitForWrites(4).DefaultTimeout();
 
-        var lines = logger.Processor.Lines;
+        var lines = logger.Lines;
         Assert.Equal("#Version: 1.0", lines[0]);
 
         Assert.StartsWith("#Start-Date: ", lines[1]);

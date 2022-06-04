@@ -49,7 +49,7 @@ public static class HttpLoggingServicesExtensions
         }
 
         services.Configure(configureOptions);
-        services.AddSingleton<W3CLogger>();
+        services.AddSingleton<W3CLoggerProcessor>();
         return services;
     }
 }

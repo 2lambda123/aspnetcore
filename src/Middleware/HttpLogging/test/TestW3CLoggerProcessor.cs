@@ -54,11 +54,11 @@ internal sealed class TestW3CLoggerProcessor : W3CLoggerProcessor
         return _tcs.Task;
     }
 
-    public override async Task OnFirstWrite(StreamWriter streamWriter, CancellationToken cancellationToken)
+    public override async Task OnFirstWrite(StreamWriter streamWriter, W3CLoggingFields loggingFields, CancellationToken cancellationToken)
     {
         if (!_hasWritten)
         {
-            await base.OnFirstWrite(streamWriter, cancellationToken);
+            await base.OnFirstWrite(streamWriter, loggingFields, cancellationToken);
             _hasWritten = true;
         }
     }

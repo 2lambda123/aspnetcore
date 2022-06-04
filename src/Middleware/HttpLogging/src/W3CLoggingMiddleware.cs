@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.HttpLogging;
 internal sealed class W3CLoggingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly W3CLogger _w3cLogger;
+    private readonly W3CLoggerProcessor _w3cLogger;
     private readonly IOptionsMonitor<W3CLoggerOptions> _options;
     private string? _serverName;
 
@@ -48,7 +48,7 @@ internal sealed class W3CLoggingMiddleware
     /// <param name="next"></param>
     /// <param name="options"></param>
     /// <param name="w3cLogger"></param>
-    public W3CLoggingMiddleware(RequestDelegate next, IOptionsMonitor<W3CLoggerOptions> options, W3CLogger w3cLogger)
+    public W3CLoggingMiddleware(RequestDelegate next, IOptionsMonitor<W3CLoggerOptions> options, W3CLoggerProcessor w3cLogger)
     {
         if (next == null)
         {
@@ -195,7 +195,7 @@ internal sealed class W3CLoggingMiddleware
             // Write the log
             if (shouldLog)
             {
-                _w3cLogger.Log(elements);
+                _w3cLogger.Log(elements, options.LoggingFields);
             }
             throw;
         }
@@ -218,7 +218,7 @@ internal sealed class W3CLoggingMiddleware
         // Write the log
         if (shouldLog)
         {
-            _w3cLogger.Log(elements);
+            _w3cLogger.Log(elements, options.LoggingFields);
         }
     }
 

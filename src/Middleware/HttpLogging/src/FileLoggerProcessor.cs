@@ -20,14 +20,13 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
     private int _fileNumber;
     private bool _maxFilesReached;
     private TimeSpan _flushInterval;
-    private W3CLoggingFields _fields;
     private DateTime _today;
     private bool _firstFile = true;
+    private W3CLoggingFields? _lastFieldsLogged;
 
     private readonly IOptionsMonitor<W3CLoggerOptions> _options;
-    private readonly BlockingCollection<string> _messageQueue = new BlockingCollection<string>(_maxQueuedMessages);
+    private readonly BlockingCollection<LogMessage> _messageQueue = new BlockingCollection<LogMessage>(_maxQueuedMessages);
     private readonly ILogger _logger;
-    private readonly List<string> _currentBatch = new List<string>();
     private readonly Task _outputTask;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
@@ -60,25 +59,13 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         _maxFileSize = loggerOptions.FileSizeLimit;
         _maxRetainedFiles = loggerOptions.RetainedFileCountLimit;
         _flushInterval = loggerOptions.FlushInterval;
-        _fields = loggerOptions.LoggingFields;
+
         _options.OnChange(options =>
         {
             lock (_pathLock)
             {
                 // Clear the cached settings.
                 loggerOptions = options;
-
-                // Move to a new file if the fields have changed
-                if (_fields != loggerOptions.LoggingFields)
-                {
-                    _fileNumber++;
-                    if (_fileNumber >= W3CLoggerOptions.MaxFileCount)
-                    {
-                        _maxFilesReached = true;
-                        Log.MaxFilesReached(_logger);
-                    }
-                    _fields = loggerOptions.LoggingFields;
-                }
 
                 if (!string.IsNullOrEmpty(loggerOptions.LogDirectory))
                 {
@@ -99,13 +86,13 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         _outputTask = Task.Run(ProcessLogQueue);
     }
 
-    public void EnqueueMessage(string message)
+    public void EnqueueMessage(string message, W3CLoggingFields loggingFields)
     {
         if (!_messageQueue.IsAddingCompleted)
         {
             try
             {
-                _messageQueue.Add(message);
+                _messageQueue.Add(new LogMessage(message, loggingFields));
                 return;
             }
             catch (InvalidOperationException) { }
@@ -114,24 +101,26 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
 
     private async Task ProcessLogQueue()
     {
+        var currentBatch = new List<LogMessage>();
+
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
             while (_messageQueue.TryTake(out var message))
             {
-                _currentBatch.Add(message);
+                currentBatch.Add(message);
             }
-            if (_currentBatch.Count > 0)
+            if (currentBatch.Count > 0)
             {
                 try
                 {
-                    await WriteMessagesAsync(_currentBatch, _cancellationTokenSource.Token);
+                    await WriteMessagesAsync(currentBatch, _cancellationTokenSource.Token);
                 }
                 catch (Exception ex)
                 {
                     Log.WriteMessagesFailed(_logger, ex);
                 }
 
-                _currentBatch.Clear();
+                currentBatch.Clear();
             }
             else
             {
@@ -148,7 +137,7 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         }
     }
 
-    private async Task WriteMessagesAsync(List<string> messages, CancellationToken cancellationToken)
+    private async Task WriteMessagesAsync(List<LogMessage> messages, CancellationToken cancellationToken)
     {
         // Files are written up to _maxFileSize before rolling to a new file
         DateTime today = SystemDateTime.Now;
@@ -193,10 +182,11 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
                 {
                     return;
                 }
+
                 fileInfo.Refresh();
-                // Roll to new file if _maxFileSize is reached
+                // Roll to new file if _maxFileSize is reached or new fields are being logged.
                 // _maxFileSize could be less than the length of the file header - in that case we still write the first log message before rolling.
-                if (fileInfo.Exists && fileInfo.Length > _maxFileSize)
+                if (fileInfo.Exists && (fileInfo.Length > _maxFileSize || LoggingFieldsChanged(message)))
                 {
                     streamWriter.Dispose();
                     _fileNumber++;
@@ -218,12 +208,14 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
                     }
                     streamWriter = GetStreamWriter(fullName);
                 }
+
                 if (!fileInfo.Exists || fileInfo.Length == 0)
                 {
-                    await OnFirstWrite(streamWriter, cancellationToken);
+                    await OnFirstWrite(streamWriter, message.LoggingFields, cancellationToken);
                 }
 
-                await WriteMessageAsync(message, streamWriter, cancellationToken);
+                _lastFieldsLogged = message.LoggingFields;
+                await WriteMessageAsync(message.Message, streamWriter, cancellationToken);
             }
         }
         finally
@@ -231,10 +223,11 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
             RollFiles();
             streamWriter?.Dispose();
         }
-
     }
 
-    internal bool TryCreateDirectory()
+    private bool LoggingFieldsChanged(LogMessage message) => _lastFieldsLogged is not null && _lastFieldsLogged != message.LoggingFields;
+
+    private bool TryCreateDirectory()
     {
         if (!Directory.Exists(_path))
         {
@@ -252,9 +245,13 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         return true;
     }
 
-    // Virtual for testing
-    internal virtual async Task WriteMessageAsync(string message, StreamWriter streamWriter, CancellationToken cancellationToken)
+    // Extensibility point for tests
+    internal virtual void OnWrite(string message) { }
+
+    protected async Task WriteMessageAsync(string message, StreamWriter streamWriter, CancellationToken cancellationToken)
     {
+        OnWrite(message);
+
         if (cancellationToken.IsCancellationRequested)
         {
             return;
@@ -293,6 +290,7 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         _cancellationTokenSource.Cancel();
         _messageQueue.CompleteAdding();
         await _outputTask;
+        _messageQueue.Dispose();
     }
 
     private int GetFirstFileCount(DateTime date)
@@ -326,9 +324,16 @@ internal partial class FileLoggerProcessor : IAsyncDisposable
         }
     }
 
-    public virtual Task OnFirstWrite(StreamWriter streamWriter, CancellationToken cancellationToken)
+    public virtual Task OnFirstWrite(StreamWriter streamWriter, W3CLoggingFields loggingFields, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
+    }
+
+    private readonly struct LogMessage
+    {
+        public LogMessage(string message, W3CLoggingFields loggingFields) => (Message, LoggingFields) = (message, loggingFields);
+        public string Message { get; }
+        public W3CLoggingFields LoggingFields { get;}
     }
 
     private static partial class Log

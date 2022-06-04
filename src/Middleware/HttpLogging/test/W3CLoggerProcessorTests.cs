@@ -9,22 +9,17 @@ using Microsoft.Extensions.Logging.Testing;
 
 namespace Microsoft.AspNetCore.HttpLogging;
 
-public class FileLoggerProcessorTests
+public class W3CLoggerProcessorTests
 {
+    private const string _versionLine = "#Version: 1.0";
+    private const string _defaultFieldsDirective = "#Fields: date time c-ip s-computername s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status time-taken cs-version cs-host cs(User-Agent) cs(Referer)";
 
-    private string _messageOne = "Message one";
-    private string _messageTwo = "Message two";
-    private string _messageThree = "Message three";
-    private string _messageFour = "Message four";
+    private const string _messageOne = "Message one";
+    private const string _messageTwo = "Message two";
+    private const string _messageThree = "Message three";
+    private const string _messageFour = "Message four";
 
     private DateTime _today = new DateTime(2021, 01, 01, 12, 00, 00);
-
-    public FileLoggerProcessorTests()
-    {
-        TempPath = Path.GetTempFileName() + "_";
-    }
-
-    public string TempPath { get; }
 
     [Fact]
     public async Task WritesToTextFile()
@@ -33,7 +28,7 @@ public class FileLoggerProcessorTests
         {
             Now = _today
         };
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         try
         {
@@ -42,17 +37,16 @@ public class FileLoggerProcessorTests
             {
                 LogDirectory = path
             };
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 fileName = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName, _messageOne.Length).DefaultTimeout();
             }
-            Assert.True(File.Exists(fileName));
 
-            Assert.Equal(_messageOne + Environment.NewLine, File.ReadAllText(fileName));
+            await AssertMessageAsync(fileName, _messageOne);
         }
         finally
         {
@@ -69,7 +63,7 @@ public class FileLoggerProcessorTests
         };
         var tomorrow = _today.AddDays(1);
 
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         var options = new W3CLoggerOptions()
         {
             LogDirectory = path
@@ -80,27 +74,25 @@ public class FileLoggerProcessorTests
             string fileNameToday;
             string fileNameTomorrow;
 
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
 
                 fileNameToday = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
 
                 await WaitForFile(fileNameToday, _messageOne.Length).DefaultTimeout();
 
                 mockSystemDateTime.Now = tomorrow;
-                logger.EnqueueMessage(_messageTwo);
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
 
                 fileNameTomorrow = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{tomorrow.Year:0000}{tomorrow.Month:00}{tomorrow.Day:00}.0000.txt"));
 
                 await WaitForFile(fileNameTomorrow, _messageTwo.Length).DefaultTimeout();
             }
 
-            Assert.True(File.Exists(fileNameToday));
-            Assert.Equal(_messageOne + Environment.NewLine, File.ReadAllText(fileNameToday));
-            Assert.True(File.Exists(fileNameTomorrow));
-            Assert.Equal(_messageTwo + Environment.NewLine, File.ReadAllText(fileNameTomorrow));
+            await AssertMessageAsync(fileNameToday, _messageOne);
+            await AssertMessageAsync(fileNameTomorrow, _messageTwo);
         }
         finally
         {
@@ -111,7 +103,7 @@ public class FileLoggerProcessorTests
     [Fact]
     public async Task RollsTextFilesBasedOnSize()
     {
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         try
         {
@@ -126,21 +118,19 @@ public class FileLoggerProcessorTests
                 LogDirectory = path,
                 FileSizeLimit = 5
             };
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
-                logger.EnqueueMessage(_messageTwo);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
                 fileName1 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
                 fileName2 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0001.txt"));
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName2, _messageTwo.Length).DefaultTimeout();
             }
-            Assert.True(File.Exists(fileName1));
-            Assert.True(File.Exists(fileName2));
 
-            Assert.Equal(_messageOne + Environment.NewLine, File.ReadAllText(fileName1));
-            Assert.Equal(_messageTwo + Environment.NewLine, File.ReadAllText(fileName2));
+            await AssertMessageAsync(fileName1, _messageOne);
+            await AssertMessageAsync(fileName2, _messageTwo);
         }
         finally
         {
@@ -151,7 +141,7 @@ public class FileLoggerProcessorTests
     [Fact]
     public async Task RespectsMaxFileCount()
     {
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
         File.WriteAllText(Path.Combine(path, "randomFile.txt"), "Text");
         var mockSystemDateTime = new MockSystemDateTime
@@ -168,12 +158,12 @@ public class FileLoggerProcessorTests
                 RetainedFileCountLimit = 3,
                 FileSizeLimit = 5
             };
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 10; i++)
                 {
-                    logger.EnqueueMessage(_messageOne);
+                    logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 }
                 lastFileName = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0009.txt"));
                 // Pause for a bit before disposing so logger can finish logging
@@ -206,7 +196,7 @@ public class FileLoggerProcessorTests
     [Fact]
     public async Task StopsLoggingAfter10000Files()
     {
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
         var mockSystemDateTime = new MockSystemDateTime
         {
@@ -224,20 +214,22 @@ public class FileLoggerProcessorTests
             };
             var testSink = new TestSink();
             var testLogger = new TestLoggerFactory(testSink, enabled:true);
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 10000; i++)
                 {
-                    logger.EnqueueMessage(_messageOne);
+                    logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 }
                 lastFileName = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.9999.txt"));
-                await WaitForFile(lastFileName, _messageOne.Length).DefaultTimeout();
+
+                // This test can actually take a while, so don't use the 5 second default timeout in debug builds.
+                await WaitForFile(lastFileName, _messageOne.Length).TimeoutAfter(TimeSpan.FromSeconds(30));
 
                 // directory is full, no warnings yet
                 Assert.Equal(0, testSink.Writes.Count);
 
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 await WaitForCondition(() => testSink.Writes.FirstOrDefault()?.EventId.Name == "MaxFilesReached").DefaultTimeout();
             }
 
@@ -248,12 +240,12 @@ public class FileLoggerProcessorTests
             // restarting the logger should do nothing since the folder is still full
             var testSink2 = new TestSink();
             var testLogger2 = new TestLoggerFactory(testSink2, enabled:true);
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger2))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), testLogger2))
             {
                 Assert.Equal(0, testSink2.Writes.Count);
 
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 await WaitForCondition(() => testSink2.Writes.FirstOrDefault()?.EventId.Name == "MaxFilesReached").DefaultTimeout();
             }
         }
@@ -271,7 +263,7 @@ public class FileLoggerProcessorTests
             Now = _today
         };
 
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
 
         try
@@ -282,12 +274,12 @@ public class FileLoggerProcessorTests
                 RetainedFileCountLimit = 10,
                 FileSizeLimit = 5
             };
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 3; i++)
                 {
-                    logger.EnqueueMessage(_messageOne);
+                    logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 }
                 var filePath = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0002.txt"));
                 // Pause for a bit before disposing so logger can finish logging
@@ -295,12 +287,12 @@ public class FileLoggerProcessorTests
             }
 
             // Second instance should pick up where first one left off
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
                 for (int i = 0; i < 3; i++)
                 {
-                    logger.EnqueueMessage(_messageOne);
+                    logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 }
                 var filePath = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0005.txt"));
                 // Pause for a bit before disposing so logger can finish logging
@@ -321,10 +313,10 @@ public class FileLoggerProcessorTests
 
             // Third instance should roll to 5 most recent files
             options.RetainedFileCountLimit = 5;
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0006.txt")), _messageOne.Length).DefaultTimeout();
                 await WaitForRoll(Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"))).DefaultTimeout();
@@ -357,7 +349,7 @@ public class FileLoggerProcessorTests
             Now = _today
         };
 
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
 
         try
@@ -371,11 +363,11 @@ public class FileLoggerProcessorTests
             var fileName2 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0001.txt"));
             var fileName3 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0002.txt"));
 
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
-                logger.EnqueueMessage(_messageTwo);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName2, _messageTwo.Length).DefaultTimeout();
             }
@@ -383,10 +375,10 @@ public class FileLoggerProcessorTests
             // Even with a big enough FileSizeLimit, we still won't try to write to files from a previous instance.
             options.FileSizeLimit = 10000;
 
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageThree);
+                logger.EnqueueMessage(_messageThree, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName3, _messageThree.Length).DefaultTimeout();
             }
@@ -399,13 +391,9 @@ public class FileLoggerProcessorTests
 
             Assert.Equal(3, actualFiles.Length);
 
-            Assert.True(File.Exists(fileName1));
-            Assert.True(File.Exists(fileName2));
-            Assert.True(File.Exists(fileName3));
-
-            Assert.Equal(_messageOne + Environment.NewLine, File.ReadAllText(fileName1));
-            Assert.Equal(_messageTwo + Environment.NewLine, File.ReadAllText(fileName2));
-            Assert.Equal(_messageThree + Environment.NewLine, File.ReadAllText(fileName3));
+            await AssertMessageAsync(fileName1, _messageOne);
+            await AssertMessageAsync(fileName2, _messageTwo);
+            await AssertMessageAsync(fileName3, _messageThree);
         }
         finally
         {
@@ -420,7 +408,7 @@ public class FileLoggerProcessorTests
             Now = _today
         };
 
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
 
         try
@@ -436,12 +424,12 @@ public class FileLoggerProcessorTests
             var fileName3 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0002.txt"));
             var fileName4 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0003.txt"));
 
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
-                logger.EnqueueMessage(_messageTwo);
-                logger.EnqueueMessage(_messageThree);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
+                logger.EnqueueMessage(_messageThree, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName3, _messageThree.Length).DefaultTimeout();
             }
@@ -449,10 +437,10 @@ public class FileLoggerProcessorTests
             // Even with a big enough FileSizeLimit, we still won't try to write to files from a previous instance.
             options.FileSizeLimit = 10000;
 
-            await using (var logger = new FileLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(new OptionsWrapperMonitor<W3CLoggerOptions>(options), new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageFour);
+                logger.EnqueueMessage(_messageFour, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName4, _messageFour.Length).DefaultTimeout();
             }
@@ -470,8 +458,8 @@ public class FileLoggerProcessorTests
             Assert.True(File.Exists(fileName3));
             Assert.True(File.Exists(fileName4));
 
-            Assert.Equal(_messageThree + Environment.NewLine, File.ReadAllText(fileName3));
-            Assert.Equal(_messageFour + Environment.NewLine, File.ReadAllText(fileName4));
+            await AssertMessageAsync(fileName3, _messageThree);
+            await AssertMessageAsync(fileName4, _messageFour);
         }
         finally
         {
@@ -480,14 +468,14 @@ public class FileLoggerProcessorTests
     }
 
     [Fact]
-    public async Task WritesToNewFileOnOptionsChange()
+    public async Task WritesToNewFileOnLoggingFieldOptionsChange()
     {
         var mockSystemDateTime = new MockSystemDateTime
         {
             Now = _today
         };
 
-        var path = Path.Combine(TempPath, Path.GetRandomFileName());
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(path);
 
         try
@@ -502,14 +490,13 @@ public class FileLoggerProcessorTests
             var fileName2 = Path.Combine(path, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0001.txt"));
             var monitor = new OptionsWrapperMonitor<W3CLoggerOptions>(options);
 
-            await using (var logger = new FileLoggerProcessor(monitor, new HostingEnvironment(), NullLoggerFactory.Instance))
+            await using (var logger = new W3CLoggerProcessor(monitor, new HostingEnvironment(), NullLoggerFactory.Instance))
             {
                 logger.SystemDateTime = mockSystemDateTime;
-                logger.EnqueueMessage(_messageOne);
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
                 await WaitForFile(fileName1, _messageOne.Length).DefaultTimeout();
                 options.LoggingFields = W3CLoggingFields.Date;
-                monitor.InvokeChanged();
-                logger.EnqueueMessage(_messageTwo);
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
                 // Pause for a bit before disposing so logger can finish logging
                 await WaitForFile(fileName2, _messageTwo.Length).DefaultTimeout();
             }
@@ -522,15 +509,57 @@ public class FileLoggerProcessorTests
 
             Assert.Equal(2, actualFiles.Length);
 
-            Assert.True(File.Exists(fileName1));
-            Assert.True(File.Exists(fileName2));
-
-            Assert.Equal(_messageOne + Environment.NewLine, File.ReadAllText(fileName1));
-            Assert.Equal(_messageTwo + Environment.NewLine, File.ReadAllText(fileName2));
+            await AssertMessageAsync(fileName1, _messageOne, "#Fields: time");
+            await AssertMessageAsync(fileName2, _messageTwo, "#Fields: date");
         }
         finally
         {
             Helpers.DisposeDirectory(path);
+        }
+    }
+
+    [Fact]
+    public async Task WritesToNewFileOnLogDirectoryOptionsChange()
+    {
+        var mockSystemDateTime = new MockSystemDateTime
+        {
+            Now = _today
+        };
+
+        var path1 = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var path2 = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+        try
+        {
+            Directory.CreateDirectory(path1);
+            Directory.CreateDirectory(path2);
+
+            var options = new W3CLoggerOptions()
+            {
+                LogDirectory = path1,
+            };
+            var fileName1 = Path.Combine(path1, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
+            var fileName2 = Path.Combine(path2, FormattableString.Invariant($"{options.FileName}{_today.Year:0000}{_today.Month:00}{_today.Day:00}.0000.txt"));
+            var monitor = new OptionsWrapperMonitor<W3CLoggerOptions>(options);
+
+            await using (var logger = new W3CLoggerProcessor(monitor, new HostingEnvironment(), NullLoggerFactory.Instance))
+            {
+                logger.SystemDateTime = mockSystemDateTime;
+                logger.EnqueueMessage(_messageOne, options.LoggingFields);
+                await WaitForFile(fileName1, _messageOne.Length).DefaultTimeout();
+                options.LogDirectory = path2;
+                monitor.InvokeChanged();
+                logger.EnqueueMessage(_messageTwo, options.LoggingFields);
+                // Pause for a bit before disposing so logger can finish logging
+                await WaitForFile(fileName2, _messageTwo.Length).DefaultTimeout();
+            }
+            await AssertMessageAsync(fileName1, _messageOne);
+            await AssertMessageAsync(fileName2, _messageTwo);
+        }
+        finally
+        {
+            Helpers.DisposeDirectory(path1);
+            Helpers.DisposeDirectory(path2);
         }
     }
 
@@ -571,5 +600,17 @@ public class FileLoggerProcessorTests
         {
             await Task.Delay(100);
         }
+    }
+
+    private async Task AssertMessageAsync(string fileName, string message, string fieldsDirective = null)
+    {
+        Assert.True(File.Exists(fileName));
+
+        using var file = new StreamReader(fileName);
+
+        Assert.Equal(_versionLine, await file.ReadLineAsync().DefaultTimeout());
+        Assert.StartsWith("#Start-Date", await file.ReadLineAsync().DefaultTimeout());
+        Assert.Equal(fieldsDirective ?? _defaultFieldsDirective, await file.ReadLineAsync().DefaultTimeout());
+        Assert.Equal(message, await file.ReadLineAsync().DefaultTimeout());
     }
 }
