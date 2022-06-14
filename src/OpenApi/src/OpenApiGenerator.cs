@@ -6,6 +6,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +30,7 @@ internal sealed class OpenApiGenerator
 {
     private readonly IHostEnvironment? _environment;
     private readonly IServiceProviderIsService? _serviceProviderIsService;
+    private readonly IAuthenticationSchemeProvider? _authenticationSchemeProvider;
 
     internal static readonly ParameterBindingMethodCache ParameterBindingMethodCache = new();
 
@@ -37,12 +40,15 @@ internal sealed class OpenApiGenerator
     /// </summary>
     /// <param name="environment">The host environment.</param>
     /// <param name="serviceProviderIsService">The service to determine if the type is available from the <see cref="IServiceProvider"/>.</param>
+    /// <param name="authenticationSchemeProvider"></param>
     internal OpenApiGenerator(
         IHostEnvironment? environment,
-        IServiceProviderIsService? serviceProviderIsService)
+        IServiceProviderIsService? serviceProviderIsService,
+        IAuthenticationSchemeProvider? authenticationSchemeProvider)
     {
         _environment = environment;
         _serviceProviderIsService = serviceProviderIsService;
+        _authenticationSchemeProvider = authenticationSchemeProvider;
     }
 
     /// <summary>
@@ -78,7 +84,8 @@ internal sealed class OpenApiGenerator
             Tags = GetOperationTags(methodInfo, metadata),
             Parameters = GetOpenApiParameters(methodInfo, metadata, pattern, disableInferredBody),
             RequestBody = GetOpenApiRequestBody(methodInfo, metadata, pattern),
-            Responses = GetOpenApiResponses(methodInfo, metadata)
+            Responses = GetOpenApiResponses(methodInfo, metadata),
+            Security = GetOpenApiSecurityRequirements(methodInfo, metadata),
         };
 
         static bool ShouldDisableInferredBody(string method)
@@ -91,6 +98,53 @@ internal sealed class OpenApiGenerator
                    method.Equals(HttpMethods.Trace, StringComparison.Ordinal) ||
                    method.Equals(HttpMethods.Connect, StringComparison.Ordinal);
         }
+    }
+
+    private List<OpenApiSecurityRequirement> GetOpenApiSecurityRequirements(MethodInfo methodInfo, EndpointMetadataCollection metadata)
+    {
+        List<OpenApiSecurityRequirement> securityRequirements = new();
+        var requiredAuthorizations = metadata.OfType<IAuthorizeData>();
+        foreach (var authorization in requiredAuthorizations)
+        {
+            var requirement = new OpenApiSecurityRequirement();
+            var schemes = authorization.AuthenticationSchemes?.Split(',');
+
+            // If no schemes are defined, then use the default scheme.
+            if (schemes is null)
+            {
+                securityRequirements.Add(
+                    new OpenApiSecurityRequirement()
+                    {
+                        {
+                            new OpenApiSecurityScheme
+                            {
+                                Reference = new()
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = _authenticationSchemeProvider?.GetDefaultAuthenticateSchemeAsync().GetAwaiter().GetResult()?.Name
+                                }
+                            },
+                            Array.Empty<string>()
+                        }
+                    });
+                return securityRequirements;
+            }
+
+            foreach (var scheme in schemes)
+            {
+                var openApiSecuritySceheme = new OpenApiSecurityScheme
+                {
+                    Reference = new()
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = scheme
+                    }
+                };
+                securityRequirements.Add(new OpenApiSecurityRequirement() {
+                    {  openApiSecuritySceheme, Array.Empty<string>() } });
+            }
+        }
+        return securityRequirements;
     }
 
     private static OpenApiResponses GetOpenApiResponses(MethodInfo method, EndpointMetadataCollection metadata)

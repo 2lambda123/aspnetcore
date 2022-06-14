@@ -1,3 +1,10 @@
 #nullable enable
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType.Basic = 0 -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType.Bearer = 1 -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType.Cookie = 2 -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType.OpenIdConnect = 3 -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType.WsFederation = 4 -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
+Microsoft.AspNetCore.Authentication.AuthenticationScheme.AuthenticationType.get -> Microsoft.AspNetCore.Authentication.Abstractions.AuthenticationType
 Microsoft.AspNetCore.Authentication.IAuthenticationConfigurationProvider
 Microsoft.AspNetCore.Authentication.IAuthenticationConfigurationProvider.GetAuthenticationSchemeConfiguration(string! authenticationScheme) -> Microsoft.Extensions.Configuration.IConfiguration!

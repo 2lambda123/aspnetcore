@@ -2,13 +2,22 @@
   "solution": {
     "path": "..\\..\\AspNetCore.sln",
     "projects": [
+      "src\\DefaultBuilder\\src\\Microsoft.AspNetCore.csproj",
+      "src\\FileProviders\\Embedded\\src\\Microsoft.Extensions.FileProviders.Embedded.csproj",
       "src\\Hosting\\Abstractions\\src\\Microsoft.AspNetCore.Hosting.Abstractions.csproj",
       "src\\Hosting\\Hosting\\src\\Microsoft.AspNetCore.Hosting.csproj",
       "src\\Http\\Http.Abstractions\\src\\Microsoft.AspNetCore.Http.Abstractions.csproj",
       "src\\Http\\Http\\src\\Microsoft.AspNetCore.Http.csproj",
       "src\\Http\\Routing\\src\\Microsoft.AspNetCore.Routing.csproj",
+      "src\\Middleware\\StaticFiles\\src\\Microsoft.AspNetCore.StaticFiles.csproj",
+      "src\\Mvc\\Mvc.ApiExplorer\\src\\Microsoft.AspNetCore.Mvc.ApiExplorer.csproj",
+      "src\\Mvc\\Mvc.Core\\src\\Microsoft.AspNetCore.Mvc.Core.csproj",
+      "src\\OpenApi\\samples\\MinimalAppWithAuth\\MinimalAppWithAuth.csproj",
       "src\\OpenApi\\src\\Microsoft.AspNetCore.OpenApi.csproj",
-      "src\\OpenApi\\test\\Microsoft.AspNetCore.OpenApi.Tests.csproj"
+      "src\\OpenApi\\test\\Microsoft.AspNetCore.OpenApi.Tests.csproj",
+      "src\\Security\\Authentication\\Core\\src\\Microsoft.AspNetCore.Authentication.csproj",
+      "src\\Security\\Authentication\\JwtBearer\\src\\Microsoft.AspNetCore.Authentication.JwtBearer.csproj",
+      "src\\Security\\Authorization\\Policy\\src\\Microsoft.AspNetCore.Authorization.Policy.csproj"
     ]
   }
 }

@@ -3,6 +3,7 @@
 
 using System.Linq;
 using System.Reflection;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -76,7 +77,8 @@ public static class OpenApiRouteHandlerBuilderExtensions
 
         var hostEnvironment = serviceProvider.GetService<IHostEnvironment>();
         var serviceProviderIsService = serviceProvider.GetService<IServiceProviderIsService>();
-        var generator = new OpenApiGenerator(hostEnvironment, serviceProviderIsService);
+        var authenticationSchemeProvider = serviceProvider.GetService<IAuthenticationSchemeProvider>();
+        var generator = new OpenApiGenerator(hostEnvironment, serviceProviderIsService, authenticationSchemeProvider);
         return generator.GetOpenApiOperation(methodInfo, metadata, pattern);
     }
 }

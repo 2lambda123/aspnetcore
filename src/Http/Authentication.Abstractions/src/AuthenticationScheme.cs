@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Authentication.Abstractions;
 
 namespace Microsoft.AspNetCore.Authentication;
 
@@ -46,6 +47,11 @@ public class AuthenticationScheme
     /// The display name for the scheme. Null is valid and used for non user facing schemes.
     /// </summary>
     public string? DisplayName { get; }
+
+    /// <summary>
+    /// The <see cref="AuthenticationType"/> associated with the scheme.
+    /// </summary>
+    public string AuthenticationType { get; }
 
     /// <summary>
     /// The <see cref="IAuthenticationHandler"/> type that handles this scheme.
