@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
+app.WithOpenApi();
+
 string Plaintext() => "Hello, World!";
 app.MapGet("/plaintext", Plaintext);
 

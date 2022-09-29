@@ -3,6 +3,7 @@
 
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
@@ -17,6 +18,21 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class OpenApiEndpointConventionBuilderExtensions
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <returns></returns>
+    public static IEndpointRouteBuilder WithOpenApi(this IEndpointRouteBuilder builder)
+    {
+        var applicationServices = builder.ServiceProvider;
+        var hostEnvironment = applicationServices.GetService<IHostEnvironment>();
+        var serviceProviderIsService = applicationServices.GetService<IServiceProviderIsService>();
+        var generator = new OpenApiGenerator(hostEnvironment, serviceProviderIsService);
+        var document = generator.GetOpenApiDocument(builder.DataSources);
+        return builder;
+    }
+
     /// <summary>
     /// Adds an OpenAPI annotation to <see cref="Endpoint.Metadata" /> associated
     /// with the current endpoint.
