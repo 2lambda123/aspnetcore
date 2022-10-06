@@ -1,0 +1,23 @@
+#nullable enable
+Microsoft.AspNetCore.Connections.Features.IConnectionNamedPipeFeature
+Microsoft.AspNetCore.Connections.Features.IConnectionNamedPipeFeature.NamedPipe.get -> System.IO.Pipes.NamedPipeServerStream!
+Microsoft.AspNetCore.Hosting.WebHostBuilderNamedPipeExtensions
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.NamedPipeEndPoint(string! pipeName, string! serverName = ".", System.IO.Pipes.PipeOptions pipeOptions = System.IO.Pipes.PipeOptions.Asynchronous) -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeName.get -> string!
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeOptions.get -> System.IO.Pipes.PipeOptions
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeOptions.set -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.ServerName.get -> string!
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.Backlog.get -> int
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.Backlog.set -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxReadBufferSize.get -> long?
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxReadBufferSize.set -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxWriteBufferSize.get -> long?
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxWriteBufferSize.set -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.NamedPipeTransportOptions() -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.PipeSecurity.get -> System.IO.Pipes.PipeSecurity?
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.PipeSecurity.set -> void
+override Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.ToString() -> string!
+static Microsoft.AspNetCore.Hosting.WebHostBuilderNamedPipeExtensions.UseNamedPipes(this Microsoft.AspNetCore.Hosting.IWebHostBuilder! hostBuilder) -> Microsoft.AspNetCore.Hosting.IWebHostBuilder!
+static Microsoft.AspNetCore.Hosting.WebHostBuilderNamedPipeExtensions.UseNamedPipes(this Microsoft.AspNetCore.Hosting.IWebHostBuilder! hostBuilder, System.Action<Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions!>! configureOptions) -> Microsoft.AspNetCore.Hosting.IWebHostBuilder!

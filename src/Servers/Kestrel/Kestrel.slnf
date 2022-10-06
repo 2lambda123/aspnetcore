@@ -21,6 +21,8 @@
       "src\\Servers\\Kestrel\\Kestrel\\test\\Microsoft.AspNetCore.Server.Kestrel.Tests.csproj",
       "src\\Servers\\Kestrel\\Transport.Libuv\\src\\Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.csproj",
       "src\\Servers\\Kestrel\\Transport.Libuv\\test\\Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests.csproj",
+      "src\\Servers\\Kestrel\\Transport.NamedPipes\\src\\Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.csproj",
+      "src\\Servers\\Kestrel\\Transport.NamedPipes\\test\\Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.Tests.csproj",
       "src\\Servers\\Kestrel\\Transport.Quic\\src\\Microsoft.AspNetCore.Server.Kestrel.Transport.Quic.csproj",
       "src\\Servers\\Kestrel\\Transport.Quic\\test\\Microsoft.AspNetCore.Server.Kestrel.Transport.Quic.Tests.csproj",
       "src\\Servers\\Kestrel\\Transport.Sockets\\src\\Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.csproj",
