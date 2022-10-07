@@ -5,8 +5,20 @@ using System.Reflection;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Extensions;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Writers;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.UseOpenApi();
+builder.Services.Configure<OpenApiDocument>(document =>
+{
+    document.Tags = new List<OpenApiTag>() { new OpenApiTag { Name = "test-tag" } };
+});
+
 var app = builder.Build();
 
 app.WithOpenApi();
@@ -91,6 +103,11 @@ app.MapGet("/problem/{problemType}", (string problemType) => problemType switch
     });
 
 app.MapPost("/todos", (TodoBindable todo) => todo);
+
+app.MapGet("/swagger", ([FromServices] IOptions<OpenApiDocument> openApiDocument) =>
+{
+    return openApiDocument.Value.SerializeAsJson(OpenApiSpecVersion.OpenApi3_0);
+});
 
 app.Run();
 

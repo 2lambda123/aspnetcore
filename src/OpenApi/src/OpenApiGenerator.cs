@@ -45,36 +45,42 @@ internal sealed class OpenApiGenerator
         _serviceProviderIsService = serviceProviderIsService;
     }
 
-    internal OpenApiDocument GetOpenApiDocument(ICollection<EndpointDataSource> dataSources)
+    internal OpenApiDocument GetOpenApiDocument(OpenApiDocument document, IReadOnlyList<Endpoint> endpoints)
     {
-        var document = new OpenApiDocument();
-        foreach (var dataSource in dataSources)
+        foreach (var endpoint in endpoints)
         {
-            foreach (var endpoint in dataSource.Endpoints)
+            if (endpoint is RouteEndpoint routeEndpoint)
             {
-                if (endpoint is RouteEndpoint routeEndpoint)
+                var methodInfo = routeEndpoint.Metadata.OfType<MethodInfo>().SingleOrDefault();
+                var metadata = routeEndpoint.Metadata;
+                if (metadata.GetMetadata<IHttpMethodMetadata>() is { } httpMethodMetadata &&
+                    httpMethodMetadata.HttpMethods.SingleOrDefault() is { } method &&
+                    metadata.GetMetadata<IExcludeFromDescriptionMetadata>() is null or { ExcludeFromDescription: false })
                 {
-                    var methodInfo = routeEndpoint.Metadata.OfType<MethodInfo>().SingleOrDefault();
-                    var metadata = routeEndpoint.Metadata;
-                    if (metadata.GetMetadata<IHttpMethodMetadata>() is { } httpMethodMetadata &&
-            httpMethodMetadata.HttpMethods.SingleOrDefault() is { } method &&
-            metadata.GetMetadata<IExcludeFromDescriptionMetadata>() is null or { ExcludeFromDescription: false })
+                    var operation = GetOperation(method, methodInfo, metadata, routeEndpoint.RoutePattern);
+                    var operationType = method switch
                     {
-                        var operation = GetOperation(method, methodInfo, metadata, routeEndpoint.RoutePattern);
-                        var operationType = method switch
-                        {
-                            string s when s == HttpMethods.Get => OperationType.Get,
-                            string s when s == HttpMethods.Post => OperationType.Post,
-                            string s when s == HttpMethods.Put => OperationType.Put,
-                            string s when s == HttpMethods.Delete => OperationType.Delete,
-                            string s when s == HttpMethods.Head => OperationType.Head,
-                            string s when s == HttpMethods.Options => OperationType.Options,
+                        string s when s == HttpMethods.Get => OperationType.Get,
+                        string s when s == HttpMethods.Post => OperationType.Post,
+                        string s when s == HttpMethods.Put => OperationType.Put,
+                        string s when s == HttpMethods.Delete => OperationType.Delete,
+                        string s when s == HttpMethods.Head => OperationType.Head,
+                        string s when s == HttpMethods.Options => OperationType.Options,
 
-                        };
+                    };
+                    document.Paths ??= new OpenApiPaths();
+                    if (!document.Paths.ContainsKey(routeEndpoint.RoutePattern.RawText))
+                    {
+                        var pathItem = new OpenApiPathItem();
+                        pathItem.AddOperation(operationType, operation);
+                        document.Paths.Add(routeEndpoint.RoutePattern.RawText, pathItem);
+                    }
+                    else
+                    {
                         document.Paths[routeEndpoint.RoutePattern.RawText]
                             .AddOperation(operationType, operation);
-                    }        
-                }
+                    }
+                }        
             }
         }
         return document;

@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -23,14 +25,24 @@ public static class OpenApiEndpointConventionBuilderExtensions
     /// </summary>
     /// <param name="builder"></param>
     /// <returns></returns>
-    public static IEndpointRouteBuilder WithOpenApi(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder WithOpenApi(this IEndpointRouteBuilder builder, Func<OpenApiDocument, OpenApiDocument> configureDocument = null)
     {
         var applicationServices = builder.ServiceProvider;
         var hostEnvironment = applicationServices.GetService<IHostEnvironment>();
         var serviceProviderIsService = applicationServices.GetService<IServiceProviderIsService>();
         var generator = new OpenApiGenerator(hostEnvironment, serviceProviderIsService);
-        var document = generator.GetOpenApiDocument(builder.DataSources);
+        //var document = generator.GetOpenApiDocument(builder.DataSources);
+        //if (configureDocument != null)
+        //{
+        //    document = configureDocument(document);
+        //}
         return builder;
+    }
+
+    public static IServiceCollection UseOpenApi(this IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<OpenApiDocument>, OpenApiDocumentConfigureOptions>());
+        return services;
     }
 
     /// <summary>
@@ -119,5 +131,26 @@ public static class OpenApiEndpointConventionBuilderExtensions
                 routeEndpointBuilder.Metadata.Add(newOperation);
             }
         }
+    }
+}
+
+internal sealed class OpenApiDocumentConfigureOptions : IConfigureOptions<OpenApiDocument>
+{
+    private readonly IHostEnvironment _hostEnvironment;
+    private readonly IServiceProviderIsService _serviceProviderIsService;
+    private readonly EndpointDataSource _endpointDataSource;
+    private readonly OpenApiGenerator _generator;
+
+    public OpenApiDocumentConfigureOptions(IHostEnvironment hostEnvironment, IServiceProviderIsService serviceProviderIsService, EndpointDataSource endpointDataSource)
+    {
+        _hostEnvironment = hostEnvironment;
+        _serviceProviderIsService = serviceProviderIsService;
+        _endpointDataSource = endpointDataSource;
+        _generator = new OpenApiGenerator(hostEnvironment, serviceProviderIsService);
+    }
+
+    public void Configure(OpenApiDocument document)
+    {
+        document = _generator.GetOpenApiDocument(document, _endpointDataSource.Endpoints);
     }
 }

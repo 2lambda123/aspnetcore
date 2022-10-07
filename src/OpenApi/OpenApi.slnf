@@ -7,6 +7,7 @@
       "src\\Http\\Http.Abstractions\\src\\Microsoft.AspNetCore.Http.Abstractions.csproj",
       "src\\Http\\Http\\src\\Microsoft.AspNetCore.Http.csproj",
       "src\\Http\\Routing\\src\\Microsoft.AspNetCore.Routing.csproj",
+      "src\\Http\\samples\\MinimalSample\\MinimalSample.csproj",
       "src\\OpenApi\\src\\Microsoft.AspNetCore.OpenApi.csproj",
       "src\\OpenApi\\test\\Microsoft.AspNetCore.OpenApi.Tests.csproj"
     ]
