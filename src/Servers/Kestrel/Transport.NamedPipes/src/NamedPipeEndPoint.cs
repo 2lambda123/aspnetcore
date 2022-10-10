@@ -3,13 +3,14 @@
 
 using System.IO.Pipes;
 using System.Net;
+using System.Net.Sockets;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes;
 
 /// <summary>
 /// Represents a Named Pipe endpoint.
 /// </summary>
-public sealed class NamedPipeEndPoint : EndPoint
+public sealed class NamedPipeEndPoint : IPEndPoint
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NamedPipeEndPoint"/> class.
@@ -17,7 +18,7 @@ public sealed class NamedPipeEndPoint : EndPoint
     /// <param name="pipeName">The name of the pipe.</param>
     /// <param name="serverName">The name of the remote computer to connect to, or "." to specify the local computer.</param>
     /// <param name="pipeOptions">One of the enumeration values that determines how to open or create the pipe.</param>
-    public NamedPipeEndPoint(string pipeName, string serverName = ".", PipeOptions pipeOptions = PipeOptions.Asynchronous)
+    public NamedPipeEndPoint(string pipeName, string serverName = ".", PipeOptions pipeOptions = PipeOptions.Asynchronous) : base(IPAddress.Any, 80)
     {
         ServerName = serverName;
         PipeName = pipeName;

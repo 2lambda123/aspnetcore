@@ -7,8 +7,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>aspnetcore;kestrel</PackageTags>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <IsTrimmable>true</IsTrimmable>
+    <VersionPrefix>$(ExperimentalVersionPrefix)</VersionPrefix>
 
     <!-- TODO: Suppress OS compatibility warnings. Think about OS compatibilty attributes more -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
@@ -24,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions" />
     <Reference Include="Microsoft.AspNetCore.Connections.Abstractions" />
     <Reference Include="Microsoft.Extensions.Options" />
   </ItemGroup>

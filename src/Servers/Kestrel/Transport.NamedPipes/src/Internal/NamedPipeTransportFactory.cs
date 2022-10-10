@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.Internal;
 
-internal sealed class NamedPipeTransportFactory : IConnectionListenerFactory
+public sealed class NamedPipeTransportFactory : IConnectionListenerFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly NamedPipeTransportOptions _options;
