@@ -13,6 +13,7 @@
     <Reference Include="Microsoft.AspNetCore.Http.Results" />
     <!-- Mvc.Core is referenced only for its attributes -->
     <Reference Include="Microsoft.AspNetCore.Mvc.Core" />
+    <Reference Include="Microsoft.AspNetCore.Mvc" />
   </ItemGroup>
 
 </Project>
