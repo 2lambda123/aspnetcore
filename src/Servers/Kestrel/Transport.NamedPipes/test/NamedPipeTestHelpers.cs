@@ -20,21 +20,24 @@ internal static class NamedPipeTestHelpers
     public static string GetUniquePipeName() => "Kestrel-" + Path.GetRandomFileName();
 
     public static NamedPipeTransportFactory CreateTransportFactory(
-        ILoggerFactory loggerFactory = null)
+        ILoggerFactory loggerFactory = null,
+        NamedPipeTransportOptions options = null)
     {
-        var options = new NamedPipeTransportOptions();
+        options ??= new NamedPipeTransportOptions();
         return new NamedPipeTransportFactory(loggerFactory ?? NullLoggerFactory.Instance, Options.Create(options));
     }
 
     public static async Task<NamedPipeConnectionListener> CreateConnectionListenerFactory(
         ILoggerFactory loggerFactory = null,
-        string pipeName = null)
+        string pipeName = null,
+        NamedPipeTransportOptions options = null)
     {
-        var transportFactory = CreateTransportFactory(loggerFactory);
+        var transportFactory = CreateTransportFactory(loggerFactory, options);
 
         var endpoint = new NamedPipeEndPoint(pipeName ?? GetUniquePipeName());
 
-        return (NamedPipeConnectionListener)await transportFactory.BindAsync(endpoint, cancellationToken: CancellationToken.None);
+        var listener = (NamedPipeConnectionListener)await transportFactory.BindAsync(endpoint, cancellationToken: CancellationToken.None);
+        return listener;
     }
 
     public static NamedPipeClientStream CreateClientStream(EndPoint remoteEndPoint, TokenImpersonationLevel? impersonationLevel = null)

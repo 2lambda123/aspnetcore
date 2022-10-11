@@ -25,12 +25,31 @@ public sealed class NamedPipeTransportFactory : IConnectionListenerFactory
 
     public ValueTask<IConnectionListener> BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
     {
-        if (endpoint is not NamedPipeEndPoint np)
+        ArgumentNullException.ThrowIfNull(endpoint);
+        
+        if (endpoint is not NamedPipeEndPoint namedPipeEndPoint)
         {
             throw new NotSupportedException($"{endpoint.GetType()} is not supported.");
         }
+        if (namedPipeEndPoint.ServerName != NamedPipeEndPoint.LocalComputerServerName)
+        {
+            throw new NotSupportedException($@"Server name '{namedPipeEndPoint.ServerName}' is invalid. The server name must be ""."".");
+        }
 
-        var listener = new NamedPipeConnectionListener(np, _options, _loggerFactory);
+        // Creating a named pipe server with an name isn't exclusive. Create a mutex with the pipe name to prevent multiple endpoints
+        // accidently sharing the same pipe name. Will detect across Kestrel processes.
+        // Note that this doesn't prevent other applications from using the pipe name.
+        var mutexName = "Kestrel-NamedPipe-" + namedPipeEndPoint.PipeName;
+        var mutex = new Mutex(false, mutexName, out var createdNew);
+        if (!createdNew)
+        {
+            mutex.Dispose();
+            throw new AddressInUseException($"Named pipe '{namedPipeEndPoint.PipeName}' is already in use by Kestrel.");
+        }
+
+        var listener = new NamedPipeConnectionListener(namedPipeEndPoint, _options, _loggerFactory, mutex);
+        listener.Start();
+        
         return new ValueTask<IConnectionListener>(listener);
     }
 }

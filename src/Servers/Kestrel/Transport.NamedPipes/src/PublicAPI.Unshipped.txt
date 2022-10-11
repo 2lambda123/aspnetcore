@@ -4,14 +4,14 @@ Microsoft.AspNetCore.Connections.Features.IConnectionNamedPipeFeature.NamedPipe.
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.Internal.NamedPipeTransportFactory
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.Internal.NamedPipeTransportFactory.BindAsync(System.Net.EndPoint! endpoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Microsoft.AspNetCore.Connections.IConnectionListener!>
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint
-Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.NamedPipeEndPoint(string! pipeName, string! serverName = ".", System.IO.Pipes.PipeOptions pipeOptions = System.IO.Pipes.PipeOptions.Asynchronous) -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.NamedPipeEndPoint(string! pipeName, string! serverName = ".") -> void
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeName.get -> string!
-Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeOptions.get -> System.IO.Pipes.PipeOptions
-Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.PipeOptions.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.ServerName.get -> string!
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.Backlog.get -> int
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.Backlog.set -> void
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.CurrentUserOnly.get -> bool
+Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.CurrentUserOnly.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxReadBufferSize.get -> long?
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxReadBufferSize.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.MaxWriteBufferSize.get -> long?
@@ -19,5 +19,7 @@ Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptio
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.NamedPipeTransportOptions() -> void
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.PipeSecurity.get -> System.IO.Pipes.PipeSecurity?
 Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions.PipeSecurity.set -> void
+override Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.Equals(object? obj) -> bool
+override Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.GetHashCode() -> int
 override Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeEndPoint.ToString() -> string!
 ~Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.Internal.NamedPipeTransportFactory.NamedPipeTransportFactory(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.NamedPipeTransportOptions!>! options) -> void

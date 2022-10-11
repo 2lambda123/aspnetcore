@@ -74,7 +74,8 @@ public class WebHostTests : LoggedTest
         }
     }
 
-    [Fact]
+    [ConditionalFact]
+    [OSSkipCondition(OperatingSystems.Linux | OperatingSystems.MacOSX, SkipReason = "Impersonation is only supported on Windows.")]
     public async Task ListenNamedPipeEndpoint_Impersonation_ClientSuccess()
     {
         AppDomain.CurrentDomain.SetPrincipalPolicy(PrincipalPolicy.WindowsPrincipal);
@@ -92,6 +93,7 @@ public class WebHostTests : LoggedTest
                     ps.AddAccessRule(new PipeAccessRule("Users", PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance, AccessControlType.Allow));
 
                     options.PipeSecurity = ps;
+                    options.CurrentUserOnly = false;
                 });
                 webHostBuilder
                     .UseKestrel(o =>
@@ -221,7 +223,8 @@ public class WebHostTests : LoggedTest
         };
     }
 
-    [Theory]
+    [ConditionalTheory]
+    [OSSkipCondition(OperatingSystems.MacOSX, SkipReason = "Missing SslStream ALPN support: https://github.com/dotnet/runtime/issues/27727")]
     [InlineData(HttpProtocols.Http1)]
     [InlineData(HttpProtocols.Http2)]
     public async Task ListenNamedPipeEndpoint_Tls_ClientSuccess(HttpProtocols protocols)
@@ -266,7 +269,7 @@ public class WebHostTests : LoggedTest
             };
 
             // Act
-            var response = await client.SendAsync(request);
+            var response = await client.SendAsync(request).DefaultTimeout();
 
             // Assert
             response.EnsureSuccessStatusCode();
