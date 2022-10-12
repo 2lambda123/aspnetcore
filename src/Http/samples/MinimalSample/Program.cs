@@ -16,46 +16,59 @@ var app = builder.Build();
 app.MapGet("/", (EndpointDataSource dataSource)
     => EndpointDataSource.GetDebuggerDisplayStringForEndpoints(dataSource.Endpoints));
 
-app.MapGet("/hello/{name}", (string name) => $"Hello {name}!")
-    .AddEndpointFilterFactory((context, next) =>
-    {
-        var parameters = context.MethodInfo.GetParameters();
-        // Only operate handlers with a single argument
-        if (parameters.Length == 1 &&
-            parameters[0] is ParameterInfo parameter &&
-            parameter.ParameterType == typeof(string))
-        {
-            return invocationContext =>
-            {
-                var modifiedArgument = invocationContext
-                    .GetArgument<string>(0)
-                    .ToUpperInvariant();
-                invocationContext.Arguments[0] = modifiedArgument;
-                return next(invocationContext);
-            };
-        }
+var preview = app.MapGroup("/preview");
+AddEndpoints(app);
+AddEndpoints(preview);
 
-        return invocationContext => next(invocationContext);
-    });
-
-app.MapControllers()
-    .AddEndpointFilter((invocationContext, next) =>
-    {
-        var argument = invocationContext.GetArgument<string>(0);
-        if (argument != null)
-        {
-            invocationContext.Arguments[0] = Convert.ToBase64String(Encoding.UTF8.GetBytes(argument));
-        }
-        return next(invocationContext);
-    });
-
-((IEndpointRouteBuilder)app).DataSources.Add(new CustomEndpointDataSource());
+preview.WithMetadata("PREVIEW! ");
 
 app.Run();
+
+static void AddEndpoints(IEndpointRouteBuilder app)
+{
+    app.MapGet("/hello/{name}", (string name) => $"Hello {name}!")
+        .AddEndpointFilterFactory((context, next) =>
+        {
+            var parameters = context.MethodInfo.GetParameters();
+            // Only operate handlers with a single argument
+            if (parameters.Length == 1 &&
+                parameters[0] is ParameterInfo parameter &&
+                parameter.ParameterType == typeof(string))
+            {
+                return invocationContext =>
+                {
+                    var modifiedArgument = invocationContext
+                        .GetArgument<string>(0)
+                        .ToUpperInvariant();
+                    invocationContext.Arguments[0] = modifiedArgument;
+                    return next(invocationContext);
+                };
+            }
+
+            return invocationContext => next(invocationContext);
+        });
+
+    app.MapControllers()
+        .AddEndpointFilter((invocationContext, next) =>
+        {
+            var argument = invocationContext.GetArgument<string>(0);
+            if (argument != null)
+            {
+                invocationContext.Arguments[0] = Convert.ToBase64String(Encoding.UTF8.GetBytes(argument));
+            }
+            return next(invocationContext);
+        });
+
+    app.DataSources.Add(new CustomEndpointDataSource());
+}
 
 class CustomEndpointDataSource : EndpointDataSource
 {
     public override IReadOnlyList<Endpoint> Endpoints => new[] { CreateEndpoint(0), CreateEndpoint(1) };
+    public override IReadOnlyList<Endpoint> GetGroupedEndpoints(RouteGroupContext context)
+    {
+        return base.GetGroupedEndpoints(context);
+    }
 
     public override IChangeToken GetChangeToken() => NullChangeToken.Singleton;
 
@@ -65,7 +78,7 @@ class CustomEndpointDataSource : EndpointDataSource
         var metadata = new EndpointMetadataCollection(new[] { new RouteNameMetadata(displayName) });
 
         return new RouteEndpoint(
-            context => context.Response.WriteAsync(displayName),
+            context => context.Response.WriteAsync($"{context.GetEndpoint()!.Metadata.GetMetadata<string>()}{displayName}"),
             RoutePatternFactory.Parse($"/custom/{id}"),
             order: 0, metadata, displayName);
     }
