@@ -16,7 +16,7 @@ public sealed class DynamicEndpointDataSource : EndpointDataSource, IDisposable
 
     public DynamicEndpointDataSource()
     {
-        _timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         _timerTask = TimerLoop();
     }
 

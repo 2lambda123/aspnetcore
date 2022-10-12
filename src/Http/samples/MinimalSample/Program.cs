@@ -6,6 +6,7 @@ using System.Text;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
+using MinimalSample;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +14,11 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-app.MapGet("/", (EndpointDataSource dataSource)
-    => EndpointDataSource.GetDebuggerDisplayStringForEndpoints(dataSource.Endpoints));
+app.MapGet("/", (EndpointDataSource dataSource, HttpResponse response) =>
+{
+    response.Headers["Refresh"] = "1";
+    return EndpointDataSource.GetDebuggerDisplayStringForEndpoints(dataSource.Endpoints);
+});
 
 var preview = app.MapGroup("/preview");
 AddEndpoints(app);
@@ -61,6 +65,8 @@ static void AddEndpoints(IEndpointRouteBuilder app)
     app.MapGet("/hello/{name}", (string name) => $"Hello {name}!")
         .AddEndpointFilterFactory((context, next) =>
         {
+            Console.WriteLine("Running filter factory!");
+
             var parameters = context.MethodInfo.GetParameters();
             // Only operate handlers with a single argument
             if (parameters.Length == 1 &&
@@ -91,7 +97,8 @@ static void AddEndpoints(IEndpointRouteBuilder app)
             return next(invocationContext);
         });
 
-    app.DataSources.Add(new CustomEndpointDataSource());
+    app.DataSources.Add(new DefaultEndpointDataSource(CustomEndpointDataSource.CreateEndpoint(0), CustomEndpointDataSource.CreateEndpoint(1)));
+    app.DataSources.Add(new DynamicEndpointDataSource());
 }
 
 class CustomEndpointDataSource : EndpointDataSource
@@ -104,7 +111,7 @@ class CustomEndpointDataSource : EndpointDataSource
 
     public override IChangeToken GetChangeToken() => NullChangeToken.Singleton;
 
-    static Endpoint CreateEndpoint(int id)
+    public static Endpoint CreateEndpoint(int id)
     {
         var displayName = $"Custom endpoint #{id}";
         var metadata = new EndpointMetadataCollection(new[] { new RouteNameMetadata(displayName) });
