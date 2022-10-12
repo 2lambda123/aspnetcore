@@ -22,7 +22,39 @@ AddEndpoints(preview);
 
 preview.WithMetadata("PREVIEW! ");
 
+app.Use(PrintMetadataMiddleware("Before"));
+
+app.UseRouting();
+
+app.Use(PrintMetadataMiddleware("Middle"));
+
+app.UseEndpoints(_ => { });
+
+app.Use(PrintMetadataMiddleware("After"));
+
 app.Run();
+
+static Func<RequestDelegate, RequestDelegate> PrintMetadataMiddleware(string name)
+{
+    return (next) =>
+    {
+        return context =>
+        {
+            var log = $"{name}: {context.Request.Path}";
+
+            if (context.GetEndpoint()?.Metadata.GetMetadata<string>() is string metadata)
+            {
+                Console.WriteLine($"{log} {metadata}");
+            }
+            else
+            {
+                Console.WriteLine($"{log} No string metadata found");
+            }
+
+            return next(context);
+        };
+    };
+}
 
 static void AddEndpoints(IEndpointRouteBuilder app)
 {
