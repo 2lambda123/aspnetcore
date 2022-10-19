@@ -10,6 +10,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
+using System.Linq;
 
 namespace Microsoft.AspNetCore.OpenApi.Tests;
 
@@ -101,7 +103,7 @@ public class SchemaGeneratorTests
     {
         var enumType = typeof(HttpStatusCode);
         var schema = GetSchemaFromType(enumType);
-        Assert.Equal(enumType.GetEnumValues().Cast<HttpStatusCode>().Distinct().Count(), schema.Enum.Count);
+        Assert.Equal(enumType.GetEnumValues().Cast<HttpStatusCode>().Count(), schema.Enum.Count);
     }
 
     [Theory]
@@ -122,7 +124,7 @@ public class SchemaGeneratorTests
     public void GenerateSchemaForType_NullableInt()
     {
         var schema = GetSchemaFromType(typeof(int?));
-        Assert.Equal("number", schema.Type);
+        Assert.Equal("integer", schema.Type);
     }
 
     [Fact]
@@ -130,7 +132,7 @@ public class SchemaGeneratorTests
     {
         var schema = GetSchemaFromType(typeof(int[]));
         Assert.Equal("array", schema.Type);
-        Assert.Equal("number", schema.Items.Type);
+        Assert.Equal("integer", schema.Items.Type);
     }
 
     [Fact]
@@ -152,7 +154,7 @@ public class SchemaGeneratorTests
             },
             third =>
             {
-                Assert.Equal("number", third.Value.Type);
+                Assert.Equal("integer", third.Value.Type);
                 Assert.Equal("Age", third.Key);
             });
     }
@@ -164,9 +166,23 @@ public class SchemaGeneratorTests
         var schema = new OpenApiSchema();
         if (jsonType.Kind == JsonTypeInfoKind.None)
         {
-            schema = _primitiveTypeToOpenApiSchema.TryGetValue(type, out var result)
-                ? result()
-                : new OpenApiSchema { Type = "string" };
+            if (type.IsEnum)
+            {
+                schema = _primitiveTypeToOpenApiSchema.TryGetValue(type.GetEnumUnderlyingType(), out var enumResult)
+                    ? enumResult()
+                    : new OpenApiSchema { Type = "string" };
+                foreach (var value in Enum.GetValues(type))
+                {
+                    schema.Enum.Add(new OpenApiInteger((int)value));
+                }
+            }
+            else
+            {
+                schema = _primitiveTypeToOpenApiSchema.TryGetValue(type, out var result)
+                    ? result()
+                    : new OpenApiSchema { Type = "string" };
+            }
+
         }
         if (jsonType.Kind == JsonTypeInfoKind.Dictionary)
         {
