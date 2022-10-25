@@ -16,4 +16,9 @@
     <Reference Include="Microsoft.AspNetCore.Mvc.Core" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Microsoft.AspNetCore.Authentication.Google" />
+    <Reference Include="Microsoft.AspNetCore.Authentication.OAuth" />
+  </ItemGroup>
+
 </Project>
