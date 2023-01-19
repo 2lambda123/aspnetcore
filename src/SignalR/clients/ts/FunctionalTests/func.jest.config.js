@@ -18,14 +18,15 @@ module.exports = {
     },
     reporters: [
         "default",
-        ["./node_modules/jest-junit/index.js", { "outputDirectory": "../../../../../artifacts/log/", "outputName": `${process.platform}` + ".node.functional.junit.xml" }]
+        ["../node_modules/jest-junit/index.js", { "outputDirectory": "../../../../../artifacts/log/", "outputName": `${process.platform}` + ".node.functional.junit.xml" }]
     ],
     transform: {
-        "^.+\\.(jsx?|tsx?)$": "./node_modules/ts-jest"
+        "^.+\\.(jsx?|tsx?)$": "../../../../../node_modules/ts-jest"
     },
     testEnvironment: "node",
     testRegex: "(Tests)\\.(jsx?|tsx?)$",
     moduleNameMapper: {
+        "^ts-jest$": "<rootDir>/../../../../../node_modules/ts-jest",
         "^@microsoft/signalr$": "<rootDir>/../signalr/dist/cjs/index.js"
     },
     moduleFileExtensions: [
