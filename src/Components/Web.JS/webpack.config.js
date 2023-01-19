@@ -15,11 +15,11 @@ module.exports = (env, args) => ({
         rules: [{ test: /\.ts?$/, loader: 'ts-loader' }]
     },
     entry: {
-        'blazor.server': './Boot.Server.ts',
-        'blazor.webassembly': './Boot.WebAssembly.ts',
-        'blazor.webview': './Boot.WebView.ts',
+        'blazor.server': './src/Boot.Server.ts',
+        'blazor.webassembly': './src/Boot.WebAssembly.ts',
+        'blazor.webview': './src/Boot.WebView.ts',
     },
-    output: { path: path.join(__dirname, '/..', '/dist', args.mode == 'development' ? '/Debug' : '/Release'), filename: '[name].js' },
+    output: { path: path.join(__dirname, '/dist', args.mode == 'development' ? '/Debug' : '/Release'), filename: '[name].js' },
     performance: {
         maxAssetSize: 122880,
     },

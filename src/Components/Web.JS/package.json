@@ -10,17 +10,16 @@
   ],
   "scripts": {
     "preclean": "npm install --mutex network --frozen-lockfile",
-    "clean": "node node_modules/rimraf/bin.js ./dist/Debug ./dist/Release",
+    "clean": "npx rimraf ./dist/Debug ./dist/Release",
     "prebuild": "npm run clean && npm install --mutex network --frozen-lockfile",
     "lint": "eslint -c ./src/.eslintrc.js --ext .ts ./src",
     "build": "npm run build:debug && npm run build:production",
-    "build:debug": "cd src && npx webpack --mode development --config ./webpack.config.js",
-    "build:production": "cd src && npx webpack --mode production --config ./webpack.config.js"
+    "build:debug": "npx webpack --mode development --config ./webpack.config.js",
+    "build:production": "npx webpack --mode production --config ./webpack.config.js"
   },
   "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.8",
-    "@microsoft/dotnet-js-interop": "*",
     "@microsoft/signalr": "*",
     "@microsoft/signalr-protocol-msgpack": "*",
     "@types/dotnet": "*",
