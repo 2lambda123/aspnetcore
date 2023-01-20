@@ -79,3 +79,4 @@ export declare class HubConnectionBuilder {
      */
     build(): HubConnection;
 }
+//# sourceMappingURL=HubConnectionBuilder.d.ts.map

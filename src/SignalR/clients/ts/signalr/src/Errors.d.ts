@@ -99,3 +99,4 @@ export declare class AggregateErrors extends Error {
      */
     constructor(message: string, innerErrors: Error[]);
 }
+//# sourceMappingURL=Errors.d.ts.map

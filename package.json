@@ -5,6 +5,7 @@
     "src/SignalR/clients/ts/common",
     "src/SignalR/clients/ts/signalr",
     "src/SignalR/clients/ts/signalr-protocol-msgpack",
+    "src/JSInterop/Microsoft.JSInterop.JS/src",
     "src/Components/Web.JS/@types/dotnet",
     "src/Components/Web.JS",
     "src/Components/CustomElements/src/js",

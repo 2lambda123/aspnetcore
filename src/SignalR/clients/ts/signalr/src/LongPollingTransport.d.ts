@@ -22,3 +22,4 @@ export declare class LongPollingTransport implements ITransport {
     stop(): Promise<void>;
     private _raiseOnClose;
 }
+//# sourceMappingURL=LongPollingTransport.d.ts.map

@@ -26,3 +26,4 @@ export declare class JsonHubProtocol implements IHubProtocol {
     private _isCompletionMessage;
     private _assertNotEmptyString;
 }
+//# sourceMappingURL=JsonHubProtocol.d.ts.map

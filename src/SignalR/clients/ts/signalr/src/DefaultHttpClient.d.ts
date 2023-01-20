@@ -9,3 +9,4 @@ export declare class DefaultHttpClient extends HttpClient {
     send(request: HttpRequest): Promise<HttpResponse>;
     getCookieString(url: string): string;
 }
+//# sourceMappingURL=DefaultHttpClient.d.ts.map

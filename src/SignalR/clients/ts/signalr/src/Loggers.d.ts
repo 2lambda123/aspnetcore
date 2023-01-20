@@ -7,3 +7,4 @@ export declare class NullLogger implements ILogger {
     /** @inheritDoc */
     log(_logLevel: LogLevel, _message: string): void;
 }
+//# sourceMappingURL=Loggers.d.ts.map

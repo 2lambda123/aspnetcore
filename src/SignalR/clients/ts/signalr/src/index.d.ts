@@ -14,3 +14,4 @@ export { JsonHubProtocol } from "./JsonHubProtocol";
 export { Subject } from "./Subject";
 export { IRetryPolicy, RetryContext } from "./IRetryPolicy";
 export { VERSION } from "./Utils";
+//# sourceMappingURL=index.d.ts.map

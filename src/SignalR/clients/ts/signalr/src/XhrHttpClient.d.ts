@@ -6,3 +6,4 @@ export declare class XhrHttpClient extends HttpClient {
     /** @inheritDoc */
     send(request: HttpRequest): Promise<HttpResponse>;
 }
+//# sourceMappingURL=XhrHttpClient.d.ts.map

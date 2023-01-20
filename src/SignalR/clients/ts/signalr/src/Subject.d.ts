@@ -7,3 +7,4 @@ export declare class Subject<T> implements IStreamResult<T> {
     complete(): void;
     subscribe(observer: IStreamSubscriber<T>): ISubscription<T>;
 }
+//# sourceMappingURL=Subject.d.ts.map

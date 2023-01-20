@@ -10,3 +10,4 @@ export declare class FetchHttpClient extends HttpClient {
     send(request: HttpRequest): Promise<HttpResponse>;
     getCookieString(url: string): string;
 }
+//# sourceMappingURL=FetchHttpClient.d.ts.map

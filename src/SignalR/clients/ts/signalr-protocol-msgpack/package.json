@@ -5,6 +5,7 @@
   "main": "./dist/cjs/src/index.js",
   "module": "./dist/esm/src/index.js",
   "typings": "./dist/esm/src/index.d.ts",
+  "types": "./dist/esm/src/",
   "umd": "./dist/browser/signalr-protocol-msgpack.js",
   "umd_name": "signalR.protocols.msgpack",
   "unpkg": "./dist/browser/signalr-protocol-msgpack.js",

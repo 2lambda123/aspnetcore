@@ -56,3 +56,4 @@ export interface MessagePackOptions {
      */
     maxExtLength?: number;
 }
+//# sourceMappingURL=MessagePackOptions.d.ts.map

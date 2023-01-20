@@ -55,3 +55,4 @@ export declare function constructUserAgent(version: string, os: string, runtime:
 export declare function getErrorString(e: any): string;
 /** @private */
 export declare function getGlobalThis(): unknown;
+//# sourceMappingURL=Utils.d.ts.map

@@ -38,3 +38,4 @@ export interface ISubscription<T> {
     /** Disconnects the {@link @microsoft/signalr.IStreamSubscriber} associated with this subscription from the stream. */
     dispose(): void;
 }
+//# sourceMappingURL=Stream.d.ts.map

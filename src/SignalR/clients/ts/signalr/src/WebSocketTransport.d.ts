@@ -21,3 +21,4 @@ export declare class WebSocketTransport implements ITransport {
     private _close;
     private _isCloseEvent;
 }
+//# sourceMappingURL=WebSocketTransport.d.ts.map

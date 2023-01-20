@@ -5,3 +5,4 @@ export declare class TextMessageFormat {
     static write(output: string): string;
     static parse(input: string): string[];
 }
+//# sourceMappingURL=TextMessageFormat.d.ts.map

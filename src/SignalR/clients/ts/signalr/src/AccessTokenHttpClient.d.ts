@@ -9,3 +9,4 @@ export declare class AccessTokenHttpClient extends HttpClient {
     private _setAuthorizationHeader;
     getCookieString(url: string): string;
 }
+//# sourceMappingURL=AccessTokenHttpClient.d.ts.map

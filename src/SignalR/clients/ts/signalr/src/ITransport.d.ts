@@ -24,3 +24,4 @@ export interface ITransport {
     onreceive: ((data: string | ArrayBuffer) => void) | null;
     onclose: ((error?: Error) => void) | null;
 }
+//# sourceMappingURL=ITransport.d.ts.map

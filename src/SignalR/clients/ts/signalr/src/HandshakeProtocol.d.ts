@@ -13,3 +13,4 @@ export declare class HandshakeProtocol {
     writeHandshakeRequest(handshakeRequest: HandshakeRequestMessage): string;
     parseHandshakeResponse(data: any): [any, HandshakeResponseMessage];
 }
+//# sourceMappingURL=HandshakeProtocol.d.ts.map

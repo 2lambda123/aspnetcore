@@ -174,3 +174,4 @@ export declare class HubConnection {
     private _createStreamItemMessage;
     private _createCompletionMessage;
 }
+//# sourceMappingURL=HubConnection.d.ts.map

@@ -27,3 +27,4 @@ export interface ILogger {
      */
     log(logLevel: LogLevel, message: string): void;
 }
+//# sourceMappingURL=ILogger.d.ts.map

@@ -142,3 +142,4 @@ export interface IHubProtocol {
      */
     writeMessage(message: HubMessage): string | ArrayBuffer;
 }
+//# sourceMappingURL=IHubProtocol.d.ts.map

@@ -47,3 +47,4 @@ export interface IHttpConnectionOptions {
      */
     timeout?: number;
 }
+//# sourceMappingURL=IHttpConnectionOptions.d.ts.map

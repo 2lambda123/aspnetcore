@@ -13,3 +13,4 @@ export interface AbortSignal {
     /** Set this to a handler that will be invoked when the request is aborted. */
     onabort: (() => void) | null;
 }
+//# sourceMappingURL=AbortController.d.ts.map

@@ -5,6 +5,7 @@
   "main": "./dist/cjs/src/index.js",
   "module": "./dist/esm/src/index.js",
   "typings": "./dist/esm/src/index.d.ts",
+  "types": "./dist/esm/src",
   "umd": "./dist/browser/signalr.js",
   "umd_name": "signalR",
   "unpkg": "./dist/browser/signalr.js",

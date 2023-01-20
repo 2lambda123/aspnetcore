@@ -5,3 +5,4 @@ export declare class DefaultReconnectPolicy implements IRetryPolicy {
     constructor(retryDelays?: number[]);
     nextRetryDelayInMilliseconds(retryContext: RetryContext): number | null;
 }
+//# sourceMappingURL=DefaultReconnectPolicy.d.ts.map

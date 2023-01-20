@@ -8,3 +8,4 @@ export interface WebSocketConstructor {
     readonly CONNECTING: number;
     readonly OPEN: number;
 }
+//# sourceMappingURL=Polyfills.d.ts.map

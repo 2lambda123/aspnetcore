@@ -114,3 +114,4 @@ export declare abstract class HttpClient {
      */
     getCookieString(url: string): string;
 }
+//# sourceMappingURL=HttpClient.d.ts.map

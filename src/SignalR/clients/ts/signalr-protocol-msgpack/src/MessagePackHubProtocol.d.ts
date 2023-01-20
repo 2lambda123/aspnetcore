@@ -43,3 +43,4 @@ export declare class MessagePackHubProtocol implements IHubProtocol {
     private _writeCancelInvocation;
     private _readHeaders;
 }
+//# sourceMappingURL=MessagePackHubProtocol.d.ts.map

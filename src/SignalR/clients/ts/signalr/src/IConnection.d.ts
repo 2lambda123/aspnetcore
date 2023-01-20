@@ -10,3 +10,4 @@ export interface IConnection {
     onreceive: ((data: string | ArrayBuffer) => void) | null;
     onclose: ((error?: Error) => void) | null;
 }
+//# sourceMappingURL=IConnection.d.ts.map

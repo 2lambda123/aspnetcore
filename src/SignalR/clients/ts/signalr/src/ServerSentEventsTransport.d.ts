@@ -18,3 +18,4 @@ export declare class ServerSentEventsTransport implements ITransport {
     stop(): Promise<void>;
     private _close;
 }
+//# sourceMappingURL=ServerSentEventsTransport.d.ts.map

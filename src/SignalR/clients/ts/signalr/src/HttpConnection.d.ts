@@ -69,3 +69,4 @@ export declare class TransportSendQueue {
     private _sendLoop;
     private static _concatBuffers;
 }
+//# sourceMappingURL=HttpConnection.d.ts.map
