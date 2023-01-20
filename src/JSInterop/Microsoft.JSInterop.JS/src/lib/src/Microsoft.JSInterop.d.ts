@@ -174,3 +174,4 @@ export declare module DotNet {
     }
     export {};
 }
+//# sourceMappingURL=Microsoft.JSInterop.d.ts.map
