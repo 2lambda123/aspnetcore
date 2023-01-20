@@ -55,7 +55,7 @@
   "scripts": {
     "preclean": "cd .. && npm run build",
     "clean": "npx rimraf ./wwwroot/dist ./obj/js",
-    "prebuild": "npm run clean && npm install --mutex network --frozen-lockfile",
+    "prebuild": "npm run clean",
     "build": "npm run build:inner",
     "build:inner": "npm run build:webpack",
     "build:webpack": "npx webpack",

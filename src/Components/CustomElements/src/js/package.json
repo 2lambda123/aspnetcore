@@ -1,9 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "preclean": "npm install --mutex network --frozen-lockfile",
     "clean": "npx rimraf ./dist/Release",
-    "prebuild": "npm run clean && npm install --mutex network --frozen-lockfile",
+    "prebuild": "npm run clean",
     "build": "npm run build:debug && npm run build:production",
     "build:debug": "npx webpack --mode development --config ./webpack.config.js",
     "build:production": "npx webpack --mode production --config ./webpack.config.js"
