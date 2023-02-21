@@ -187,6 +187,20 @@ namespace Microsoft.AspNetCore.Http.Generated
             }
         }
 
+        private static ValueTask<(bool, T?)> TryResolveJsonBodyOrService<T>(HttpContext httpContext, bool isOptional)
+        {
+            var serviceProviderIsService = httpContext.RequestServices.GetService<IServiceProviderIsService>();
+            if (serviceProviderIsService is not null)
+            {
+                if (serviceProviderIsService.IsService(typeof(T)))
+                {
+                    return new ValueTask<(bool, T?)>((true, httpContext.RequestServices.GetService<T>()));
+                }
+            }
+
+            return TryResolveBody<T>(httpContext, isOptional);
+        }
+
         private static async ValueTask<(bool, T?)> TryResolveBody<T>(HttpContext httpContext, bool allowEmpty)
         {
             var feature = httpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpRequestBodyDetectionFeature>();

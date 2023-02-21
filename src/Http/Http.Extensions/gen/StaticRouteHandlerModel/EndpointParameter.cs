@@ -52,8 +52,9 @@ internal class EndpointParameter
         }
         else
         {
-            // TODO: Inferencing rules go here - but for now:
-            Source = EndpointParameterSource.Unknown;
+            Source = EndpointParameterSource.JsonBodyOrService;
+            IsOptional = parameter.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } || parameter.HasExplicitDefaultValue;
+            AssigningCode = $"await GeneratedRouteBuilderExtensionsCore.TryResolveJsonBodyOrService<{parameter.Type}>(httpContext, {(IsOptional ? "true" : "false")})";
         }
     }
 
@@ -69,7 +70,7 @@ internal class EndpointParameter
     public string EmitArgument() => Source switch
     {
         EndpointParameterSource.SpecialType or EndpointParameterSource.Query or EndpointParameterSource.Service => HandlerArgument,
-        EndpointParameterSource.JsonBody => IsOptional ? HandlerArgument : $"{HandlerArgument}!",
+        EndpointParameterSource.JsonBody or EndpointParameterSource.JsonBodyOrService => IsOptional ? HandlerArgument : $"{HandlerArgument}!",
         _ => throw new Exception("Unreachable!")
     };
 

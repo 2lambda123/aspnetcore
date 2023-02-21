@@ -59,7 +59,7 @@ internal class Endpoint
         }
 
         Parameters = parameters;
-        IsAwaitable |= parameters.Any(parameter => parameter.Source == EndpointParameterSource.JsonBody);
+        IsAwaitable |= parameters.Any(parameter => parameter.Source is EndpointParameterSource.JsonBody or EndpointParameterSource.JsonBodyOrService);
     }
 
     public string HttpMethod { get; }

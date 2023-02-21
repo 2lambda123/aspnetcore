@@ -24,8 +24,8 @@ internal static class EndpointEmitter
                     Source: EndpointParameterSource.Query,
                 } => parameter.EmitQueryParameterPreparation(),
                 {
-                    Source: EndpointParameterSource.JsonBody
-                } => parameter.EmitJsonBodyParameterPreparationString(),
+                    Source: EndpointParameterSource.JsonBody or EndpointParameterSource.JsonBodyOrService
+                } => parameter.EmitJsonBodyOrServiceParameterPreparationString(),
                 {
                     Source: EndpointParameterSource.Service
                 } => parameter.EmitServiceParameterPreparation(),

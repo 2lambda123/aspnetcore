@@ -51,7 +51,7 @@ internal static class EndpointParameterEmitter
         return builder.ToString();
     }
 
-    internal static string EmitJsonBodyParameterPreparationString(this EndpointParameter endpointParameter)
+    internal static string EmitJsonBodyOrServiceParameterPreparationString(this EndpointParameter endpointParameter)
     {
         var builder = new StringBuilder();
 

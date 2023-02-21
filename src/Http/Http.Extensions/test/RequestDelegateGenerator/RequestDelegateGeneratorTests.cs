@@ -615,31 +615,6 @@ app.MapPost("/fromBodyOptional", ([FromBody] Todo? todo) => TypedResults.Ok(todo
         await VerifyResponseBodyAsync(httpContext, string.Empty);
     }
 
-    [Fact]
-    public async Task MapAction_UnknownParameter_EmitsDiagnostic_NoSource()
-    {
-        // This will eventually be handled by the EndpointParameterSource.JsonBodyOrService.
-        // All parameters should theoretically be handleable with enough "Or"s in the future
-        // we'll remove this test and diagnostic.
-        var source = """
-app.MapGet("/", (IServiceProvider provider) => "Hello world!");
-""";
-        var expectedBody = "Hello world!";
-        var (result, compilation) = await RunGeneratorAsync(source);
-
-        // Emits diagnostic but generates no source
-        var diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(DiagnosticDescriptors.GetUnableToResolveParameterDescriptor("provider").Id, diagnostic.Id);
-        Assert.Empty(result.GeneratedSources);
-
-        // Falls back to runtime-generated endpoint
-        var endpoint = GetEndpointFromCompilation(compilation, expectSourceKey: false);
-
-        var httpContext = CreateHttpContext();
-        await endpoint.RequestDelegate(httpContext);
-        await VerifyResponseBodyAsync(httpContext, expectedBody);
-    }
-
     public static object[][] MapAction_ExplicitServiceParam_SimpleReturn_Data
     {
         get
@@ -754,6 +729,61 @@ app.MapGet("/multipleFromService", ([FromServices]{{typeof(TestService)}}? svc, 
         httpContext.RequestServices = services;
         await endpoints[2].RequestDelegate(httpContext);
         await VerifyResponseBodyAsync(httpContext, $"{expectedBody}, {expectedBody}");
+    }
+
+    public static object[][] MapAction_JsonBodyOrService_SimpleReturn_Data
+    {
+        get
+        {
+            var todo = new Todo()
+            {
+                Id = 0,
+                Name = "Test Item",
+                IsComplete = false
+            };
+            var expectedTodoBody = "Test Item";
+            var expectedServiceBody = "Produced from service!";
+            var implicitRequiredServiceSource = $"""app.MapPost("/", ({typeof(TestService)} svc) => svc.TestServiceMethod());""";
+            var implicitRequiredJsonBodySource = $"""app.MapPost("/", (Todo todo) => todo.Name ?? string.Empty);""";
+
+            return new[]
+            {
+                new object[] { implicitRequiredServiceSource, false, null, true, 200, expectedServiceBody },
+                new object[] { implicitRequiredServiceSource, false, null, false, 200, string.Empty },
+                new object[] { implicitRequiredJsonBodySource, true, todo, false, 200, expectedTodoBody },
+                new object[] { implicitRequiredJsonBodySource, true, null, false, 400, string.Empty },
+            };
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(MapAction_JsonBodyOrService_SimpleReturn_Data))]
+    public async Task MapAction_JsonBodyOrService_SimpleReturn(string source, bool hasBody, Todo requestData, bool hasService, int expectedStatusCode, string expectedBody)
+    {
+        var (_, compilation) = await RunGeneratorAsync(source);
+        var serviceProvider = hasService ? new ServiceCollection()
+            .AddSingleton(new TestService())
+            .BuildServiceProvider() : null;
+        var endpoint = GetEndpointFromCompilation(compilation, serviceProvider: serviceProvider);
+
+        var httpContext = CreateHttpContext();
+
+        if (hasService)
+        {
+            httpContext = CreateHttpContext((serviceCollection) =>
+            {
+                serviceCollection.AddSingleton(new TestService());
+            });
+        }
+
+        if (hasBody)
+        {
+            httpContext = CreateHttpContextWithBody(requestData);
+        }
+
+        await endpoint.RequestDelegate(httpContext);
+        await VerifyResponseBodyAsync(httpContext, expectedBody, expectedStatusCode);
+
     }
 
     [Fact]

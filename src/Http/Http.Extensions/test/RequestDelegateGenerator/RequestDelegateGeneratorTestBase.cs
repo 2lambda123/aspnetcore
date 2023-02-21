@@ -72,10 +72,12 @@ public class RequestDelegateGeneratorTestBase : LoggedTest
         return Array.Empty<StaticRouteHandlerModel.Endpoint>();
     }
 
-    internal static Endpoint GetEndpointFromCompilation(Compilation compilation, bool expectSourceKey = true) =>
-        Assert.Single(GetEndpointsFromCompilation(compilation, expectSourceKey));
+    internal static Endpoint GetEndpointFromCompilation(Compilation compilation, bool expectSourceKey = true, IServiceProvider serviceProvider = null) =>
+        Assert.Single(GetEndpointsFromCompilation(compilation, expectSourceKey, serviceProvider));
 
-    internal static Endpoint[] GetEndpointsFromCompilation(Compilation compilation, bool expectSourceKey = true)
+    internal static Endpoint[] GetEndpointsFromCompilation(Compilation compilation,
+            bool expectSourceKey = true,
+            IServiceProvider serviceProvider = null)
     {
         var assemblyName = compilation.AssemblyName!;
         var symbolsName = Path.ChangeExtension(assemblyName, "pdb");
@@ -121,7 +123,7 @@ public class RequestDelegateGeneratorTestBase : LoggedTest
 
         Assert.NotNull(handler);
 
-        var builder = new DefaultEndpointRouteBuilder(new ApplicationBuilder(new EmptyServiceProvider()));
+        var builder = new DefaultEndpointRouteBuilder(new ApplicationBuilder(serviceProvider ?? new EmptyServiceProvider()));
         _ = handler(builder);
 
         var dataSource = Assert.Single(builder.DataSources);
@@ -146,7 +148,7 @@ public class RequestDelegateGeneratorTestBase : LoggedTest
         return endpoints;
     }
 
-    internal HttpContext CreateHttpContext()
+    internal HttpContext CreateHttpContext(Action<IServiceCollection> configureServices = null)
     {
         var httpContext = new DefaultHttpContext();
 
@@ -154,6 +156,10 @@ public class RequestDelegateGeneratorTestBase : LoggedTest
         serviceCollection.AddSingleton(LoggerFactory);
         var jsonOptions = new JsonOptions();
         serviceCollection.AddSingleton(Options.Create(jsonOptions));
+        if (configureServices != null)
+        {
+            configureServices(serviceCollection);
+        }
         httpContext.RequestServices = serviceCollection.BuildServiceProvider();
 
         var outStream = new MemoryStream();
@@ -262,9 +268,10 @@ public static class TestMapActions
 
     internal async Task VerifyAgainstBaselineUsingFile(Compilation compilation, [CallerMemberName] string callerName = "")
     {
-        var baselineFilePath = Path.Combine("RequestDelegateGenerator", "Baselines", $"{callerName}.generated.txt");
+        var baselineFilePath = Path.Combine("/Users/captainsafia/repos/aspnetcore/src/Http/Http.Extensions/test", "RequestDelegateGenerator", "Baselines", $"{callerName}.generated.txt");
         var generatedSyntaxTree = compilation.SyntaxTrees.Last();
         var generatedCode = await generatedSyntaxTree.GetTextAsync();
+        await File.WriteAllTextAsync(baselineFilePath, generatedCode.ToString().Replace(RequestDelegateGeneratorSources.GeneratedCodeAttribute, "%GENERATEDCODEATTRIBUTE%"));
         var baseline = await File.ReadAllTextAsync(baselineFilePath);
         var expectedLines = baseline
             .TrimEnd() // Trim newlines added by autoformat
