@@ -19,6 +19,7 @@ using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.DependencyModel.Resolution;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Http.Generators.Tests;
@@ -32,6 +33,8 @@ public abstract class RequestDelegateCreationTestBase : LoggedTest
 
     internal async Task<(GeneratorRunResult?, Compilation)> RunGeneratorAsync(string sources, params string[] updatedSources)
     {
+        Logger.LogInformation("Generating source: {0}", sources);
+
         var compilation = await CreateCompilationAsync(sources);
 
         // Return the compilation immediately if
