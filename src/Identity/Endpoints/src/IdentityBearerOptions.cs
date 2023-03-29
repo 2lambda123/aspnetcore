@@ -3,7 +3,9 @@
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Identity.Endpoints;
 
@@ -31,19 +33,15 @@ public sealed class IdentityBearerOptions : AuthenticationSchemeOptions
     public IDataProtectionProvider? DataProtectionProvider { get; set; }
 
     /// <summary>
-    /// If set, authentication and challenges will be forwarded to this scheme only if the request does not contain a bearer token.
-    /// This is typically set to Usually Identity.Application cookies <see cref="IdentityConstants.ApplicationScheme"/>
+    /// If set, authentication will be forwarded to this scheme only if the request does not contain a bearer token.
+    /// This is typically set to <see cref="IdentityConstants.ApplicationScheme"/> ("Identity.Application") the for identity cookies by
+    /// <see cref="IdentityEndpointsServiceCollectionExtensions.AddIdentityEndpoints{TUser}(IServiceCollection)"/>.
     /// </summary>
-    public string? BearerTokenMissingFallbackScheme { get; set; }
+    public string? MissingBearerTokenFallbackScheme { get; set; }
 
     /// <summary>
-    /// The object provided by the application to process events raised by the bearer authentication handler.
-    /// The application may implement the interface fully, or it may create an instance of <see cref="IdentityBearerEvents"/>
-    /// and assign delegates only to the events it wants to process.
+    /// If set, this provides the bearer token. If unset, the bearer token is read from the Authorization  request header with a "Bearer " prefix.
     /// </summary>
-    public new IdentityBearerEvents? Events
-    {
-        get => (IdentityBearerEvents?)base.Events;
-        set => base.Events = value;
-    }
+    public Func<HttpContext, ValueTask<string?>>? ExtractBearerToken { get; set; }
 }
+
