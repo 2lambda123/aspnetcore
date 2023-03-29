@@ -10,7 +10,7 @@ namespace Microsoft.AspNetCore.Identity.Endpoints;
 /// <summary>
 /// Contains the options used to authenticate using bearer tokens issued by <see cref="IdentityEndpointRouteBuilderExtensions.MapIdentity{TUser}(IEndpointRouteBuilder)"/>.
 /// </summary>
-public sealed class IdentityBearerAuthenticationOptions : AuthenticationSchemeOptions
+public sealed class IdentityBearerOptions : AuthenticationSchemeOptions
 {
     /// <summary>
     /// Controls how much time the bearer token will remain valid from the point it is created.
@@ -35,4 +35,15 @@ public sealed class IdentityBearerAuthenticationOptions : AuthenticationSchemeOp
     /// This is typically set to Usually Identity.Application cookies <see cref="IdentityConstants.ApplicationScheme"/>
     /// </summary>
     public string? BearerTokenMissingFallbackScheme { get; set; }
+
+    /// <summary>
+    /// The object provided by the application to process events raised by the bearer authentication handler.
+    /// The application may implement the interface fully, or it may create an instance of <see cref="IdentityBearerEvents"/>
+    /// and assign delegates only to the events it wants to process.
+    /// </summary>
+    public new IdentityBearerEvents? Events
+    {
+        get => (IdentityBearerEvents?)base.Events;
+        set => base.Events = value;
+    }
 }

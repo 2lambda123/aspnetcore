@@ -13,18 +13,20 @@ using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.AspNetCore.Identity.Endpoints;
 
-internal sealed class IdentityBearerAuthenticationHandler : SignInAuthenticationHandler<IdentityBearerAuthenticationOptions>
+internal sealed class IdentityBearerAuthenticationHandler : SignInAuthenticationHandler<IdentityBearerOptions>
 {
     private const string BearerTokenPurpose = $"Microsoft.AspNetCore.Identity.Endpoints.IdentityBearerAuthenticationHandler:v1:BearerToken";
 
-    private static readonly Task<AuthenticateResult> TokenMissingTask = Task.FromResult(AuthenticateResult.Fail("Token missing"));
-    private static readonly Task<AuthenticateResult> FailedUnprotectingTokenTask = Task.FromResult(AuthenticateResult.Fail("Unprotect token failed"));
-    private static readonly Task<AuthenticateResult> TokenExpiredTask = Task.FromResult(AuthenticateResult.Fail("Token expired"));
+    private static readonly AuthenticateResult TokenMissing = AuthenticateResult.Fail("Token missing");
+    private static readonly AuthenticateResult FailedUnprotectingToken = AuthenticateResult.Fail("Unprotected token failed");
+    private static readonly AuthenticateResult TokenExpired = AuthenticateResult.Fail("Token expired");
+
+    private static readonly Task<AuthenticateResult> TokenMissingTask = Task.FromResult(TokenMissing);
 
     private readonly IDataProtectionProvider _fallbackDataProtectionProvider;
 
     public IdentityBearerAuthenticationHandler(
-        IOptionsMonitor<IdentityBearerAuthenticationOptions> optionsMonitor,
+        IOptionsMonitor<IdentityBearerOptions> optionsMonitor,
         ILoggerFactory loggerFactory,
         UrlEncoder urlEncoder,
         ISystemClock clock,
@@ -34,35 +36,52 @@ internal sealed class IdentityBearerAuthenticationHandler : SignInAuthentication
         _fallbackDataProtectionProvider = dataProtectionProvider;
     }
 
+    private new IdentityBearerEvents Events => (IdentityBearerEvents)base.Events!;
+
     private IDataProtectionProvider DataProtectionProvider
         => Options.DataProtectionProvider ?? _fallbackDataProtectionProvider;
 
     private ISecureDataFormat<AuthenticationTicket> BearerTokenProtector
         => Options.BearerTokenProtector ?? new TicketDataFormat(DataProtectionProvider.CreateProtector(BearerTokenPurpose));
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override Task<object> CreateEventsAsync() => Task.FromResult<object>(new IdentityBearerEvents());
+
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // Give application opportunity to find from a different location, adjust, or reject token
+        var messageReceivedContext = new MessageReceivedContext(Context, Scheme, Options);
+
+        // event can set the token
+        await Events.MessageReceived(messageReceivedContext);
+        if (messageReceivedContext.Result != null)
+        {
+            return messageReceivedContext.Result;
+        }
+
+        // If application retrieved token from somewhere else, use that.
+        var token = messageReceivedContext.Token ?? GetBearerTokenOrNull();
+
         // If there's no bearer token, forward to cookie auth.
-        if (GetBearerTokenOrNull() is not string token)
+        if (token is null)
         {
             return Options.BearerTokenMissingFallbackScheme is string fallbackScheme
-                ? Context.AuthenticateAsync(fallbackScheme)
-                : TokenMissingTask;
+                ? await Context.AuthenticateAsync(fallbackScheme)
+                : TokenMissing;
         }
 
         var ticket = BearerTokenProtector.Unprotect(token);
 
         if (ticket?.Properties?.ExpiresUtc is null)
         {
-            return FailedUnprotectingTokenTask;
+            return FailedUnprotectingToken;
         }
 
         if (Clock.UtcNow >= ticket.Properties.ExpiresUtc)
         {
-            return TokenExpiredTask;
+            return TokenExpired;
         }
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)

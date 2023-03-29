@@ -76,7 +76,7 @@ public class MapIdentityTests : LoggedTest
         await using var app = await CreateAppAsync(services =>
         {
             AddIdentityEndpoints(services);
-            services.Configure<IdentityBearerAuthenticationOptions>(IdentityConstants.BearerScheme, options =>
+            services.Configure<IdentityBearerOptions>(IdentityConstants.BearerScheme, options =>
             {
                 options.BearerTokenExpiration = expireTimeSpan;
             });

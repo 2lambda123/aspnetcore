@@ -43,12 +43,12 @@ public static class IdentityEndpointServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
     /// <param name="configureIdentityOptions">Configures the <see cref="IdentityOptions"/>.</param>
-    /// <param name="configureIdentityBearerOptions">Configures the <see cref="IdentityBearerAuthenticationOptions"/>.</param>
+    /// <param name="configureIdentityBearerOptions">Configures the <see cref="IdentityBearerOptions"/>.</param>
     /// <returns>The <see cref="IdentityBuilder"/>.</returns>
     public static IdentityBuilder AddIdentityEndpoints<TUser>(
         this IServiceCollection services,
         Action<IdentityOptions> configureIdentityOptions,
-        Action<IdentityBearerAuthenticationOptions> configureIdentityBearerOptions)
+        Action<IdentityBearerOptions> configureIdentityBearerOptions)
         where TUser : class, new()
     {
         var (identityBuilder, authBuilder) = services.AddIdentityEndpointsCoreInternal<TUser>(configureIdentityOptions, options =>
@@ -69,12 +69,12 @@ public static class IdentityEndpointServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
     /// <param name="configureIdentityOptions">Configures the <see cref="IdentityOptions"/>.</param>
-    /// <param name="configureIdentityBearerOptions">Configures the <see cref="IdentityBearerAuthenticationOptions"/>.</param>
+    /// <param name="configureIdentityBearerOptions">Configures the <see cref="IdentityBearerOptions"/>.</param>
     /// <returns>The <see cref="IdentityBuilder"/>.</returns>
     public static IdentityBuilder AddIdentityEndpointsCore<TUser>(
         this IServiceCollection services,
         Action<IdentityOptions> configureIdentityOptions,
-        Action<IdentityBearerAuthenticationOptions> configureIdentityBearerOptions)
+        Action<IdentityBearerOptions> configureIdentityBearerOptions)
         where TUser : class, new()
     {
         var (identityBuilder, _) = services.AddIdentityEndpointsCoreInternal<TUser>(configureIdentityOptions, configureIdentityBearerOptions);
@@ -84,7 +84,7 @@ public static class IdentityEndpointServiceCollectionExtensions
     private static (IdentityBuilder, AuthenticationBuilder) AddIdentityEndpointsCoreInternal<TUser>(
         this IServiceCollection services,
         Action<IdentityOptions> configureIdentityOptions,
-        Action<IdentityBearerAuthenticationOptions> configureIdentityBearerOptions)
+        Action<IdentityBearerOptions> configureIdentityBearerOptions)
         where TUser : class, new()
     {
         ArgumentNullException.ThrowIfNull(nameof(services));
@@ -103,7 +103,7 @@ public static class IdentityEndpointServiceCollectionExtensions
         {
             o.DefaultScheme = IdentityConstants.BearerScheme;
         })
-        .AddScheme<IdentityBearerAuthenticationOptions, IdentityBearerAuthenticationHandler>(IdentityConstants.BearerScheme, configureIdentityBearerOptions);
+        .AddScheme<IdentityBearerOptions, IdentityBearerAuthenticationHandler>(IdentityConstants.BearerScheme, configureIdentityBearerOptions);
 
         return (identityBuilder, authBuilder);
     }
