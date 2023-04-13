@@ -296,17 +296,19 @@ public class KestrelServerTests
         var httpsConfigurationService = new HttpsConfigurationService();
         if (options?.ApplicationServices is IServiceProvider serviceProvider)
         {
-            httpsConfigurationService.Initialize(
+            var tlsConfigurationLoader = new TlsConfigurationLoader(
                 serviceProvider.GetRequiredService<IHostEnvironment>(),
                 serviceProvider.GetRequiredService<ILogger<KestrelServer>>(),
                 serviceProvider.GetRequiredService<ILogger<HttpsConnectionMiddleware>>());
+
+            httpsConfigurationService.Initialize(tlsConfigurationLoader);
         }
-	
+
         return new KestrelServerImpl(
             Options.Create<KestrelServerOptions>(options),
             transportFactories,
             multiplexedFactories,
-			httpsConfigurationService,
+            httpsConfigurationService,
             loggerFactory ?? new LoggerFactory(new[] { new KestrelTestLoggerProvider() }),
             metrics ?? new KestrelMetrics(new TestMeterFactory()));
     }

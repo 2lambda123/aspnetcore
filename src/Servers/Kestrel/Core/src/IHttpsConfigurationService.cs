@@ -5,9 +5,6 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core;
 
@@ -28,10 +25,7 @@ internal interface IHttpsConfigurationService
     /// <summary>
     /// Replaces the implementations off all other methods with functioning (as opposed to throwing) versions.
     /// </summary>
-    void Initialize(
-        IHostEnvironment hostEnvironment,
-        ILogger<KestrelServer> serverLogger,
-        ILogger<HttpsConnectionMiddleware> httpsLogger);
+    void Initialize(TlsConfigurationLoader tlsConfigurationLoader);
 
     /// <summary>
     /// Applies various configuration settings to <paramref name="httpsOptions"/> and <paramref name="endpoint"/>.

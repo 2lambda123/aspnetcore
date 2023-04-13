@@ -291,7 +291,7 @@ public class KestrelServerOptions
             var hostEnvironment = ApplicationServices.GetRequiredService<IHostEnvironment>();
             var logger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
             var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
-            httpsConfigurationService.Initialize(hostEnvironment, logger, httpsLogger);
+            httpsConfigurationService.Initialize(new TlsConfigurationLoader(hostEnvironment, logger, httpsLogger));
         }
     }
 

@@ -88,6 +88,7 @@ internal class TestServer : IAsyncDisposable, IStartup
                 services.AddSingleton(context.LoggerFactory);
                 services.AddSingleton(context.Metrics);
                 services.AddSingleton<IHttpsConfigurationService, HttpsConfigurationService>();
+                services.AddSingleton<TlsConfigurationLoader>();
                 services.AddSingleton<HttpsConfigurationService.IInitializer, HttpsConfigurationService.Initializer>();
 
                 services.AddSingleton<IServer>(sp =>

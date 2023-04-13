@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Security;
@@ -10,8 +12,6 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core;
 
@@ -50,10 +50,7 @@ internal sealed class HttpsConfigurationService : IHttpsConfigurationService
     bool IHttpsConfigurationService.IsInitialized => _isInitialized || _initializer is not null;
 
     /// <inheritdoc/>
-    public void Initialize(
-        IHostEnvironment hostEnvironment,
-        ILogger<KestrelServer> serverLogger,
-        ILogger<HttpsConnectionMiddleware> httpsLogger)
+    public void Initialize(TlsConfigurationLoader tlsConfigurationLoader)
     {
         if (_isInitialized)
         {
@@ -62,7 +59,7 @@ internal sealed class HttpsConfigurationService : IHttpsConfigurationService
 
         _isInitialized = true;
 
-        _tlsConfigurationLoader = new TlsConfigurationLoader(hostEnvironment, serverLogger, httpsLogger);
+        _tlsConfigurationLoader = tlsConfigurationLoader;
         _populateMultiplexedTransportFeatures = PopulateMultiplexedTransportFeaturesWorker;
         _useHttpsWithDefaults = UseHttpsWithDefaultsWorker;
     }
@@ -76,41 +73,42 @@ internal sealed class HttpsConfigurationService : IHttpsConfigurationService
         ConfigurationReader configurationReader)
     {
         EnsureInitialized();
-        _tlsConfigurationLoader!.ApplyHttpsConfiguration(httpsOptions, endpoint, serverOptions, defaultCertificateConfig, configurationReader);
+        _tlsConfigurationLoader.ApplyHttpsConfiguration(httpsOptions, endpoint, serverOptions, defaultCertificateConfig, configurationReader);
     }
 
     /// <inheritdoc/>
     public ListenOptions UseHttpsWithSni(ListenOptions listenOptions, HttpsConnectionAdapterOptions httpsOptions, EndpointConfig endpoint)
     {
         EnsureInitialized();
-        return _tlsConfigurationLoader!.UseHttpsWithSni(listenOptions, httpsOptions, endpoint);
+        return _tlsConfigurationLoader.UseHttpsWithSni(listenOptions, httpsOptions, endpoint);
     }
 
     /// <inheritdoc/>
     public CertificateAndConfig? LoadDefaultCertificate(ConfigurationReader configurationReader)
     {
         EnsureInitialized();
-        return _tlsConfigurationLoader!.LoadDefaultCertificate(configurationReader);
+        return _tlsConfigurationLoader.LoadDefaultCertificate(configurationReader);
     }
 
     /// <inheritdoc/>
     public void PopulateMultiplexedTransportFeatures(FeatureCollection features, ListenOptions listenOptions)
     {
         EnsureInitialized();
-        _populateMultiplexedTransportFeatures!.Invoke(features, listenOptions);
+        _populateMultiplexedTransportFeatures.Invoke(features, listenOptions);
     }
 
     /// <inheritdoc/>
     public ListenOptions UseHttpsWithDefaults(ListenOptions listenOptions)
     {
         EnsureInitialized();
-        return _useHttpsWithDefaults!.Invoke(listenOptions);
+        return _useHttpsWithDefaults.Invoke(listenOptions);
     }
 
     /// <summary>
     /// If this instance has not been initialized, initialize it if possible and throw otherwise.
     /// </summary>
     /// <exception cref="InvalidOperationException">If initialization is not possible.</exception>
+    [MemberNotNull(nameof(_useHttpsWithDefaults), nameof(_tlsConfigurationLoader), nameof(_populateMultiplexedTransportFeatures))]
     private void EnsureInitialized()
     {
         if (!_isInitialized)
@@ -124,6 +122,10 @@ internal sealed class HttpsConfigurationService : IHttpsConfigurationService
                 throw new InvalidOperationException(CoreStrings.NeedHttpsConfiguration);
             }
         }
+
+        Debug.Assert(_useHttpsWithDefaults != null);
+        Debug.Assert(_tlsConfigurationLoader != null);
+        Debug.Assert(_populateMultiplexedTransportFeatures != null);
     }
 
     /// <summary>
@@ -228,24 +230,17 @@ internal sealed class HttpsConfigurationService : IHttpsConfigurationService
     /// <inheritdoc/>
     internal sealed class Initializer : IInitializer
     {
-        private readonly IHostEnvironment _hostEnvironment;
-        private readonly ILogger<KestrelServer> _serverLogger;
-        private readonly ILogger<HttpsConnectionMiddleware> _httpsLogger;
+        private readonly TlsConfigurationLoader _configurationLoader;
 
-        public Initializer(
-            IHostEnvironment hostEnvironment,
-            ILogger<KestrelServer> serverLogger,
-            ILogger<HttpsConnectionMiddleware> httpsLogger)
+        public Initializer(TlsConfigurationLoader configurationLoader)
         {
-            _hostEnvironment = hostEnvironment;
-            _serverLogger = serverLogger;
-            _httpsLogger = httpsLogger;
+            _configurationLoader = configurationLoader;
         }
 
         /// <inheritdoc/>
         public void Initialize(IHttpsConfigurationService httpsConfigurationService)
         {
-            httpsConfigurationService.Initialize(_hostEnvironment, _serverLogger, _httpsLogger);
+            httpsConfigurationService.Initialize(_configurationLoader);
         }
     }
 }

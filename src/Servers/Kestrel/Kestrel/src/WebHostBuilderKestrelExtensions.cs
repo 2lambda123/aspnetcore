@@ -38,6 +38,7 @@ public static class WebHostBuilderKestrelExtensions
         return hostBuilder.ConfigureServices(services =>
         {
             services.AddSingleton<HttpsConfigurationService.IInitializer, HttpsConfigurationService.Initializer>();
+            services.AddSingleton<TlsConfigurationLoader>();
         });
     }
 

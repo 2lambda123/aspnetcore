@@ -42,6 +42,7 @@ public class HttpsConnectionMiddlewareTests : LoggedTest
         serverOptions.ApplicationServices = new ServiceCollection()
             .AddLogging()
             .AddSingleton<IHttpsConfigurationService, HttpsConfigurationService>()
+            .AddSingleton<TlsConfigurationLoader>()
             .AddSingleton<HttpsConfigurationService.IInitializer, HttpsConfigurationService.Initializer>()
             .AddSingleton(env.Object)
             .AddSingleton(new KestrelMetrics(new TestMeterFactory()))

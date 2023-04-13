@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Metrics;
 using Microsoft.Extensions.Options;
@@ -80,7 +78,7 @@ public class KestrelServer : IServer
     {
         public bool IsInitialized => true;
 
-        public void Initialize(IHostEnvironment hostEnvironment, ILogger<KestrelServer> serverLogger, ILogger<HttpsConnectionMiddleware> httpsLogger)
+        public void Initialize(TlsConfigurationLoader tlsConfigurationLoader)
         {
             // Already initialized
         }
