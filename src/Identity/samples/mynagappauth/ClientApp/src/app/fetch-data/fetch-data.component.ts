@@ -15,7 +15,7 @@ export class FetchDataComponent {
 
   public fetch() {
     this.operationFailed = false;
-    this.http.get<Effects>(this.baseUrl + 'effects', { withCredentials: true }).subscribe(result => {
+    this.http.get<Effects>(this.baseUrl + 'effects').subscribe(result => {
       this.fx = result;
       if (this.fx.username) {
         this.authenticated = true;
@@ -33,7 +33,6 @@ export class FetchDataComponent {
 
   public toggleRegister() {
     this.register = this.register ? false : true;
-                   
   };
 
   public validate(f: NgForm) {
@@ -75,8 +74,6 @@ export class FetchDataComponent {
     this.operationFailed = false;
     this.http.post(this.baseUrl + 'identity/v1/login', {
       username: uwpd.username, password: uwpd.password, cookieMode: true
-    }, {
-      withCredentials: true
     }).subscribe(_ => {
         this.authenticated = true;
         this.fetch();

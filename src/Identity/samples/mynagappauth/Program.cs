@@ -4,40 +4,22 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+using var connection = new SqliteConnection("DataSource=:memory:");
+connection.Open();
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddCors();
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAuthorization();
 
 builder.Services.AddDbContext<ApplicationDbContext>(
-    options => options.UseSqlite("Data Source=tmpauth.sqlite3"));
+    options => options.UseSqlite(connection));
 builder.Services.AddIdentityEndpoints<IdentityUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 var app = builder.Build();
-
-// demo stuff here, never do this in production
-var ctx = app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>();
-ctx.Database.EnsureDeleted();
-ctx.Database.EnsureCreated();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
-
-app.UseCors(corsBuilder => corsBuilder
-                .WithOrigins("http://localhost:4200")
-                .AllowAnyHeader().AllowAnyMethod().AllowCredentials());
-
-app.UseHttpsRedirection();
 
 app.MapGet("/effects", (ClaimsPrincipal user) =>
     new
@@ -59,8 +41,6 @@ app.MapGet("/effects", (ClaimsPrincipal user) =>
 
 app.MapGroup("/identity").MapIdentity<IdentityUser>();
 
-app.UseStaticFiles();
-
 app.Run();
 
 public class ApplicationDbContext : IdentityDbContext<IdentityUser>
@@ -68,5 +48,6 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
+        Database.EnsureCreated();
     }
 }
