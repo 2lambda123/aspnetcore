@@ -42,7 +42,7 @@ app.UseHttpsRedirection();
 app.MapGet("/effects", (ClaimsPrincipal user) =>
     new
     {
-        UserName = user?.Identity?.Name ?? string.Empty,
+        Username = user?.Identity?.Name ?? string.Empty,
         Effects = new string[]
         {
             @"c.width|=0;for(b=1e3;b--;){r=i=>i*50+550;d=r(C(b+t*2)+T(p=b/4));e=r(S(b+t/2)+T(p));x.fillStyle=R(p/2,p,b/4,0.2);x.fillRect(d,e,10,10);}",
@@ -55,13 +55,14 @@ app.MapGet("/effects", (ClaimsPrincipal user) =>
             @"for(c.width=b=1800;b;b-=20)for(d=1000;d;d-=20){x.fillStyle=R(S(b*d+t*2)*240,C(b*d+t*3)*200,S(t*4)*64+C(t*2)*64,0.2);x.fillRect(b,d,40,40);}",
              @"c.width|=0;for(i=120;i--;){p=q=1;for(j=30;j--;)p+=q,q=t/3,x.fillStyle=R(S(j)*255,C(j)*255,j*16,0.1),x.fillRect((j*p*10+i)%2e3,i+200,5,600);}",
         }
-    }).RequireAuthorization(); 
+    }).RequireAuthorization();
 
 app.MapGroup("/identity").MapIdentity<IdentityUser>();
 
 app.UseStaticFiles();
 
 app.Run();
+
 public class ApplicationDbContext : IdentityDbContext<IdentityUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)

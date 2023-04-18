@@ -132,5 +132,8 @@
       }
     }
   },
-  "defaultProject": "myngapp"
+  "defaultProject": "myngapp",
+  "cli": {
+    "analytics": false
+  }
 }

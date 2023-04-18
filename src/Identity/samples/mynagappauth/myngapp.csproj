@@ -10,22 +10,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
- <ItemGroup>
+  <ItemGroup>
     <Reference Include="Microsoft.AspNetCore" />
     <Reference Include="Microsoft.AspNetCore.Mvc" />
-   <Reference Include="Microsoft.AspNetCore.HttpsPolicy" />
-   <Reference Include="Microsoft.AspNetCore.StaticFiles" />
+    <Reference Include="Microsoft.AspNetCore.HttpsPolicy" />
+    <Reference Include="Microsoft.AspNetCore.StaticFiles" />
     <Reference Include="Microsoft.AspNetCore.Identity.Endpoints" />
     <Reference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <Reference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <Reference Include="Microsoft.AspNetCore.SpaProxy" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.SpaProxy" Version="8.0.0-preview.4.23205.4">
-      <!-- The SPA Proxy is only used at development time -->
-      <Publish>false</Publish>
-    </Reference>
-  </ItemGroup>
+  <!-- Manually include SpaProxy.targets to generate spa.proxy.json. This would be unnecessary if SpaProxy was a PackageReference. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\..\Middleware\Spa\SpaProxy\src\build\Microsoft.AspNetCore.SpaProxy.targets"/>
 
   <ItemGroup>
     <!-- Don't publish the SPA source files, but do show them in the project files list -->
@@ -34,7 +31,7 @@
     <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**" />
   </ItemGroup>
 
-    <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Debug' And !Exists('$(SpaRoot)node_modules') ">
+  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Debug' And !Exists('$(SpaRoot)node_modules') ">
     <!-- Ensure Node.js is installed -->
     <Exec Command="node --version" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="ErrorCode" />
@@ -43,7 +40,7 @@
     <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
   </Target>
-  
+
   <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
     <!-- As part of publishing, ensure the JS resources are freshly built in production mode -->
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
