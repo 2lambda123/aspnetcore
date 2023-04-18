@@ -2,6 +2,8 @@ import { Component, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { NgForm } from '@angular/forms';
 
+declare let window: any;
+
 @Component({
   selector: 'app-fetch-data',
   templateUrl: './fetch-data.component.html'
@@ -19,19 +21,21 @@ export class FetchDataComponent {
       this.fx = result;
       if (this.fx.username) {
         this.authenticated = true;
+        window.canvasStart();
       }
       else {
         this.authenticated = false;
       }
     },
-      error => {
+      _ => {
         this.authenticated = false;
         this.operationFailed = true;
-        this.operationReason = error;
+        this.operationReason = "Request for effects failed.";
       });
   }
 
-  public toggleRegister() {
+  public toggleRegister(f: NgForm) {
+    f.resetForm();
     this.register = this.register ? false : true;
   };
 
@@ -66,7 +70,7 @@ export class FetchDataComponent {
         alert('You successfully registered. Now login!');
       }, error => {
         this.operationFailed = true;
-        this.operationReason = error;
+        this.operationReason = "Registration failed.";
       });
   };
 
@@ -77,21 +81,15 @@ export class FetchDataComponent {
     }).subscribe(_ => {
         this.authenticated = true;
         this.fetch();
-      }, error => {
+      }, _ => {
         this.authenticated = false;
         this.operationFailed = true;
-        this.operationReason = error;
+        this.operationReason = "Login failed. Try again!";
       });
   };
 
   constructor(private http: HttpClient, @Inject('BASE_URL') private baseUrl: string) {
-    http.get<Effects>(baseUrl + 'effects').subscribe(result => {
-      this.fx = result;
-      if (this.fx.username) {
-        this.authenticated = true;
-      }
-    },
-      error => console.error(error));
+    this.fetch();
   }
 }
 

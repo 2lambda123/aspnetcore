@@ -1,4 +1,4 @@
-<h1 id="tableLabel">JavaScript Effects</h1>
+<h3 id="tableLabel">JavaScript Effects</h3>
 
 <p>This component demonstrates fetching data protected by auth from the server.</p>
 
@@ -11,7 +11,7 @@
             <div *ngIf="register">Confirm password: <input type="password" name="pconfirm" required ngModel></div>
             <button type="submit">{{ register ? "Register" : "Login" }}</button>
         </form>
-        <button class="btn btn-link" (click)="register = !register;f.resetForm()">Switch to {{ register ? "Login" : "Register" }}</button>
+        <button class="btn btn-link" (click)="toggleRegister(f)">Switch to {{ register ? "Login" : "Register" }}</button>
     </div>
 </div> 
 
@@ -23,10 +23,8 @@
 
     <p *ngIf="fx && fx.username">Welcome, {{ fx.username }}</p>
 
-    <div *ngIf="fx">
-      <button *ngFor="let eff of fx.effects" [attr.data-js]="eff" onclick="window.canvasStart(this.getAttribute('data-js'));">
-          &nbsp;Effect&nbsp;
-      </button>  
+    <div id="effectsHost" *ngIf="fx">
+      <div class="d-none" *ngFor="let eff of fx.effects">{{ eff }}</div>      
     </div>
 
 </div>
