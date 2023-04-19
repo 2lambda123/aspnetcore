@@ -26,7 +26,7 @@ var fx = File.ReadAllLines("./fx.js");
 app.MapGet("/effects", (ClaimsPrincipal user) =>
     new
     {
-        Username = user?.Identity?.Name ?? string.Empty,
+        Username = user.Identity?.Name ?? string.Empty,
         Effects = fx
     }).RequireAuthorization();
 

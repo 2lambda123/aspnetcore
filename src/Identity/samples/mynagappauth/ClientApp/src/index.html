@@ -17,7 +17,8 @@
             margin-top: 2em;
             width: 1920px;
             height: 1080px;
-        }</style>
+        }
+    </style>
     <script>
         const S = Math.sin;
         const C = Math.cos;
@@ -43,13 +44,6 @@
         window.canvasStart = () => setTimeout(init);
 
         function init() {
-
-            if (state.init) {
-                state.fn = state.effects[state.idx];
-                state.div.innerText = state.fn;
-                return;
-            }
-
             const wrapper = document.getElementById("effectsHost");
             const children = document.querySelectorAll("div.d-none");
 
@@ -89,8 +83,6 @@
                 eval(state.fn);
                 state.render = false;
             }
-            
-            setInterval(changeEffect, Math.floor(Math.random() * 10000 + 500));
         };
     </script>
 </body>

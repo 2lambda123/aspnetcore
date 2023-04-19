@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NgForm } from '@angular/forms';
 
 declare let window: any;
@@ -14,10 +14,14 @@ export class FetchDataComponent {
   public register: boolean = false;
   public operationFailed: boolean = false;
   public operationReason: string = "";
+  public accessToken?: string;
 
   public fetch() {
     this.operationFailed = false;
-    this.http.get<Effects>(this.baseUrl + 'effects').subscribe(result => {
+
+    let headers = this.accessToken ? { "Authorization": "Bearer " + this.accessToken } : new HttpHeaders();
+
+    this.http.get<Effects>(this.baseUrl + 'effects', { headers }).subscribe(result => {
       this.fx = result;
       if (this.fx.username) {
         this.authenticated = true;
@@ -26,12 +30,11 @@ export class FetchDataComponent {
       else {
         this.authenticated = false;
       }
-    },
-      _ => {
-        this.authenticated = false;
-        this.operationFailed = true;
-        this.operationReason = "Request for effects failed.";
-      });
+    }, _ => {
+      this.authenticated = false;
+      this.operationFailed = true;
+      this.operationReason = "Request for effects failed.";
+    });
   }
 
   public toggleRegister(f: NgForm) {
@@ -66,26 +69,31 @@ export class FetchDataComponent {
     this.http.post(this.baseUrl + 'identity/v1/register', {
       username: upwd.username, password: upwd.password
     }).subscribe(_ => {
-        this.register = false;
-        alert('You successfully registered. Now login!');
-      }, error => {
-        this.operationFailed = true;
-        this.operationReason = "Registration failed.";
-      });
+      this.register = false;
+      alert('You successfully registered. Now login!');
+    }, error => {
+      this.operationFailed = true;
+      this.operationReason = "Registration failed.";
+    });
   };
 
   public login(uwpd: UserPwd) {
+    let cookieMode = !!uwpd.cookieMode;
     this.operationFailed = false;
-    this.http.post(this.baseUrl + 'identity/v1/login', {
-      username: uwpd.username, password: uwpd.password, cookieMode: true
-    }).subscribe(_ => {
-        this.authenticated = true;
-        this.fetch();
-      }, _ => {
-        this.authenticated = false;
-        this.operationFailed = true;
-        this.operationReason = "Login failed. Try again!";
-      });
+
+    this.http.post<LoginResponse>(this.baseUrl + 'identity/v1/login', {
+      username: uwpd.username, password: uwpd.password, cookieMode: cookieMode
+    }).subscribe(response => {
+      this.authenticated = true;
+      if (!cookieMode) {
+        this.accessToken = response.access_token;
+      }
+      this.fetch();
+    }, _ => {
+      this.authenticated = false;
+      this.operationFailed = true;
+      this.operationReason = "Login failed. Try again!";
+    });
   };
 
   constructor(private http: HttpClient, @Inject('BASE_URL') private baseUrl: string) {
@@ -101,4 +109,11 @@ interface Effects {
 interface UserPwd {
   username: string;
   password: string;
+  cookieMode: boolean;
+}
+
+interface LoginResponse {
+  token_type: string;
+  access_token: string;
+  expires_in: number;
 }

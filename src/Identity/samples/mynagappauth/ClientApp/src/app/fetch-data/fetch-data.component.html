@@ -7,13 +7,14 @@
     <div>
         <form #f="ngForm" (ngSubmit)="validate(f)">
             <div>Username: <input type="text" name="username" required ngModel></div>
-            <div>Password: <input type="password" name="password" required ngModel></div>                              
-            <div *ngIf="register">Confirm password: <input type="password" name="pconfirm" required ngModel></div>
+            <div>Password: <input type="password" name="password" required ngModel></div>
+            <div *ngIf="!register">Use cookies: <input type="checkbox" name="cookieMode" ngModel></div>
+            <div *ngIf="register">Confirm password: <input type="password" name="pconfirm" required ngModel ng-true-value="true" ng-false-value="false"></div>
             <button type="submit">{{ register ? "Register" : "Login" }}</button>
         </form>
         <button class="btn btn-link" (click)="toggleRegister(f)">Switch to {{ register ? "Login" : "Register" }}</button>
     </div>
-</div> 
+</div>
 
 <div>Operation status: {{ operationFailed ? operationReason : "Success" }}</div>
 
@@ -24,7 +25,7 @@
     <p *ngIf="fx && fx.username">Welcome, {{ fx.username }}</p>
 
     <div id="effectsHost" *ngIf="fx">
-      <div class="d-none" *ngFor="let eff of fx.effects">{{ eff }}</div>      
+        <div class="d-none" *ngFor="let eff of fx.effects">{{ eff }}</div>
     </div>
 
 </div>
