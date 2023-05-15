@@ -151,9 +151,10 @@ internal static class ParsabilityHelper
             SymbolEqualityComparer.Default.Equals(returnType.TypeArguments[0].UnwrapTypeSymbol(unwrapNullable: true), containingType);
     }
 
-    internal static Bindability GetBindability(ITypeSymbol typeSymbol, WellKnownTypes wellKnownTypes, out BindabilityMethod? bindabilityMethod)
+    internal static Bindability GetBindability(ITypeSymbol typeSymbol, WellKnownTypes wellKnownTypes, out BindabilityMethod? bindabilityMethod, out ITypeSymbol? returnType)
     {
         bindabilityMethod = null;
+        returnType = null;
 
         if (IsBindableViaIBindableFromHttpContext(typeSymbol, wellKnownTypes))
         {
@@ -168,21 +169,26 @@ internal static class ParsabilityHelper
             .SelectMany(t => t.GetMembers("BindAsync"))
             .OfType<IMethodSymbol>();
 
+        IMethodSymbol? targetMethodSymbol = null;
+
         foreach (var methodSymbol in bindAsyncMethods)
         {
             if (IsBindAsyncWithParameter(methodSymbol, typeSymbol, wellKnownTypes))
             {
                 bindabilityMethod = BindabilityMethod.BindAsyncWithParameter;
+                targetMethodSymbol = methodSymbol;
                 break;
             }
             if (IsBindAsync(methodSymbol, typeSymbol, wellKnownTypes))
             {
                 bindabilityMethod = BindabilityMethod.BindAsync;
+                targetMethodSymbol = methodSymbol;
             }
         }
 
         if (bindabilityMethod is not null)
         {
+            returnType = targetMethodSymbol!.ReturnType;
             return Bindability.Bindable;
         }
 
@@ -191,7 +197,7 @@ internal static class ParsabilityHelper
         {
             var bindAsyncMethod = bindAsyncMethods.Single();
 
-            if (bindAsyncMethod.ReturnType is INamedTypeSymbol returnType && !IsReturningValueTaskOfTOrNullableT(returnType, typeSymbol, wellKnownTypes))
+            if (bindAsyncMethod.ReturnType is INamedTypeSymbol targetReturnType && !IsReturningValueTaskOfTOrNullableT(targetReturnType, typeSymbol, wellKnownTypes))
             {
                 return Bindability.InvalidReturnType;
             }

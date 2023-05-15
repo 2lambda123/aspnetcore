@@ -71,7 +71,7 @@ public sealed class RequestDelegateGenerator : IIncrementalGenerator
             codeWriter.StartBlock();
             codeWriter.WriteLine(@"Debug.Assert(options != null, ""RequestDelegateFactoryOptions not found."");");
             codeWriter.WriteLine(@"Debug.Assert(options.EndpointBuilder != null, ""EndpointBuilder not found."");");
-            codeWriter.WriteLine($"var handler = ({endpoint!.EmitHandlerDelegateType(considerOptionality: true)})del;");
+            codeWriter.WriteLine($"var handler = ({endpoint!.EmitHandlerDelegateType()})del;");
             codeWriter.WriteLine("EndpointFilterDelegate? filteredInvocation = null;");
             if (endpoint!.EmitterContext.RequiresLoggingHelper || endpoint!.EmitterContext.HasJsonBodyOrService || endpoint!.Response?.IsSerializableJsonResponse(out var _) is true)
             {
@@ -136,7 +136,7 @@ public sealed class RequestDelegateGenerator : IIncrementalGenerator
                     {
                         codeWriter.WriteLine("global::System.Collections.Generic.IEnumerable<string> httpMethods,");
                     }
-                    codeWriter.WriteLine($"global::{endpoint.EmitHandlerDelegateType()} handler,");
+                    codeWriter.WriteLine($"global::{endpoint.EmitHandlerSignatureType()} handler,");
                     codeWriter.WriteLine(@"[global::System.Runtime.CompilerServices.CallerFilePath] string filePath = """",");
                     codeWriter.WriteLine("[global::System.Runtime.CompilerServices.CallerLineNumber]int lineNumber = 0)");
                     codeWriter.Indent--;

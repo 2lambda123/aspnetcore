@@ -228,10 +228,12 @@ internal static class EndpointParameterEmitter
     internal static void EmitBindAsyncPreparation(this EndpointParameter endpointParameter, CodeWriter codeWriter)
     {
         var unwrappedType = endpointParameter.Type.UnwrapTypeSymbol(unwrapNullable: true);
+        var unwrappedReturnType = endpointParameter.BindMethodReturnType?.UnwrapTypeSymbol(unwrapNullable: true);
         var unwrappedTypeString = unwrappedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var resolveParameterInfo = endpointParameter.IsProperty
             ? endpointParameter.PropertyAsParameterInfoConstruction
             : $"parameters[{endpointParameter.Ordinal}]";
+        var unwrappedReturnTypeString = unwrappedReturnType?.ToDisplayString(EmitterConstants.DisplayFormat) ?? unwrappedTypeString;
 
         switch (endpointParameter.BindMethod)
         {
@@ -255,7 +257,7 @@ internal static class EndpointParameterEmitter
         }
         else
         {
-            codeWriter.WriteLine($"{unwrappedTypeString} {endpointParameter.EmitHandlerArgument()};");
+            codeWriter.WriteLine($"{unwrappedReturnTypeString} {endpointParameter.EmitHandlerArgument()};");
             codeWriter.WriteLine($"if ((object?){endpointParameter.EmitTempArgument()} == null)");
             codeWriter.StartBlock();
             codeWriter.WriteLine($@"logOrThrowExceptionHelper.RequiredParameterNotProvided({SymbolDisplay.FormatLiteral(endpointParameter.Type.ToDisplayString(SymbolDisplayFormat.CSharpShortErrorMessageFormat), true)}, {SymbolDisplay.FormatLiteral(endpointParameter.SymbolName, true)}, {SymbolDisplay.FormatLiteral(endpointParameter.ToMessageString(), true)});");
@@ -264,7 +266,7 @@ internal static class EndpointParameterEmitter
             codeWriter.EndBlock();
             codeWriter.WriteLine("else");
             codeWriter.StartBlock();
-            codeWriter.WriteLine($"{endpointParameter.EmitHandlerArgument()} = ({unwrappedTypeString}){endpointParameter.EmitTempArgument()};");
+            codeWriter.WriteLine($"{endpointParameter.EmitHandlerArgument()} = {endpointParameter.EmitTempArgument()};");
             codeWriter.EndBlock();
         }
     }

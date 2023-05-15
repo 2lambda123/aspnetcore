@@ -12,15 +12,24 @@ namespace Microsoft.AspNetCore.Http.RequestDelegateGenerator.StaticRouteHandlerM
 
 internal static class StaticRouteHandlerModelEmitter
 {
-    public static string EmitHandlerDelegateType(this Endpoint endpoint, bool considerOptionality = false)
+    public static string EmitHandlerSignatureType(this Endpoint endpoint)
+    {
+        var parameterTypeList = string.Join(", ", endpoint.Parameters.Select(p => p.Type.ToDisplayString(EmitterConstants.DisplayFormat)));
+        return endpoint.EmitHandlerTypeHelper(parameterTypeList);
+    }
+
+    public static string EmitHandlerDelegateType(this Endpoint endpoint)
+    {
+        var parameterTypeList = string.Join(", ", endpoint.Parameters.Select(p => (p.BindMethodReturnType ?? p.Type).ToDisplayString(p.IsOptional ? NullableFlowState.MaybeNull : NullableFlowState.NotNull, EmitterConstants.DisplayFormat)));
+        return endpoint.EmitHandlerTypeHelper(parameterTypeList);
+    }
+
+    private static string EmitHandlerTypeHelper(this Endpoint endpoint, string parameterTypeList)
     {
         if (endpoint.Parameters.Length == 0)
         {
             return endpoint.Response == null || (endpoint.Response.HasNoResponse && !endpoint.Response.IsAwaitable) ? "System.Action" : $"System.Func<{endpoint.Response.WrappedResponseType}>";
         }
-        var parameterTypeList = string.Join(", ", endpoint.Parameters.Select(p => considerOptionality
-            ? p.Type.ToDisplayString(p.IsOptional ? NullableFlowState.MaybeNull : NullableFlowState.NotNull, EmitterConstants.DisplayFormat)
-            : p.Type.ToDisplayString(EmitterConstants.DisplayFormat)));
 
         if (endpoint.Response == null || (endpoint.Response.HasNoResponse && !endpoint.Response.IsAwaitable))
         {
@@ -388,7 +397,7 @@ internal static class StaticRouteHandlerModelEmitter
 
         for (var i = 0; i < endpoint.Parameters.Length; i++)
         {
-            sb.Append(endpoint.Parameters[i].Type.ToDisplayString(endpoint.Parameters[i].IsOptional ? NullableFlowState.MaybeNull : NullableFlowState.NotNull, EmitterConstants.DisplayFormat));
+            sb.Append((endpoint.Parameters[i].BindMethodReturnType ?? endpoint.Parameters[i].Type).ToDisplayString(endpoint.Parameters[i].IsOptional ? NullableFlowState.MaybeNull : NullableFlowState.NotNull, EmitterConstants.DisplayFormat));
 
             if (i < endpoint.Parameters.Length - 1)
             {

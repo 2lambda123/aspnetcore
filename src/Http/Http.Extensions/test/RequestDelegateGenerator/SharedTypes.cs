@@ -946,3 +946,23 @@ public class Attribute1 : Attribute
 public class Attribute2 : Attribute
 {
 }
+
+#nullable enable
+public class Validated<TValue>
+{
+    public Validated(TValue? value)
+    {
+        Value = value;
+    }
+
+    public TValue? Value { get; }
+    public static async ValueTask<Validated<TValue?>> BindAsync(HttpContext context, ParameterInfo parameter)
+    {
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        ArgumentNullException.ThrowIfNull(parameter, nameof(parameter));
+
+        await Task.CompletedTask;
+
+        return new Validated<TValue?>(default);
+    }
+}

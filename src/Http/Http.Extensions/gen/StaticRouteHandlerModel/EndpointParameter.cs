@@ -190,12 +190,13 @@ internal class EndpointParameter
             LookupName = symbol.Name;
             AssigningCode = "httpContext.Request.Form";
         }
-        else if (HasBindAsync(Type, wellKnownTypes, out var bindMethod))
+        else if (HasBindAsync(Type, wellKnownTypes, out var bindMethod, out var returnType))
         {
             endpoint.IsAwaitable = true;
             endpoint.EmitterContext.RequiresPropertyAsParameterInfo = IsProperty && bindMethod is BindabilityMethod.BindAsyncWithParameter or BindabilityMethod.IBindableFromHttpContext;
             Source = EndpointParameterSource.BindAsync;
             BindMethod = bindMethod;
+            BindMethodReturnType = ((INamedTypeSymbol)returnType!).TypeArguments[0];
         }
         else if (Type.SpecialType == SpecialType.System_String)
         {
@@ -273,11 +274,12 @@ internal class EndpointParameter
     public bool IsStringValues { get; set; }
 
     public BindabilityMethod? BindMethod { get; set; }
+    public ITypeSymbol? BindMethodReturnType { get; set; }
 
-    private static bool HasBindAsync(ITypeSymbol typeSymbol, WellKnownTypes wellKnownTypes, [NotNullWhen(true)] out BindabilityMethod? bindMethod)
+    private static bool HasBindAsync(ITypeSymbol typeSymbol, WellKnownTypes wellKnownTypes, [NotNullWhen(true)] out BindabilityMethod? bindMethod, out ITypeSymbol? returnType)
     {
         var parameterType = typeSymbol.UnwrapTypeSymbol(unwrapArray: true, unwrapNullable: true);
-        return ParsabilityHelper.GetBindability(parameterType, wellKnownTypes, out bindMethod) == Bindability.Bindable;
+        return ParsabilityHelper.GetBindability(parameterType, wellKnownTypes, out bindMethod, out returnType) == Bindability.Bindable;
     }
 
     private static bool TryGetArrayElementType(ITypeSymbol type, [NotNullWhen(true)]out ITypeSymbol elementType)

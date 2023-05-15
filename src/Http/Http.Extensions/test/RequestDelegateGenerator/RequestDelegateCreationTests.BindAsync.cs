@@ -195,4 +195,21 @@ app.MapGet("/", (HttpContext httpContext, MyBindAsyncTypeThatThrows myBindAsyncP
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => endpoint.RequestDelegate(httpContext));
         Assert.Equal("BindAsync failed", ex.Message);
     }
+
+    [Fact]
+    public async Task MapAction_BindAsync_MixedNullability()
+    {
+        var source = """
+app.MapGet("/", (HttpContext httpContext, Validated<string> bindAsync) => httpContext.Items["value"] = bindAsync);
+""";
+        var (_, compilation) = await RunGeneratorAsync(source);
+        var endpoint = GetEndpointFromCompilation(compilation);
+
+        var httpContext = CreateHttpContext();
+
+        await endpoint.RequestDelegate(httpContext);
+
+        var boundValue = Assert.IsType<Validated<string>>(httpContext.Items["value"]);
+        Assert.Null(boundValue.Value);
+    }
 }
