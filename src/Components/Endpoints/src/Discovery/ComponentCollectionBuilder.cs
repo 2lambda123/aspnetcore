@@ -3,6 +3,10 @@
 
 namespace Microsoft.AspNetCore.Components;
 
+/// <summary>
+/// Represents the list of components defined in a <see cref="ComponentApplicationBuilder"/>
+/// before the configuration has finalized.
+/// </summary>
 public class ComponentCollectionBuilder
 {
     private readonly List<ComponentBuilder> _components = new();

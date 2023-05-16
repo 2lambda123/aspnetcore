@@ -3,17 +3,28 @@
 
 namespace Microsoft.AspNetCore.Components;
 
+/// <summary>
+/// Represents a discovered component.
+/// </summary>
 public class ComponentBuilder : IEquatable<ComponentBuilder?>
 {
+    /// <summary>
+    /// Gets or sets the source for the component.
+    /// </summary>
     public string? Source { get; set; }
 
+    /// <summary>
+    /// Gets or sets the component type.
+    /// </summary>
     public Type? ComponentType { get; set; }
 
+    /// <inheritdoc/>
     public override bool Equals(object? obj)
     {
         return Equals(obj as ComponentBuilder);
     }
 
+    /// <inheritdoc/>
     public bool Equals(ComponentBuilder? other)
     {
         return other is not null &&
@@ -21,6 +32,7 @@ public class ComponentBuilder : IEquatable<ComponentBuilder?>
                EqualityComparer<Type>.Default.Equals(ComponentType, other.ComponentType);
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         return HashCode.Combine(Source, ComponentType);

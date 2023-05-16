@@ -8,7 +8,6 @@ using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Endpoints.Generator;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Testing;
@@ -71,7 +70,7 @@ public abstract class ComponentEndpointsGeneratorTestBase : LoggedTest
         return project.GetCompilationAsync();
     }
 
-    protected static async Task<MetadataReference> CreateClassLibraryAsync(string name, string source, MetadataReference[] references = null)
+    protected static async Task<(MetadataReference, byte[])> CreateClassLibraryAsync(string name, string source, MetadataReference[] references = null)
     {
         var project = CreateProject(name);
         project = project.AddMetadataReferences(references ?? Array.Empty<MetadataReference>());
@@ -82,7 +81,7 @@ public abstract class ComponentEndpointsGeneratorTestBase : LoggedTest
         Assert.True(result.Success);
         memoryStream.Position = 0;
         var library = MetadataReference.CreateFromStream(memoryStream);
-        return library;
+        return (library, memoryStream.ToArray());
     }
 
     protected static Project CreateProject(string name = null, MetadataReference[] references = null, ProjectReference[] projectReferences = null)
@@ -217,7 +216,7 @@ Actual Line:
         return true;
     }
 
-    internal TestServer GetTestServer(Compilation compilation)
+    internal TestServer GetTestServer(Compilation compilation, params byte[][] otherLibraries)
     {
         var assemblyName = compilation.AssemblyName!;
         var symbolsName = Path.ChangeExtension(assemblyName, "pdb");
@@ -256,8 +255,17 @@ Actual Line:
         output.Position = 0;
         pdb.Position = 0;
 
+        foreach (var bytes in otherLibraries)
+        {
+            var stream = new MemoryStream(bytes)
+            {
+                Position = 0
+            };
+            AssemblyLoadContext.Default.LoadFromStream(stream);
+        }
+        
         var assembly = AssemblyLoadContext.Default.LoadFromStream(output, pdb);
-        var builder = WebHostBuilderFactory.CreateFromTypesAssemblyEntryPoint<TEntryPoint>(Array.Empty<string>());
+        var builder = WebHostBuilderFactory.CreateFromAssemblyEntryPoint(assembly, Array.Empty<string>());
 
         if (builder is not null)
         {

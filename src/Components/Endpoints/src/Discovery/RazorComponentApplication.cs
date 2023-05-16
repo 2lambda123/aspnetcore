@@ -25,5 +25,8 @@ public class RazorComponentApplication
     /// <returns>The list of pages.</returns>
     public IReadOnlyList<PageComponentInfo> Pages => _pages;
 
+    /// <summary>
+    /// Gets the list of <see cref="ComponentInfo"/> associated with the application.
+    /// </summary>
     public IReadOnlyList<ComponentInfo> Components => _components;
 }

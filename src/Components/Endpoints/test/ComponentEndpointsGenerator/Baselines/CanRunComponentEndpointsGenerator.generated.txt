@@ -54,7 +54,7 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         {
             Source = source,
             PageType = typeof(global::DirectDependency.Counter),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
+            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/dependency" }
         };
     }
 
@@ -69,7 +69,7 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         {
             Source = source,
             PageType = typeof(global::MyApp.MyAppComponent),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
+            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/app" }
         };
     }
 

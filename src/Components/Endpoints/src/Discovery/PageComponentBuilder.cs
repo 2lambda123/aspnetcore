@@ -4,13 +4,21 @@
 using System.Linq;
 
 namespace Microsoft.AspNetCore.Components;
-
+/// <summary>
+/// Initializes a new instance of <see cref="PageComponentBuilder"/>.
+/// </summary>
 public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
 {
     private List<string>? _routeTemplates;
 
+    /// <summary>
+    /// Gets or sets the source for this page component.
+    /// </summary>
     public string? Source { get; set; }
 
+    /// <summary>
+    /// Gets or sets the route templates for this page component.
+    /// </summary>
     public List<string>? RouteTemplates
     {
         get => _routeTemplates;
@@ -21,18 +29,28 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
         }
     }
 
+    /// <summary>
+    /// Gets or sets the page type.
+    /// </summary>
     public Type? PageType { get; set; }
 
-    public bool HasSource(string name)
+    /// <summary>
+    /// Compares the given <paramref name="source"/> against the source for this <see cref="PageComponentBuilder"/>.
+    /// </summary>
+    /// <param name="source">The source to compare against.</param>
+    /// <returns><c>true</c> when it has the same source; false otherwise.</returns>
+    public bool HasSource(string source)
     {
-        return string.Equals(Source, name, StringComparison.Ordinal);
+        return string.Equals(Source, source, StringComparison.Ordinal);
     }
 
+    /// <inheritdoc/>
     public override bool Equals(object? obj)
     {
         return Equals(obj as PageComponentBuilder);
     }
 
+    /// <inheritdoc/>
     public bool Equals(PageComponentBuilder? other)
     {
         return other is not null &&
@@ -42,6 +60,7 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
                EqualityComparer<Type>.Default.Equals(PageType, other.PageType);
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hash = new HashCode();

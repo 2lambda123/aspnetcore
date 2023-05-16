@@ -1,6 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-using Microsoft.AspNetCore.Mvc.Testing;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -14,11 +14,11 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
     [Fact]
     public async Task CanRunComponentEndpointsGenerator()
     {
-        var transitive = await CreateClassLibraryAsync(
+        var (transitive, transitiveBytes) = await CreateClassLibraryAsync(
             "TransitiveDependency",
             TestComponent("TransitiveDependency", "TransitiveDependencyComponent"));
 
-        var library = await CreateClassLibraryAsync(
+        var (library, libraryBytes) = await CreateClassLibraryAsync(
             "DirectDependency",
             TestComponent("DirectDependency", "Counter", "[Route(\"/dependency\")]"),
             new MetadataReference[] { transitive });
@@ -41,46 +41,69 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
         Assert.Empty(results.Diagnostics);
         await VerifyAgainstBaselineUsingFile(compilation);
 
-        var server = GetTestServer(compilation);
+        var server = GetTestServer(compilation, transitiveBytes, libraryBytes);
         Assert.NotNull(server);
         var client = server.CreateClient();
-        var response = await client.GetStringAsync("/counter");
-        Assert.NotNull(response);
+        var response = await client.GetStringAsync("/dependency");
+        Assert.Contains("<h1>Counter</h1>", response);
     }
 
     private string GetProgram(string programNamespace)
     {
         return $$"""
 using {{programNamespace}};
+using System.Threading.Tasks;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddRazorComponents();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+internal class Program
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    private static async Task Main(string[] args)
+    {
+        var builder = CreateWebHostBuilder(args);
+
+        var host = builder.Build();
+
+        await host.RunAsync();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+        WebHost.CreateDefaultBuilder(args)
+            .UseStartup<Startup>();
 }
 
-app.UseHttpsRedirection();
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRazorComponents();
+    }
 
-app.UseStaticFiles();
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
+    {
+        // Configure the HTTP request pipeline.
+        if (!environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Error");
+            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            app.UseHsts();
+        }
 
-app.UseRouting();
+        app.UseHttpsRedirection();
 
-app.MapRazorComponents<App>();
+        app.UseRouting();
 
-app.Run();
-            
+        app.UseStaticFiles();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapRazorComponents<App>();
+        });
+    }
+}    
 """;
     }
 
@@ -249,6 +272,10 @@ namespace {{componentNamespace}};
 {{(route == null ? "" : route)}}
 public class {{componentName}} : ComponentBase
 {
+    protected override void BuildRenderTree(global::Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder)
+    {
+        __builder.AddMarkupContent(0, "<h1>{{componentName}}</h1>");
+    }
 }
 """;
     }

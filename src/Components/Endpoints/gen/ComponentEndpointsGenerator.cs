@@ -126,20 +126,22 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
             .Where(FilterAssemblies)
             .Select(static (c, _) => c.Left);
 
-        var getLibraryComponentMethodThunks =
-            assembliesReferencingComponents.Select(static (arc, ct) => Emitter.CreateGetLibraryMethodThunk(arc));
+        var getLibraryComponentMethodThunks = assembliesReferencingComponents
+            .Select(static (arc, ct) => Emitter.CreateGetLibraryMethodThunk(arc));
 
         var appGetLibraryComponentMethodThunk = context.CompilationProvider
             .Select(static (c, ct) => Emitter.CreateGetLibraryMethodThunk(c.Assembly));
 
-        var referencesGetLibraryThunk =
-            assembliesReferencingComponents
+        var referencesGetLibraryThunk = assembliesReferencingComponents
             .Select(static (arc, ct) => Emitter.CreateLibraryThunk(arc));
 
         var appGetLibraryThunk = context.CompilationProvider
             .Select(static (c, ct) => Emitter.CreateLibraryThunk(c.Assembly));
 
-        var getBuilderThunk = referencesGetLibraryThunk.Collect().Combine(appGetLibraryThunk).Select(static (t, ct) => t.Left.Add(t.Right))
+        var getBuilderThunk = referencesGetLibraryThunk
+            .Collect()
+            .Combine(appGetLibraryThunk)
+            .Select(static (t, ct) => t.Left.Add(t.Right))
             .Select(static (getLibraryThunks, ct) => Emitter.CreateGetBuilderThunk(getLibraryThunks));
 
         var referencedAssembliesComponents = assembliesReferencingComponents
@@ -435,10 +437,6 @@ public class ComponentCollector : SymbolVisitor
         return false;
     }
 }
-
-public record ComponentsCompilationContext(
-    INamedTypeSymbol ComponentInterface,
-    INamedTypeSymbol RouteAttribute);
 
 public record ComponentModel(INamedTypeSymbol Component, AttributeData? RouteAttribute)
 {

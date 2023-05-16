@@ -4,6 +4,7 @@
     <TargetFramework>$(DefaultNetCoreTargetFramework)</TargetFramework>
     <RazorLangVersion>8.0</RazorLangVersion>
     <PreserveCompilationContext>true</PreserveCompilationContext>
+    <NoWarn>CS8632</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

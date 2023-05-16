@@ -3,30 +3,51 @@
 
 using BlazorUnitedApp;
 using BlazorUnitedApp.Data;
+using Microsoft.AspNetCore;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddRazorComponents();
-
-builder.Services.AddSingleton<WeatherForecastService>();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+internal class Program
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    private static async Task Main(string[] args)
+    {
+        var builder = CreateWebHostBuilder(args);
+
+        var host = builder.Build();
+
+        await host.RunAsync();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+        WebHost.CreateDefaultBuilder(args)
+            .UseStartup<Startup>();
 }
 
-app.UseHttpsRedirection();
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRazorComponents();
+        services.AddSingleton<WeatherForecastService>();
+    }
 
-app.UseStaticFiles();
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
+    {
+        // Configure the HTTP request pipeline.
+        if (!environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Error");
+            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            app.UseHsts();
+        }
 
-app.UseRouting();
+        app.UseHttpsRedirection();
 
-app.MapRazorComponents<App>();
+        app.UseRouting();
 
-app.Run();
+        app.UseStaticFiles();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapRazorComponents<App>();
+        });
+    }
+}

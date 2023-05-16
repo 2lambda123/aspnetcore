@@ -5,11 +5,14 @@ using System.Buffers;
 
 namespace Microsoft.AspNetCore.Components;
 
+/// <summary>
+/// Represents the list of pages in a <see cref="ComponentApplicationBuilder"/>.
+/// </summary>
 public class PageCollectionBuilder
 {
     private readonly List<PageComponentBuilder> _pages = new();
 
-    public void Combine(PageCollectionBuilder pages)
+    internal void Combine(PageCollectionBuilder pages)
     {
         for (var i = 0; i < pages._pages.Count; i++)
         {
@@ -32,7 +35,7 @@ public class PageCollectionBuilder
         }
     }
 
-    public void Exclude(PageCollectionBuilder pages)
+    internal void Exclude(PageCollectionBuilder pages)
     {
         for (var i = 0; i < pages._pages.Count; i++)
         {
@@ -49,7 +52,7 @@ public class PageCollectionBuilder
         }
     }
 
-    public void RemoveFromAssembly(string name)
+    internal void RemoveFromAssembly(string name)
     {
         for (var i = _pages.Count - 1; i > 0; i--)
         {
@@ -85,6 +88,24 @@ public class PageCollectionBuilder
         }
 
         return list.ToArray();
+    }
+
+    private static IReadOnlyList<object> ResolveMetadata(Type componentType, MetadataBuffer buffer)
+    {
+        // We remove the route attribute since it is captured on the endpoint.
+        // This is similar to how MVC behaves.
+        var attributes = componentType.GetCustomAttributes(inherit: true);
+        buffer.Reset(attributes.Length);
+        foreach (var attribute in attributes)
+        {
+            if (attribute is RouteAttribute)
+            {
+                continue;
+            }
+            buffer.Add(attribute);
+        }
+
+        return buffer.ToArray();
     }
 
     private ref struct MetadataBuffer
@@ -128,23 +149,5 @@ public class PageCollectionBuilder
             Buffer.AsSpan(0, Count).CopyTo(result.AsSpan());
             return result;
         }
-    }
-
-    private IReadOnlyList<object> ResolveMetadata(Type componentType, MetadataBuffer buffer)
-    {
-        // We remove the route attribute since it is captured on the endpoint.
-        // This is similar to how MVC behaves.
-        var attributes = componentType.GetCustomAttributes(inherit: true);
-        buffer.Reset(attributes.Length);
-        foreach (var attribute in attributes)
-        {
-            if (attribute is RouteAttribute)
-            {
-                continue;
-            }
-            buffer.Add(attribute);
-        }
-
-        return buffer.ToArray();
     }
 }
