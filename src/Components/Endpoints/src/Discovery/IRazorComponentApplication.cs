@@ -6,26 +6,20 @@ using System.Reflection;
 
 namespace Microsoft.AspNetCore.Components;
 
-/// <summary>
-/// The definition of a Razor Components Application.
-/// </summary>
-/// <remarks>
-/// Typically the top level component (like the App component or the MainLayout component)
-/// for the application implements this interface.
-/// </remarks>
-/// <typeparam name="TComponent">The component used to define the application.</typeparam>
-public interface IRazorComponentApplication<TComponent>
-    where TComponent : IRazorComponentApplication<TComponent>
+internal interface IRazorComponentApplication
 {
-    /// <summary>
-    /// Creates a builder that can be used to customize the definition of the application.
-    /// For example, to add or remove pages, change routes, etc.
-    /// </summary>
-    /// <returns>
-    /// The <see cref="ComponentApplicationBuilder"/> associated with the application
-    /// definition.
-    /// </returns>
-    static virtual ComponentApplicationBuilder GetBuilder()
+    ComponentApplicationBuilder GetBuilder();
+}
+
+internal class DefaultRazorComponentApplication<TComponent> : IRazorComponentApplication
+{
+    public static IRazorComponentApplication Instance { get; } = new DefaultRazorComponentApplication<TComponent>();
+
+    public DefaultRazorComponentApplication()
+    {
+    }
+
+    public ComponentApplicationBuilder GetBuilder()
     {
         var builder = new ComponentApplicationBuilder();
         // TODO: We'll have to figure out the exact API shape here
@@ -48,32 +42,40 @@ public interface IRazorComponentApplication<TComponent>
         // endpoint metadata.
         // We might expose something like the PageCollection or PageFeature in the future
         // so that users can decide the list of things that get considered as endpoints.
-        builder.AddAssembly(typeof(TComponent).Assembly.FullName!);
-        builder.RegisterPages(new PageCollection(CreatePageRouteCollection()));
-
+        var libraryName = typeof(TComponent).Assembly.FullName!;
+        var (pages, components) = CreatePageRouteCollection(libraryName);
+        builder.AddLibrary(new ComponentLibraryBuilder(
+            libraryName,
+            pages,
+            components));
         return builder;
 
-        static IEnumerable<PageDefinition> CreatePageRouteCollection()
+        static (IEnumerable<PageComponentBuilder>, IEnumerable<ComponentBuilder>) CreatePageRouteCollection(string name)
         {
             var exported = typeof(TComponent).Assembly.GetExportedTypes();
+            var pages = new List<PageComponentBuilder>();
+            var components = new List<ComponentBuilder>();
+
             for (var i = 0; i < exported.Length; i++)
             {
                 var candidate = exported[i];
-                if (candidate.IsAssignableTo(typeof(IComponent)) &&
-                    // Note that this does not support multiple routes, which is
-                    // something someone could do with an explicit [Route] attribute
-                    // definition.
-                    candidate.GetCustomAttribute<RouteAttribute>() is { } route)
+                if (candidate.IsAssignableTo(typeof(IComponent)))
                 {
-                    yield return new PageDefinition(
-                        candidate.FullName!,
-                        candidate,
-                        route.Template,
-                        // We remove the route attribute since it is captured on the endpoint.
-                        // This is similar to how MVC behaves.
-                        candidate.GetCustomAttributes(inherit: true).Except(Enumerable.Repeat(route, 1)).ToArray());
-                };
+                    if (candidate.GetCustomAttributes<RouteAttribute>() is { } route)
+                    {
+                        pages.Add(new PageComponentBuilder()
+                        {
+                            RouteTemplates = route.Select(r => r.Template).ToList(),
+                            Source = name,
+                            PageType = candidate
+                        });
+                    }
+
+                    components.Add(new ComponentBuilder() { Source = name, ComponentType = candidate });
+                }
             }
+
+            return (pages, components);
         }
     }
 }

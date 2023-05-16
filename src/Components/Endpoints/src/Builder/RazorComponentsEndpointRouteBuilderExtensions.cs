@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Linq;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Endpoints;
 using Microsoft.AspNetCore.Components.Infrastructure;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +23,6 @@ public static class RazorComponentsEndpointRouteBuilderExtensions
     /// <param name="endpoints"></param>
     /// <returns></returns>
     public static RazorComponentEndpointConventionBuilder MapRazorComponents<TRootComponent>(this IEndpointRouteBuilder endpoints)
-        where TRootComponent : IRazorComponentApplication<TRootComponent>
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
@@ -66,7 +64,6 @@ public static class RazorComponentsEndpointRouteBuilderExtensions
     }
 
     private static RazorComponentEndpointDataSource<TRootComponent> GetOrCreateDataSource<TRootComponent>(IEndpointRouteBuilder endpoints)
-        where TRootComponent : IRazorComponentApplication<TRootComponent>
     {
         var dataSource = endpoints.DataSources.OfType<RazorComponentEndpointDataSource<TRootComponent>>().FirstOrDefault();
         if (dataSource == null)

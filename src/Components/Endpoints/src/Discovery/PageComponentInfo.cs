@@ -6,16 +6,16 @@ namespace Microsoft.AspNetCore.Components;
 /// <summary>
 /// The definition for a page, including the type and the associated routes.
 /// </summary>
-public class PageDefinition
+public class PageComponentInfo
 {
     /// <summary>
-    /// Initializes a new instance of <see cref="PageDefinition"/>.
+    /// Initializes a new instance of <see cref="PageComponentInfo"/>.
     /// </summary>
     /// <param name="displayName">The name for the page. Used for logging and debug purposes across the system.</param>
     /// <param name="type">The page <see cref="System.Type"/>.</param>
     /// <param name="route">The see list of routes for the page.</param>
     /// <param name="metadata">The page metadata.</param>
-    internal PageDefinition(
+    internal PageComponentInfo(
         string displayName,
         Type type,
         string route,

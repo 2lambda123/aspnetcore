@@ -25,13 +25,12 @@ public class RazorComponentEndpointDataSourceTest
     }
 
     private RazorComponentEndpointDataSource<TComponent> CreateDataSource<TComponent>()
-        where TComponent : IRazorComponentApplication<TComponent>
     {
-        return new RazorComponentEndpointDataSource<TComponent>(TComponent.GetBuilder(), new RazorComponentEndpointFactory());
+        return new RazorComponentEndpointDataSource<TComponent>(DefaultRazorComponentApplication<TComponent>.Instance.GetBuilder(), new RazorComponentEndpointFactory());
     }
 }
 
-public class CustomApp : IComponent, IRazorComponentApplication<CustomApp>
+public class CustomApp : IComponent
 {
     public void Attach(RenderHandle renderHandle)
     {
@@ -42,14 +41,9 @@ public class CustomApp : IComponent, IRazorComponentApplication<CustomApp>
     {
         throw new NotImplementedException();
     }
-
-    static ComponentApplicationBuilder IRazorComponentApplication<CustomApp>.GetBuilder()
-    {
-        return new ComponentApplicationBuilder();
-    }
 }
 
-public class App : IComponent, IRazorComponentApplication<App>
+public class App : IComponent
 {
     public void Attach(RenderHandle renderHandle)
     {

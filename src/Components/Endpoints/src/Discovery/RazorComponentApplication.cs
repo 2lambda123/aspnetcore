@@ -8,19 +8,22 @@ namespace Microsoft.AspNetCore.Components;
 /// </summary>
 public class RazorComponentApplication
 {
-    private readonly PageCollection _pageCollection;
+    private readonly PageComponentInfo[] _pages;
+    private readonly ComponentInfo[] _components;
 
-    // TODO: we define the concepts explicitly (like the collection of pages)
-    // In the future we need to decide if we want to do generalize this concept and use
-    // something "generic" like a list of "features".
-    internal RazorComponentApplication(PageCollection pagesCollection)
+    internal RazorComponentApplication(
+        PageComponentInfo[] pageCollection,
+        ComponentInfo[] componentCollection)
     {
-        _pageCollection = pagesCollection;
+        _pages = pageCollection;
+        _components = componentCollection;
     }
 
     /// <summary>
-    /// Gets the list of <see cref="PageDefinition"/> associated with the application.
+    /// Gets the list of <see cref="PageComponentInfo"/> associated with the application.
     /// </summary>
     /// <returns>The list of pages.</returns>
-    public IEnumerable<PageDefinition> Pages => _pageCollection.Pages;
+    public IReadOnlyList<PageComponentInfo> Pages => _pages;
+
+    public IReadOnlyList<ComponentInfo> Components => _components;
 }
