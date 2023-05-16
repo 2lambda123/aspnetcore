@@ -369,21 +369,6 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
     }
 }
 
-internal class AssemblyModel
-{
-    private IAssemblySymbol _assembly;
-    private ImmutableArray<ComponentModel>? _components;
-
-    public AssemblyModel(IAssemblySymbol assembly, ImmutableArray<ComponentModel> components)
-    {
-        Assembly = assembly;
-        Components = components;
-    }
-
-    public IAssemblySymbol Assembly { get => _assembly; set => _assembly = value; }
-    public ImmutableArray<ComponentModel>? Components { get => _components; set => _components = value; }
-}
-
 public class ComponentCollector : SymbolVisitor
 {
     public ComponentCollector(INamedTypeSymbol componentsInterface, INamedTypeSymbol routeAttribute)

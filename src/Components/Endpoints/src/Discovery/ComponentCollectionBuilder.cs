@@ -74,7 +74,7 @@ public class ComponentCollectionBuilder
         for (var i = 0; i < _components.Count; i++)
         {
             var componentType = _components[i];
-            result[i] = new ComponentInfo(componentType.ComponentType);
+            result[i] = new ComponentInfo(componentType.ComponentType!);
         }
 
         return result;

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -19,7 +20,7 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
 
         var library = await CreateClassLibraryAsync(
             "DirectDependency",
-            TestComponent("DirectDependency", "Counter", "[Route(\"/counter\")]"),
+            TestComponent("DirectDependency", "Counter", "[Route(\"/dependency\")]"),
             new MetadataReference[] { transitive });
 
         var project = CreateProject("UnitedApp", new MetadataReference[] { library, transitive });
@@ -35,10 +36,16 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
         project = project.WithCompilationOptions(new CSharpCompilationOptions(OutputKind.ConsoleApplication)
             .WithNullableContextOptions(NullableContextOptions.Enable));
 
-        var (generatorRunResult, compilation) = await RunGeneratorAsync(TestComponent("MyApp", "MyAppComponent", "[Route(\"/counter\")]"), project);
+        var (generatorRunResult, compilation) = await RunGeneratorAsync(TestComponent("MyApp", "MyAppComponent", "[Route(\"/app\")]"), project);
         var results = Assert.IsType<GeneratorRunResult>(generatorRunResult);
         Assert.Empty(results.Diagnostics);
         await VerifyAgainstBaselineUsingFile(compilation);
+
+        var server = GetTestServer(compilation);
+        Assert.NotNull(server);
+        var client = server.CreateClient();
+        var response = await client.GetStringAsync("/counter");
+        Assert.NotNull(response);
     }
 
     private string GetProgram(string programNamespace)

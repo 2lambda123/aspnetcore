@@ -7,7 +7,7 @@ namespace Microsoft.AspNetCore.Components;
 
 public class PageCollectionBuilder
 {
-    private List<PageComponentBuilder> _pages;
+    private readonly List<PageComponentBuilder> _pages = new();
 
     public void Combine(PageCollectionBuilder pages)
     {
@@ -78,9 +78,9 @@ public class PageCollectionBuilder
         for (var i = 0; i < _pages.Count; i++)
         {
             var page = _pages[i];
-            foreach (var route in page.RouteTemplates)
+            foreach (var route in page.RouteTemplates!)
             {
-                list.Add(new PageComponentInfo(route, page.PageType, route, ResolveMetadata(page.PageType, buffer)));
+                list.Add(new PageComponentInfo(route, page.PageType!, route, ResolveMetadata(page.PageType!, buffer)));
             }
         }
 

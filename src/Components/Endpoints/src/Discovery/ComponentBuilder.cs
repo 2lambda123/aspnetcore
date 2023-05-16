@@ -1,13 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 namespace Microsoft.AspNetCore.Components;
 
 public class ComponentBuilder : IEquatable<ComponentBuilder?>
 {
-    public string Source { get; set; }
+    public string? Source { get; set; }
 
-    public Type ComponentType { get; set; }
+    public Type? ComponentType { get; set; }
 
     public override bool Equals(object? obj)
     {
@@ -18,7 +18,7 @@ public class ComponentBuilder : IEquatable<ComponentBuilder?>
     {
         return other is not null &&
                Source == other.Source &&
-               ComponentType.Equals(other.ComponentType);
+               EqualityComparer<Type>.Default.Equals(ComponentType, other.ComponentType);
     }
 
     public override int GetHashCode()

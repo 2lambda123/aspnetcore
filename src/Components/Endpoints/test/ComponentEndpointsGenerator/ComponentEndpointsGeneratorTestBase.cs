@@ -3,14 +3,22 @@
 
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Endpoints.Generator;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Testing;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.DependencyModel.Resolution;
+using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.AspNetCore.Components.Endpoints.Tests;
 
@@ -207,6 +215,57 @@ Actual Line:
         }
         message = string.Empty;
         return true;
+    }
+
+    internal TestServer GetTestServer(Compilation compilation)
+    {
+        var assemblyName = compilation.AssemblyName!;
+        var symbolsName = Path.ChangeExtension(assemblyName, "pdb");
+
+        var output = new MemoryStream();
+        var pdb = new MemoryStream();
+
+        var emitOptions = new EmitOptions(
+            debugInformationFormat: DebugInformationFormat.PortablePdb,
+            pdbFilePath: symbolsName,
+            outputNameOverride: $"TestProject-{Guid.NewGuid()}");
+
+        var embeddedTexts = new List<EmbeddedText>();
+
+        // Make sure we embed the sources in pdb for easy debugging
+        foreach (var syntaxTree in compilation.SyntaxTrees)
+        {
+            var text = syntaxTree.GetText();
+            var encoding = text.Encoding ?? Encoding.UTF8;
+            var buffer = encoding.GetBytes(text.ToString());
+            var sourceText = SourceText.From(buffer, buffer.Length, encoding, canBeEmbedded: true);
+
+            var syntaxRootNode = (CSharpSyntaxNode)syntaxTree.GetRoot();
+            var newSyntaxTree = CSharpSyntaxTree.Create(syntaxRootNode, options: null, encoding: encoding, path: syntaxTree.FilePath);
+
+            compilation = compilation.ReplaceSyntaxTree(syntaxTree, newSyntaxTree);
+
+            embeddedTexts.Add(EmbeddedText.FromSource(syntaxTree.FilePath, sourceText));
+        }
+
+        var result = compilation.Emit(output, pdb, options: emitOptions, embeddedTexts: embeddedTexts);
+
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity > DiagnosticSeverity.Warning));
+        Assert.True(result.Success);
+
+        output.Position = 0;
+        pdb.Position = 0;
+
+        var assembly = AssemblyLoadContext.Default.LoadFromStream(output, pdb);
+        var builder = WebHostBuilderFactory.CreateFromTypesAssemblyEntryPoint<TEntryPoint>(Array.Empty<string>());
+
+        if (builder is not null)
+        {
+            builder.UseEnvironment(Environments.Development);
+        }
+
+        var testHost = new TestServer(builder);
+        return testHost;
     }
 
     private sealed class AppLocalResolver : ICompilationAssemblyResolver

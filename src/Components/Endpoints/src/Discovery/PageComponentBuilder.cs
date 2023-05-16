@@ -7,21 +7,21 @@ namespace Microsoft.AspNetCore.Components;
 
 public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
 {
-    private List<string> _routeTemplates;
+    private List<string>? _routeTemplates;
 
-    public string Source { get; set; }
+    public string? Source { get; set; }
 
-    public List<string> RouteTemplates
+    public List<string>? RouteTemplates
     {
         get => _routeTemplates;
         set
         {
-            value.Sort(StringComparer.Ordinal);
+            value?.Sort(StringComparer.Ordinal);
             _routeTemplates = value;
         }
     }
 
-    public Type PageType { get; set; }
+    public Type? PageType { get; set; }
 
     public bool HasSource(string name)
     {
@@ -37,7 +37,8 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
     {
         return other is not null &&
                Source == other.Source &&
-               Enumerable.SequenceEqual(RouteTemplates, other.RouteTemplates, StringComparer.OrdinalIgnoreCase) &&
+               (ReferenceEquals(RouteTemplates, other.RouteTemplates) || (RouteTemplates != null &&
+               Enumerable.SequenceEqual(RouteTemplates, other.RouteTemplates!, StringComparer.OrdinalIgnoreCase))) &&
                EqualityComparer<Type>.Default.Equals(PageType, other.PageType);
     }
 
@@ -45,9 +46,12 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
     {
         var hash = new HashCode();
         hash.Add(Source);
-        for (var i = 0; i < RouteTemplates.Count; i++)
+        if (RouteTemplates != null)
         {
-            hash.Add(RouteTemplates[i]);
+            for (var i = 0; i < RouteTemplates.Count; i++)
+            {
+                hash.Add(RouteTemplates[i]);
+            }
         }
         hash.Add(PageType);
         return hash.ToHashCode();
