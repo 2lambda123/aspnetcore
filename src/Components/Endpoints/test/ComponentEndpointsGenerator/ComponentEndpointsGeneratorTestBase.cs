@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.Components.Endpoints.Tests;
 
 public abstract class ComponentEndpointsGeneratorTestBase : LoggedTest
 {
-    public bool RegenerateBaselines => false || bool.TryParse(Environment.GetEnvironmentVariable("ASPNETCORE_TEST_BASELINES"), out var result) && result;
+    public bool RegenerateBaselines => bool.TryParse(Environment.GetEnvironmentVariable("ASPNETCORE_TEST_BASELINES"), out var result) && result;
 
     protected abstract bool IsGeneratorEnabled { get; }
 

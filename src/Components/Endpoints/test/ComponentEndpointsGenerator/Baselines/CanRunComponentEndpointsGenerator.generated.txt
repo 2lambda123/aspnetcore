@@ -16,6 +16,63 @@ namespace Microsoft.AspNetCore.Components.Infrastructure;
 %GENERATEDCODEATTRIBUTE%
 file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttribute
 {
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetDirectDependencyComponents(string source)
+    {
+        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
+        {
+            Source = source,
+            ComponentType = typeof(global::DirectDependency.Counter),
+        };
+    }
+
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetTransitiveDependencyComponents(string source)
+    {
+        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
+        {
+            Source = source,
+            ComponentType = typeof(global::TransitiveDependency.TransitiveDependencyComponent),
+        };
+    }
+
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetUnitedAppComponents(string source)
+    {
+        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
+        {
+            Source = source,
+            ComponentType = typeof(global::UnitedApp.App),
+        };
+        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
+        {
+            Source = source,
+            ComponentType = typeof(global::MyApp.MyAppComponent),
+        };
+    }
+
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetDirectDependencyPages(string source)
+    {
+        yield return new global::Microsoft.AspNetCore.Components.PageComponentBuilder
+        {
+            Source = source,
+            PageType = typeof(global::DirectDependency.Counter),
+            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
+        };
+    }
+
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetTransitiveDependencyPages(string source)
+    {
+        yield break;
+    }
+
+    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetUnitedAppPages(string source)
+    {
+        yield return new global::Microsoft.AspNetCore.Components.PageComponentBuilder
+        {
+            Source = source,
+            PageType = typeof(global::MyApp.MyAppComponent),
+            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
+        };
+    }
+
     private global::Microsoft.AspNetCore.Components.ComponentLibraryBuilder GetDirectDependencyBuilder()
     {
         var source = "DirectDependency";
@@ -50,62 +107,5 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         builder.AddLibrary(GetTransitiveDependencyBuilder());
         builder.AddLibrary(GetUnitedAppBuilder());
         return builder;
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetDirectDependencyPages(string source)
-    {
-        yield return new global::Microsoft.AspNetCore.Components.PageComponentBuilder
-        {
-            Source = source,
-            PageType = typeof(global::DirectDependency.Counter),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
-        };
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetTransitiveDependencyPages(string source)
-    {
-        yield break;
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetDirectDependencyComponents(string source)
-    {
-        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
-        {
-            Source = source,
-            ComponentType = typeof(global::DirectDependency.Counter),
-        };
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetTransitiveDependencyComponents(string source)
-    {
-        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
-        {
-            Source = source,
-            ComponentType = typeof(global::TransitiveDependency.TransitiveDependencyComponent),
-        };
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder> GetUnitedAppPages(string source)
-    {
-        yield return new global::Microsoft.AspNetCore.Components.PageComponentBuilder
-        {
-            Source = source,
-            PageType = typeof(global::MyApp.MyAppComponent),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/counter" }
-        };
-    }
-
-    private global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder> GetUnitedAppComponents(string source)
-    {
-        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
-        {
-            Source = source,
-            ComponentType = typeof(global::UnitedApp.App),
-        };
-        yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder
-        {
-            Source = source,
-            ComponentType = typeof(global::MyApp.MyAppComponent),
-        };
     }
 }

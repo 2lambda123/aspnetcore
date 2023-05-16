@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.AspNetCore.App.Analyzers.Infrastructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,9 +18,7 @@ namespace Microsoft.AspNetCore.Components.Endpoints.Generator;
 [Generator]
 public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
 {
-    public ComponentEndpointsGenerator()
-    {
-    }
+    private static readonly ImmutableArray<string> _yieldBreakStatement = ImmutableArray.Create("yield break;");
     // We are going to generate a file like this one (with some simplifications in the sample),
     // assuming an app Blazor.United.Assembly and a library Razor.Class.Library:
     //[assembly: AppRazorComponentApplication]
@@ -97,136 +96,93 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
     // combinations over big and coarse methods that compute the entire contents.
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var componentsAssemblyIdentity = context.CompilationProvider
-            .Select((c, t) => c.ReferencedAssemblyNames.SingleOrDefault(ai => ai.Name == "Microsoft.AspNetCore.Components"));
+        var wellKnownTypes = context.CompilationProvider.Select(static (compilation, ct) => WellKnownTypes.GetOrCreate(compilation));
 
-        var componentsAssemblySymbol = context.CompilationProvider.Combine(componentsAssemblyIdentity)
-            .Select(FindComponentsAssemblySymbol);
+        var componentInterface = wellKnownTypes.Select(
+            static (wkt, ct) => wkt.Get(WellKnownTypeData.WellKnownType.Microsoft_AspNetCore_Components_IComponent));
 
-        var componentInterface = componentsAssemblySymbol
-            .Select((assembly, t) => ResolveComponentsCompilationContext(assembly));
+        var routeAttribute = wellKnownTypes.Select(
+            static (wkt, ct) => wkt.Get(WellKnownTypeData.WellKnownType.Microsoft_AspNetCore_Components_RouteAttribute));
+
+        var componentsAssemblySymbol = componentInterface.Select(static (ci, ct) => ci.ContainingAssembly);
 
         var componentsFromProject = context.SyntaxProvider.CreateSyntaxProvider(
-                predicate: (sn, ct) => sn is ClassDeclarationSyntax cls &&
+                predicate: static (sn, ct) => sn is ClassDeclarationSyntax cls &&
                 sn.IsKind(SyntaxKind.ClassDeclaration) &&
                 cls.BaseList != null && cls.BaseList.Types.Count > 0,
-                transform: (ctx, ct) => ctx.SemanticModel.GetDeclaredSymbol(ctx.Node, cancellationToken: ct))
+                transform: static (ctx, ct) => ctx.SemanticModel.GetDeclaredSymbol(ctx.Node, cancellationToken: ct))
             .Combine(componentInterface)
             .Where(IsComponent)
+            .Combine(routeAttribute)
             .Select(CreateComponentModel)
-            .Combine(context.CompilationProvider.Select((c, ct) => c.Assembly))
-            .Select((pair, ct) => (pair.Right, pair.Left));
+            .Combine(context.CompilationProvider.Select(static (c, ct) => c.Assembly))
+            .Select(static (pair, ct) => (pair.Right, pair.Left));
 
         var compilationReferences = context.CompilationProvider
-            .SelectMany((c, t) => c.References.Select(r => (IAssemblySymbol)c.GetAssemblyOrModuleSymbol(r)!));
+            .SelectMany(static (c, t) => c.References.Select(r => (IAssemblySymbol)c.GetAssemblyOrModuleSymbol(r)!));
 
-        var assembliesReferencingComponents = compilationReferences.Combine(componentsAssemblyIdentity)
+        var assembliesReferencingComponents = compilationReferences
+            .Combine(componentsAssemblySymbol)
             .Where(FilterAssemblies)
-            .WithTrackingName("AssembliesWithComponentsAssemblyReference");
+            .Select(static (c, _) => c.Left);
 
         var getLibraryComponentMethodThunks =
-            assembliesReferencingComponents.Select((arc, ct) => CreateGetLibraryMethodThunk(arc.Left));
+            assembliesReferencingComponents.Select(static (arc, ct) => Emitter.CreateGetLibraryMethodThunk(arc));
 
         var appGetLibraryComponentMethodThunk = context.CompilationProvider
-            .Select((c, ct) => CreateGetLibraryMethodThunk(c.Assembly));
+            .Select(static (c, ct) => Emitter.CreateGetLibraryMethodThunk(c.Assembly));
 
         var referencesGetLibraryThunk =
             assembliesReferencingComponents
-            .Select((arc, ct) => CreateLibraryThunk(arc.Left!));
+            .Select(static (arc, ct) => Emitter.CreateLibraryThunk(arc));
 
         var appGetLibraryThunk = context.CompilationProvider
-            .Select((c, ct) => CreateLibraryThunk(c.Assembly));
+            .Select(static (c, ct) => Emitter.CreateLibraryThunk(c.Assembly));
 
-        var getBuilderThunk = referencesGetLibraryThunk.Collect().Combine(appGetLibraryThunk).Select((t, ct) => t.Left.Add(t.Right))
-            .Select((getLibraryThunks, ct) => CreateGetBuilderThunk(getLibraryThunks));
+        var getBuilderThunk = referencesGetLibraryThunk.Collect().Combine(appGetLibraryThunk).Select(static (t, ct) => t.Left.Add(t.Right))
+            .Select(static (getLibraryThunks, ct) => Emitter.CreateGetBuilderThunk(getLibraryThunks));
 
-        var allComponentDefinitions = assembliesReferencingComponents
-            .Select(((IAssemblySymbol candidate, AssemblyIdentity identity) context, CancellationToken cancellation) => context.candidate)
+        var referencedAssembliesComponents = assembliesReferencingComponents
             .Combine(componentInterface)
+            .Combine(routeAttribute)
             .SelectMany(ComponentWithAssembly);
 
-        var getPagesSignature = assembliesReferencingComponents.Select(
-            (t, ct) => (assembly: t.Left!, signature: CreateGetPagesMethodSignature(t.Left!)));
+        var (projectGetComponentPagesBodyThunk, getPagesMethodThunks) = CreateGetPagesMethodThunks(
+            context,
+            componentsFromProject,
+            assembliesReferencingComponents,
+            referencedAssembliesComponents);
 
-        var projectGetPagesSignature = context.CompilationProvider.Select((c, ct) => c.Assembly)
-            .Select((assembly, ct) => (assembly, signature: CreateGetPagesMethodSignature(assembly)));
+        var (projectGetComponentsBodyThunk, getComponentsMethodThunks) = CreateGetComponentsMethodThunks(
+                context,
+                componentsFromProject,
+                assembliesReferencingComponents,
+                referencedAssembliesComponents);
 
-        var projectGetComponentPagesBodyThunk = componentsFromProject
-            .Where(cfp => cfp.Left.IsPage)
-            .Select((cm, ct) => GetPagesBody(cm.Left))
+        var allThunks = getLibraryComponentMethodThunks
             .Collect()
-            .Combine(projectGetPagesSignature)
-            .Select((ctx, ct) => CreateGetMethod(ctx.Right.signature, ctx.Left));
-
-        var getComponentPagesBodyThunk = allComponentDefinitions
-            .Where(c => c.component.IsPage)
-            .Select((cm, ct) => (cm.assembly, body: GetPagesBody(cm.component)));
-
-        var groupedComponentPageStatements = getComponentPagesBodyThunk
-            .Collect()
-            .Select((gpbt, ct) => gpbt.GroupBy(kvp => kvp.assembly, SymbolEqualityComparer.Default)
-            .ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Select(t => t.body).ToImmutableArray(), SymbolEqualityComparer.Default));
-
-        var empty = ImmutableArray.Create("yield break;");
-        var getPagesMethodThunks = getPagesSignature
-            .Combine(groupedComponentPageStatements)
-            .Select((ctx, ct) =>
-            {
-                var (assembly, signature) = ctx.Left;
-                var bodyStatements = ctx.Right;
-                var body = bodyStatements.TryGetValue(assembly, out var found) ? found : empty;
-                return CreateGetMethod(signature, body);
-            });
-
-        var projectGetComponentsSignature = context.CompilationProvider.Select((c, ct) => c.Assembly)
-            .Select((assembly, ct) => (assembly, signature: CreateGetComponentsMethodSignature(assembly)));
-
-        var projectGetComponentComponentsBodyThunk = componentsFromProject
-            .Select((cm, ct) => GetComponentsBody(cm.Left))
-            .Collect()
-            .Combine(projectGetComponentsSignature)
-            .Select((ctx, ct) => CreateGetMethod(ctx.Right.signature, ctx.Left));
-
-        var getComponentsSignature = assembliesReferencingComponents.Select(
-            (t, ct) => (assembly: t.Left!, signature: CreateGetComponentsMethodSignature(t.Left!)));
-
-        var getComponentsBodyThunk = allComponentDefinitions
-            .Select((cm, ct) => (cm.assembly, body: GetComponentsBody(cm.component)));
-
-        var groupedComponentStatements = getComponentsBodyThunk
-            .Collect()
-            .Select((gpbt, ct) => gpbt.GroupBy(kvp => kvp.assembly, SymbolEqualityComparer.Default)
-            .ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Select(t => t.body).ToImmutableArray(), SymbolEqualityComparer.Default));
-
-        var getComponentMethodThunks = getComponentsSignature
-            .Combine(groupedComponentStatements)
-            .Select((ctx, ct) =>
-            {
-                var (assembly, signature) = ctx.Left;
-                var bodyStatements = ctx.Right;
-                var body = bodyStatements[assembly];
-                return CreateGetMethod(signature, body);
-            });
-
-        var allThunks = getLibraryComponentMethodThunks.Collect().Combine(appGetLibraryComponentMethodThunk)
-            .Select((pair, ct) => pair.Left.Add(pair.Right))
+            .Combine(appGetLibraryComponentMethodThunk)
             .Combine(getBuilderThunk)
-            .Select((pair, ct) => pair.Left.Add(pair.Right))
-            .Combine(getPagesMethodThunks.Collect())
-            .Select((pair, ct) => pair.Left.AddRange(pair.Right))
-            .Combine(getComponentMethodThunks.Collect())
-            .Select((pair, ct) => pair.Left.AddRange(pair.Right))
+            .Combine(getComponentsMethodThunks.Collect())
             .Combine(projectGetComponentPagesBodyThunk)
-            .Select((pair, ct) => pair.Left.Add(pair.Right))
-            .Combine(projectGetComponentComponentsBodyThunk)
-            .Select((pair, ct) => pair.Left.Add(pair.Right));
+            .Combine(projectGetComponentsBodyThunk)
+            .Combine(getPagesMethodThunks.Collect());
 
-        context.RegisterImplementationSourceOutput(allThunks, (spc, thunks) =>
+        context.RegisterImplementationSourceOutput(allThunks, static (spc, thunks) =>
         {
+            // These APIs are heavily biased towards creating lists by nesting tuples.
+            // These lists are formed by tuples where the head is on the right element and the tail on the left.
+            // We avoid constructing intermediate arrays because every time we do so is an additional
+            // array copy we need to make
+            var ((((((
+                getLibraryComponentMethodThunks,
+                appGetLibraryComponentMethodThunk),
+                getBuilderThunk),
+                getComponentMethodThunks),
+                projectGetComponentPagesBodyThunk),
+                projectGetComponentComponentsBodyThunk),
+                getPagesMethodThunks) = thunks;
+
             var stringBuilder = new StringBuilder();
             using var stringWriter = new StringWriter(stringBuilder);
             var codeWriter = new CodeWriter(stringWriter, 0);
@@ -237,219 +193,151 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
             codeWriter.WriteLine(ComponentEndpointsGeneratorSources.GeneratedCodeAttribute);
             codeWriter.WriteLine(ComponentEndpointsGeneratorSources.RazorComponentApplicationAttributeFileHeader);
             codeWriter.StartBlock();
-            for (var i = 0; i < thunks.Length - 1; i++)
-            {
-                var thunk = thunks[i];
-                codeWriter.WriteLine(thunk);
-            }
-            codeWriter.Write(thunks[thunks.Length - 1]);
+            WriteThunks(codeWriter, getComponentMethodThunks);
+            codeWriter.WriteLine(projectGetComponentComponentsBodyThunk);
+            WriteThunks(codeWriter, getPagesMethodThunks);
+            codeWriter.WriteLine(projectGetComponentPagesBodyThunk);
+            WriteThunks(codeWriter, getLibraryComponentMethodThunks);
+            codeWriter.WriteLine(appGetLibraryComponentMethodThunk);
+            codeWriter.Write(getBuilderThunk);
             codeWriter.EndBlock(newLine: false);
 
             codeWriter.Flush();
             stringWriter.Flush();
 
             var fileText = stringBuilder.ToString();
+            spc.AddSource("Components.Discovery.g.cs", fileText);
 
-            spc.AddSource("Components.Discovery.cs", fileText);
+            static void WriteThunks(CodeWriter codeWriter, ImmutableArray<string> thunks)
+            {
+                for (var i = 0; i < thunks.Length; i++)
+                {
+                    var thunk = thunks[i];
+                    codeWriter.WriteLine(thunk);
+                }
+            }
         });
     }
 
-    private string GetComponentsBody(ComponentModel cm)
+    private static (IncrementalValueProvider<string> projectGetPagesThunk, IncrementalValuesProvider<string> getPagesThunks)
+        CreateGetPagesMethodThunks(
+            IncrementalGeneratorInitializationContext context,
+            IncrementalValuesProvider<(IAssemblySymbol Right, ComponentModel Left)> componentsFromProject,
+            IncrementalValuesProvider<IAssemblySymbol> assembliesReferencingComponents,
+            IncrementalValuesProvider<ComponentModel> allComponentDefinitions)
     {
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 2);
-        codeWriter.WriteLine("yield return new global::Microsoft.AspNetCore.Components.ComponentBuilder");
-        codeWriter.StartBlock();
-        codeWriter.WriteLine($"Source = source,");
-        codeWriter.WriteLine($"ComponentType = typeof({cm.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}),");
-        codeWriter.EndBlockWithSemiColon(newLine: false);
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
+        var getPagesSignature = assembliesReferencingComponents.Select(
+            static (t, ct) => (assembly: t, signature: Emitter.CreateGetPagesMethodSignature(t)));
+
+        var projectGetPagesSignature = context.CompilationProvider.Select(static (c, ct) => c.Assembly)
+            .Select(static (assembly, ct) => (assembly, signature: Emitter.CreateGetPagesMethodSignature(assembly)));
+
+        var projectGetComponentPagesBodyThunk = componentsFromProject
+            .Where(cfp => cfp.Left.IsPage)
+            .Select(static (cm, ct) => Emitter.GetPagesBody(cm.Left))
+            .Collect()
+            .Combine(projectGetPagesSignature)
+            .Select(static (ctx, ct) => Emitter.CreateGetMethod(ctx.Right.signature, ctx.Left));
+        var getComponentPagesBodyThunk = allComponentDefinitions
+            .Where(c => c.IsPage)
+            .Select(static (cm, ct) => (cm.Component.ContainingAssembly, body: Emitter.GetPagesBody(cm)));
+
+        var groupedComponentPageStatements = getComponentPagesBodyThunk
+            .Collect()
+            .Select(static (gpbt, ct) => gpbt.GroupBy(kvp => kvp.ContainingAssembly, SymbolEqualityComparer.Default)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Select(t => t.body).ToImmutableArray(), SymbolEqualityComparer.Default));
+
+        var getPagesMethodThunks = getPagesSignature
+            .Combine(groupedComponentPageStatements)
+            .Select(static (ctx, ct) =>
+            {
+                var (assembly, signature) = ctx.Left;
+                var bodyStatements = ctx.Right;
+                var body = bodyStatements.TryGetValue(assembly, out var found) ? found : _yieldBreakStatement;
+                return Emitter.CreateGetMethod(signature, body);
+            });
+
+        return (projectGetComponentPagesBodyThunk, getPagesMethodThunks);
     }
 
-    private string CreateGetComponentsMethodSignature(IAssemblySymbol assembly)
+    private static (IncrementalValueProvider<string> projectGetComponentsThunk, IncrementalValuesProvider<string> getComponentsThunks)
+        CreateGetComponentsMethodThunks(
+            IncrementalGeneratorInitializationContext context,
+            IncrementalValuesProvider<(IAssemblySymbol Right, ComponentModel Left)> componentsFromProject,
+            IncrementalValuesProvider<IAssemblySymbol> assembliesReferencingComponents,
+            IncrementalValuesProvider<ComponentModel> referencedAssembliesComponents)
     {
-        var name = assembly.Name.Replace(".", "_");
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 1);
-        var returnType = "global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.ComponentBuilder>";
-        codeWriter.Write($"private {returnType} Get{name}Components(string source)");
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
+        var projectGetComponentsSignature = context.CompilationProvider.Select(static (c, ct) => c.Assembly)
+            .Select(static (assembly, ct) => (assembly, signature: Emitter.CreateGetComponentsMethodSignature(assembly)));
+
+        var projectGetComponentComponentsBodyThunk = componentsFromProject
+            .Select(static (cm, ct) => Emitter.GetComponentsBody(cm.Left))
+            .Collect()
+            .Combine(projectGetComponentsSignature)
+            .Select(static (ctx, ct) => Emitter.CreateGetMethod(ctx.Right.signature, ctx.Left));
+
+        var getComponentsSignature = assembliesReferencingComponents.Select(
+            static (assembly, ct) => (assembly, signature: Emitter.CreateGetComponentsMethodSignature(assembly)));
+
+        var getComponentsBodyThunk = referencedAssembliesComponents
+            .Select(static (cm, ct) => (cm.Component.ContainingAssembly, body: Emitter.GetComponentsBody(cm)));
+
+        var groupedComponentStatements = getComponentsBodyThunk
+            .Collect()
+            .Select(static (gpbt, ct) => gpbt.GroupBy(kvp => kvp.ContainingAssembly, SymbolEqualityComparer.Default)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Select(t => t.body).ToImmutableArray(), SymbolEqualityComparer.Default));
+
+        var getComponentMethodThunks = getComponentsSignature
+            .Combine(groupedComponentStatements)
+            .Select(static (ctx, ct) =>
+            {
+                var (assembly, signature) = ctx.Left;
+                var bodyStatements = ctx.Right;
+                var body = bodyStatements[assembly];
+                return Emitter.CreateGetMethod(signature, body);
+            });
+
+        return (projectGetComponentComponentsBodyThunk, getComponentMethodThunks);
     }
 
-    private string CreateGetMethod(string signature, ImmutableArray<string> body)
+    private static IEnumerable<ComponentModel> ComponentWithAssembly(
+        ((IAssemblySymbol, INamedTypeSymbol), INamedTypeSymbol) context,
+        CancellationToken _)
     {
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 1);
-        codeWriter.WriteLine(signature);
-        codeWriter.StartBlock();
-        for (var i = 0; i < body.Length; i++)
-        {
-            var definition = body[i];
-            codeWriter.WriteLine(definition);
-        }
-        codeWriter.EndBlock();
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
-    }
+        var ((candidate, componentsInterface), routeAttribute) = context;
+        var module = candidate.Modules.Single();
 
-    private IEnumerable<(IAssemblySymbol assembly, ComponentModel component)> ComponentWithAssembly(
-        (IAssemblySymbol? assembly, ComponentsCompilationContext componentContext) context, CancellationToken cancellation)
-    {
-        var (assembly, componentContext) = context;
-        if (assembly == null || componentContext.ComponentInterface == null)
-        {
-            yield break;
-        }
-
-        var module = assembly.Modules.Single();
-
-        var componentCollector = new ComponentCollector
-        {
-            Context = componentContext
-        };
-
+        var componentCollector = new ComponentCollector(componentsInterface, routeAttribute);
         componentCollector.Visit(module.GlobalNamespace);
 
         foreach (var item in componentCollector.Components!)
         {
-            yield return (assembly, item);
+            yield return item;
         }
     }
 
-    private string GetPagesBody(ComponentModel cm)
+    private ComponentModel CreateComponentModel(((ISymbol?, INamedTypeSymbol), INamedTypeSymbol) context, CancellationToken token)
     {
-        //        yield return new PageComponentBuilder()
-        //        {
-        //            Source = "Blazor.United.Assembly",
-        //            PageType = typeof(Counter),
-        //            RouteTemplates = new List<string> { "/counter" }
-        //        };
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 2);
-        codeWriter.WriteLine("yield return new global::Microsoft.AspNetCore.Components.PageComponentBuilder");
-        codeWriter.StartBlock();
-        codeWriter.WriteLine($"Source = source,");
-        codeWriter.WriteLine($"PageType = typeof({cm.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}),");
-        codeWriter.WriteLine($$"""RouteTemplates = new global::System.Collections.Generic.List<string>{ {{cm.RouteAttribute!.ConstructorArguments[0].ToCSharpString()}} }""");
-        codeWriter.EndBlockWithSemiColon(newLine: false);
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
-    }
-
-    private string CreateGetPagesMethodSignature(IAssemblySymbol assembly)
-    {
-        var name = assembly.Name.Replace(".", "_");
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 1);
-        var returnType = "global::System.Collections.Generic.IEnumerable<global::Microsoft.AspNetCore.Components.PageComponentBuilder>";
-        codeWriter.Write($"private {returnType} Get{name}Pages(string source)");
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
-    }
-
-    private string CreateGetLibraryMethodThunk(IAssemblySymbol assembly)
-    {
-        var name = assembly.Name.Replace(".", "_");
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 1);
-        var returnType = "global::Microsoft.AspNetCore.Components.ComponentLibraryBuilder";
-        codeWriter.WriteLine($"private {returnType} Get{name}Builder()");
-        codeWriter.StartBlock();
-        codeWriter.WriteLine($"var source = \"{assembly.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}\";");
-        codeWriter.Write("return new global::Microsoft.AspNetCore.Components.ComponentLibraryBuilder");
-        codeWriter.StartParameterListBlock();
-        codeWriter.WriteLine("source,");
-        codeWriter.WriteLine($"Get{name}Pages(source),");
-        codeWriter.Write($"Get{name}Components(source)");
-        codeWriter.EndParameterListBlock();
-        codeWriter.WriteLine(";");
-        codeWriter.EndBlock();
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
-    }
-
-    private string CreateGetBuilderThunk(ImmutableArray<string> getLibraryThunks)
-    {
-        var builder = new StringBuilder();
-        var writer = new StringWriter(builder);
-        var codeWriter = new CodeWriter(writer, 1);
-        codeWriter.WriteLine("public override global::Microsoft.AspNetCore.Components.ComponentApplicationBuilder GetBuilder()");
-        codeWriter.StartBlock();
-        codeWriter.WriteLine("var builder = new global::Microsoft.AspNetCore.Components.ComponentApplicationBuilder();");
-        for (var i = 0; i < getLibraryThunks.Length; i++)
-        {
-            codeWriter.WriteLine(getLibraryThunks[i]);
-        }
-        codeWriter.WriteLine("return builder;");
-        codeWriter.EndBlock();
-        codeWriter.Flush();
-        writer.Flush();
-        return builder.ToString();
-    }
-
-    private string CreateLibraryThunk(IAssemblySymbol assembly)
-    {
-        var name = assembly.Name.Replace(".", "_");
-        return $"builder.AddLibrary(Get{name}Builder());";
-    }
-
-    private ComponentModel CreateComponentModel((ISymbol? Left, ComponentsCompilationContext Right) tuple, CancellationToken token)
-    {
-        var (component, componentContext) = tuple;
+        var ((component, _), routeAttribute) = context;
 
         return new ComponentModel(
             (INamedTypeSymbol)component!,
             component!
                 .GetAttributes()
-                .FirstOrDefault(ad => SymbolEqualityComparer.Default.Equals(ad.AttributeClass, componentContext.RouteAttribute)));
+                .FirstOrDefault(ad => SymbolEqualityComparer.Default.Equals(ad.AttributeClass, routeAttribute)));
     }
 
-    private bool IsComponent((ISymbol? Left, ComponentsCompilationContext Right) tuple)
+    private bool IsComponent((ISymbol? candidate, INamedTypeSymbol componentInterface) tuple)
     {
-        return tuple.Left is INamedTypeSymbol componentType &&
-            ComponentCollector.IsComponent(componentType, tuple.Right.ComponentInterface);
+        return tuple.candidate is INamedTypeSymbol componentType &&
+            ComponentCollector.IsComponent(componentType, tuple.componentInterface);
     }
 
-    private static ComponentsCompilationContext ResolveComponentsCompilationContext(IAssemblySymbol? assembly)
-    {
-        var componentInterface = assembly?.GetTypeByMetadataName("Microsoft.AspNetCore.Components.IComponent");
-        var routeAttribute = assembly?.GetTypeByMetadataName("Microsoft.AspNetCore.Components.RouteAttribute");
-
-        return new ComponentsCompilationContext(assembly!, componentInterface!, routeAttribute!);
-    }
-
-    private IAssemblySymbol? FindComponentsAssemblySymbol((Compilation, AssemblyIdentity) tuple, CancellationToken token)
-    {
-        var (compilation, identity) = tuple;
-        // This assumes a C# compilation
-        var module = compilation.Assembly.Modules.Single();
-
-        foreach (var assembly in module.ReferencedAssemblySymbols)
-        {
-            if (assembly.Identity == identity)
-            {
-                return assembly;
-            }
-        }
-
-        return null;
-    }
-
-    private bool FilterAssemblies((IAssemblySymbol assembly, AssemblyIdentity componentsAssembly) context)
+    private bool FilterAssemblies((IAssemblySymbol assembly, IAssemblySymbol componentsAssembly) context)
     {
         var (assembly, componentsAssembly) = context;
         if (assembly.Name.StartsWith("System.", StringComparison.Ordinal) ||
@@ -471,7 +359,7 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
 
         foreach (var refIdentity in module.ReferencedAssemblies)
         {
-            if (refIdentity == componentsAssembly)
+            if (refIdentity == componentsAssembly.Identity)
             {
                 return true;
             }
@@ -498,13 +386,27 @@ internal class AssemblyModel
 
 public class ComponentCollector : SymbolVisitor
 {
-    public ComponentCollector()
+    public ComponentCollector(INamedTypeSymbol componentsInterface, INamedTypeSymbol routeAttribute)
     {
+        if (componentsInterface is null)
+        {
+            throw new ArgumentNullException(nameof(componentsInterface));
+        }
+
+        if (routeAttribute is null)
+        {
+            throw new ArgumentNullException(nameof(routeAttribute));
+        }
+
+        ComponentsInterface = componentsInterface;
+        RouteAttribute = routeAttribute;
     }
 
-    public System.Collections.Generic.List<ComponentModel>? Components { get; set; }
+    public List<ComponentModel>? Components { get; set; }
 
-    public ComponentsCompilationContext? Context { get; set; }
+    public INamedTypeSymbol ComponentsInterface { get; set; }
+
+    public INamedTypeSymbol RouteAttribute { get; set; }
 
     public override void VisitNamespace(INamespaceSymbol symbol)
     {
@@ -516,18 +418,13 @@ public class ComponentCollector : SymbolVisitor
 
     public override void VisitNamedType(INamedTypeSymbol symbol)
     {
-        if (Context == null)
-        {
-            throw new InvalidOperationException("Missing context");
-        }
-
-        if (IsComponent(symbol, Context.ComponentInterface))
+        if (IsComponent(symbol, ComponentsInterface))
         {
             Components ??= new();
             Components.Add(
                 new ComponentModel(
                     symbol,
-                    symbol.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, Context.RouteAttribute))));
+                    symbol.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, RouteAttribute))));
         }
     }
 
@@ -555,7 +452,6 @@ public class ComponentCollector : SymbolVisitor
 }
 
 public record ComponentsCompilationContext(
-    IAssemblySymbol? Assembly,
     INamedTypeSymbol ComponentInterface,
     INamedTypeSymbol RouteAttribute);
 
