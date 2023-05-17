@@ -11,12 +11,17 @@ public class ComponentBuilder : IEquatable<ComponentBuilder?>
     /// <summary>
     /// Gets or sets the source for the component.
     /// </summary>
-    public string? Source { get; set; }
+    public required string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the component type.
     /// </summary>
-    public Type? ComponentType { get; set; }
+    public required Type ComponentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the render mode for the component.
+    /// </summary>
+    public IComponentRenderMode? RenderMode { get; set; }
 
     /// <inheritdoc/>
     public override bool Equals(object? obj)

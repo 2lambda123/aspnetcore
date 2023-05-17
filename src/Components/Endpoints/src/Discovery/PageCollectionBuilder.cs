@@ -8,7 +8,7 @@ namespace Microsoft.AspNetCore.Components;
 /// <summary>
 /// Represents the list of pages in a <see cref="ComponentApplicationBuilder"/>.
 /// </summary>
-public class PageCollectionBuilder
+internal class PageCollectionBuilder
 {
     private readonly List<PageComponentBuilder> _pages = new();
 

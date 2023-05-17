@@ -7,7 +7,7 @@ namespace Microsoft.AspNetCore.Components;
 /// Represents the list of components defined in a <see cref="ComponentApplicationBuilder"/>
 /// before the configuration has finalized.
 /// </summary>
-public class ComponentCollectionBuilder
+internal class ComponentCollectionBuilder
 {
     private readonly List<ComponentBuilder> _components = new();
 
@@ -78,7 +78,10 @@ public class ComponentCollectionBuilder
         for (var i = 0; i < _components.Count; i++)
         {
             var componentType = _components[i];
-            result[i] = new ComponentInfo(componentType.ComponentType!);
+            result[i] = new ComponentInfo(componentType.ComponentType)
+            {
+                RenderMode = componentType.RenderMode,
+            };
         }
 
         return result;

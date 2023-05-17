@@ -47,7 +47,7 @@ public class ComponentApplicationBuilder
     /// </summary>
     /// <param name="assemblyName">The name of the assembly to check.</param>
     /// <returns><c>true</c> when present; <c>false</c> otherwise.</returns>
-    public bool HasAssembly(string assemblyName)
+    public bool HasLibrary(string assemblyName)
     {
         return _assemblies.Contains(assemblyName);
     }
@@ -80,7 +80,7 @@ public class ComponentApplicationBuilder
     /// the current <see cref="ComponentApplicationBuilder"/>.
     /// </summary>
     /// <param name="assembly">The assembly name.</param>
-    public void Remove(string assembly)
+    public void RemoveLibrary(string assembly)
     {
         _assemblies.Remove(assembly);
         Pages.RemoveFromAssembly(assembly);
@@ -90,10 +90,10 @@ public class ComponentApplicationBuilder
     /// <summary>
     /// Gets the page component collection available in this builder instance.
     /// </summary>
-    public PageCollectionBuilder Pages { get; } = new PageCollectionBuilder();
+    internal PageCollectionBuilder Pages { get; } = new PageCollectionBuilder();
 
     /// <summary>
     /// Gets the component collection available in this builder instance.
     /// </summary>
-    public ComponentCollectionBuilder Components { get; } = new ComponentCollectionBuilder();
+    internal ComponentCollectionBuilder Components { get; } = new ComponentCollectionBuilder();
 }

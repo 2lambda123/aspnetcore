@@ -1,11 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+
 namespace Microsoft.AspNetCore.Components;
 
 /// <summary>
 /// The definition for a page, including the type and the associated routes.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public class PageComponentInfo
 {
     /// <summary>
@@ -46,4 +49,9 @@ public class PageComponentInfo
     /// Gets the metadata for the page.
     /// </summary>
     public IReadOnlyList<object> Metadata { get; }
+
+    private string GetDebuggerDisplay()
+    {
+        return $"{Type.FullName}: {DisplayName}";
+    }
 }

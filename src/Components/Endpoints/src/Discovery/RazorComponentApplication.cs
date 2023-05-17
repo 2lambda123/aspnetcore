@@ -1,11 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+
 namespace Microsoft.AspNetCore.Components;
 
 /// <summary>
 /// The definition of a component based application.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public class RazorComponentApplication
 {
     private readonly PageComponentInfo[] _pages;
@@ -29,4 +32,9 @@ public class RazorComponentApplication
     /// Gets the list of <see cref="ComponentInfo"/> associated with the application.
     /// </summary>
     public IReadOnlyList<ComponentInfo> Components => _components;
+
+    private string GetDebuggerDisplay()
+    {
+        return $"Pages: {Pages.Count}, Components: {Components.Count}";
+    }
 }

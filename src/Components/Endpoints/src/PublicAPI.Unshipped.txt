@@ -8,23 +8,23 @@ Microsoft.AspNetCore.Components.ComponentApplicationBuilder.AddLibrary(Microsoft
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Build() -> Microsoft.AspNetCore.Components.RazorComponentApplication!
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Combine(Microsoft.AspNetCore.Components.ComponentApplicationBuilder! other) -> void
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.ComponentApplicationBuilder() -> void
-Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Components.get -> Microsoft.AspNetCore.Components.ComponentCollectionBuilder!
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Exclude(Microsoft.AspNetCore.Components.ComponentApplicationBuilder! builder) -> void
-Microsoft.AspNetCore.Components.ComponentApplicationBuilder.HasAssembly(string! assemblyName) -> bool
-Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Pages.get -> Microsoft.AspNetCore.Components.PageCollectionBuilder!
-Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Remove(string! assembly) -> void
+Microsoft.AspNetCore.Components.ComponentApplicationBuilder.HasLibrary(string! assemblyName) -> bool
+Microsoft.AspNetCore.Components.ComponentApplicationBuilder.RemoveLibrary(string! assembly) -> void
 Microsoft.AspNetCore.Components.ComponentBuilder
 Microsoft.AspNetCore.Components.ComponentBuilder.ComponentBuilder() -> void
-Microsoft.AspNetCore.Components.ComponentBuilder.ComponentType.get -> System.Type?
+Microsoft.AspNetCore.Components.ComponentBuilder.ComponentType.get -> System.Type!
 Microsoft.AspNetCore.Components.ComponentBuilder.ComponentType.set -> void
 Microsoft.AspNetCore.Components.ComponentBuilder.Equals(Microsoft.AspNetCore.Components.ComponentBuilder? other) -> bool
-Microsoft.AspNetCore.Components.ComponentBuilder.Source.get -> string?
+Microsoft.AspNetCore.Components.ComponentBuilder.RenderMode.get -> Microsoft.AspNetCore.Components.IComponentRenderMode?
+Microsoft.AspNetCore.Components.ComponentBuilder.RenderMode.set -> void
+Microsoft.AspNetCore.Components.ComponentBuilder.Source.get -> string!
 Microsoft.AspNetCore.Components.ComponentBuilder.Source.set -> void
-Microsoft.AspNetCore.Components.ComponentCollectionBuilder
-Microsoft.AspNetCore.Components.ComponentCollectionBuilder.ComponentCollectionBuilder() -> void
 Microsoft.AspNetCore.Components.ComponentInfo
 Microsoft.AspNetCore.Components.ComponentInfo.ComponentInfo(System.Type! componentType) -> void
 Microsoft.AspNetCore.Components.ComponentInfo.ComponentType.get -> System.Type!
+Microsoft.AspNetCore.Components.ComponentInfo.RenderMode.get -> Microsoft.AspNetCore.Components.IComponentRenderMode?
+Microsoft.AspNetCore.Components.ComponentInfo.RenderMode.init -> void
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder.ComponentLibraryBuilder(string! name, System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.PageComponentBuilder!>! pages, System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.ComponentBuilder!>! components) -> void
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder.Components.get -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.ComponentBuilder!>!
@@ -63,17 +63,15 @@ Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.RootComponentMet
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.Type.get -> System.Type!
 Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute
 Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute.RazorComponentApplicationAttribute() -> void
-Microsoft.AspNetCore.Components.PageCollectionBuilder
-Microsoft.AspNetCore.Components.PageCollectionBuilder.PageCollectionBuilder() -> void
 Microsoft.AspNetCore.Components.PageComponentBuilder
 Microsoft.AspNetCore.Components.PageComponentBuilder.Equals(Microsoft.AspNetCore.Components.PageComponentBuilder? other) -> bool
 Microsoft.AspNetCore.Components.PageComponentBuilder.HasSource(string! source) -> bool
 Microsoft.AspNetCore.Components.PageComponentBuilder.PageComponentBuilder() -> void
-Microsoft.AspNetCore.Components.PageComponentBuilder.PageType.get -> System.Type?
+Microsoft.AspNetCore.Components.PageComponentBuilder.PageType.get -> System.Type!
 Microsoft.AspNetCore.Components.PageComponentBuilder.PageType.set -> void
-Microsoft.AspNetCore.Components.PageComponentBuilder.RouteTemplates.get -> System.Collections.Generic.List<string!>?
+Microsoft.AspNetCore.Components.PageComponentBuilder.RouteTemplates.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Microsoft.AspNetCore.Components.PageComponentBuilder.RouteTemplates.set -> void
-Microsoft.AspNetCore.Components.PageComponentBuilder.Source.get -> string?
+Microsoft.AspNetCore.Components.PageComponentBuilder.Source.get -> string!
 Microsoft.AspNetCore.Components.PageComponentBuilder.Source.set -> void
 Microsoft.AspNetCore.Components.PageComponentInfo
 Microsoft.AspNetCore.Components.PageComponentInfo.DisplayName.get -> string!

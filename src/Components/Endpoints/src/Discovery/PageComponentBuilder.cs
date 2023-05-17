@@ -1,30 +1,33 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Linq;
 
 namespace Microsoft.AspNetCore.Components;
+
 /// <summary>
 /// Initializes a new instance of <see cref="PageComponentBuilder"/>.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
 {
-    private List<string>? _routeTemplates;
+    private IReadOnlyList<string> _routeTemplates = Array.Empty<string>();
 
     /// <summary>
     /// Gets or sets the source for this page component.
     /// </summary>
-    public string? Source { get; set; }
+    public required string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the route templates for this page component.
     /// </summary>
-    public List<string>? RouteTemplates
+    public required IReadOnlyList<string> RouteTemplates
     {
         get => _routeTemplates;
         set
         {
-            value?.Sort(StringComparer.Ordinal);
+            ArgumentOutOfRangeException.ThrowIfZero(value.Count, nameof(value));
             _routeTemplates = value;
         }
     }
@@ -32,7 +35,7 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
     /// <summary>
     /// Gets or sets the page type.
     /// </summary>
-    public Type? PageType { get; set; }
+    public required Type PageType { get; set; }
 
     /// <summary>
     /// Compares the given <paramref name="source"/> against the source for this <see cref="PageComponentBuilder"/>.
@@ -55,8 +58,7 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
     {
         return other is not null &&
                Source == other.Source &&
-               (ReferenceEquals(RouteTemplates, other.RouteTemplates) || (RouteTemplates != null &&
-               Enumerable.SequenceEqual(RouteTemplates, other.RouteTemplates!, StringComparer.OrdinalIgnoreCase))) &&
+               RouteTemplates.SequenceEqual(other.RouteTemplates!, StringComparer.OrdinalIgnoreCase) &&
                EqualityComparer<Type>.Default.Equals(PageType, other.PageType);
     }
 
@@ -74,5 +76,10 @@ public class PageComponentBuilder : IEquatable<PageComponentBuilder?>
         }
         hash.Add(PageType);
         return hash.ToHashCode();
+    }
+
+    private string GetDebuggerDisplay()
+    {
+        return $"{PageType.FullName}{string.Join(", ", RouteTemplates ?? Enumerable.Empty<string>())}";
     }
 }
