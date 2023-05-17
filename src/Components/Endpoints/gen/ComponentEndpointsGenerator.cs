@@ -104,6 +104,9 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
         var routeAttribute = wellKnownTypes.Select(
             static (wkt, ct) => wkt.Get(WellKnownTypeData.WellKnownType.Microsoft_AspNetCore_Components_RouteAttribute));
 
+        var renderModeAttribute = wellKnownTypes.Select(
+            static (wkt, ct) => wkt.Get(WellKnownTypeData.WellKnownType.Microsoft_AspNetCore_Components_RenderModeAttribute));
+
         var componentsAssemblySymbol = componentInterface.Select(static (ci, ct) => ci.ContainingAssembly);
 
         var componentsFromProject = context.SyntaxProvider.CreateSyntaxProvider(
@@ -114,6 +117,7 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
             .Combine(componentInterface)
             .Where(IsComponent)
             .Combine(routeAttribute)
+            .Combine(renderModeAttribute)
             .Select(CreateComponentModel)
             .Combine(context.CompilationProvider.Select(static (c, ct) => c.Assembly))
             .Select(static (pair, ct) => (pair.Right, pair.Left));
@@ -147,6 +151,7 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
         var referencedAssembliesComponents = assembliesReferencingComponents
             .Combine(componentInterface)
             .Combine(routeAttribute)
+            .Combine(renderModeAttribute)
             .SelectMany(ComponentWithAssembly);
 
         var (projectGetComponentPagesBodyThunk, getPagesMethodThunks) = CreateGetPagesMethodThunks(
@@ -307,13 +312,13 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
     }
 
     private static IEnumerable<ComponentModel> ComponentWithAssembly(
-        ((IAssemblySymbol, INamedTypeSymbol), INamedTypeSymbol) context,
+        (((IAssemblySymbol, INamedTypeSymbol), INamedTypeSymbol), INamedTypeSymbol) context,
         CancellationToken _)
     {
-        var ((candidate, componentsInterface), routeAttribute) = context;
+        var (((candidate, componentsInterface), routeAttribute), renderModeAttribute) = context;
         var module = candidate.Modules.Single();
 
-        var componentCollector = new ComponentCollector(componentsInterface, routeAttribute);
+        var componentCollector = new ComponentCollector(componentsInterface, routeAttribute, renderModeAttribute);
         componentCollector.Visit(module.GlobalNamespace);
 
         foreach (var item in componentCollector.Components!)
@@ -322,15 +327,10 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
         }
     }
 
-    private ComponentModel CreateComponentModel(((ISymbol?, INamedTypeSymbol), INamedTypeSymbol) context, CancellationToken token)
+    private ComponentModel CreateComponentModel((((ISymbol?, INamedTypeSymbol), INamedTypeSymbol), INamedTypeSymbol) context, CancellationToken token)
     {
-        var ((component, _), routeAttribute) = context;
-
-        return new ComponentModel(
-            (INamedTypeSymbol)component!,
-            component!
-                .GetAttributes()
-                .FirstOrDefault(ad => SymbolEqualityComparer.Default.Equals(ad.AttributeClass, routeAttribute)));
+        var (((component, _), routeAttribute), renderModeAttribute) = context;
+        return ComponentModel.FromType((INamedTypeSymbol)component!, routeAttribute, renderModeAttribute);
     }
 
     private bool IsComponent((ISymbol? candidate, INamedTypeSymbol componentInterface) tuple)
@@ -373,7 +373,7 @@ public sealed class ComponentEndpointsGenerator : IIncrementalGenerator
 
 public class ComponentCollector : SymbolVisitor
 {
-    public ComponentCollector(INamedTypeSymbol componentsInterface, INamedTypeSymbol routeAttribute)
+    public ComponentCollector(INamedTypeSymbol componentsInterface, INamedTypeSymbol routeAttribute, INamedTypeSymbol renderModeAttribute)
     {
         if (componentsInterface is null)
         {
@@ -387,6 +387,7 @@ public class ComponentCollector : SymbolVisitor
 
         ComponentsInterface = componentsInterface;
         RouteAttribute = routeAttribute;
+        RenderModeAttribute = renderModeAttribute;
     }
 
     public List<ComponentModel>? Components { get; set; }
@@ -394,6 +395,8 @@ public class ComponentCollector : SymbolVisitor
     public INamedTypeSymbol ComponentsInterface { get; set; }
 
     public INamedTypeSymbol RouteAttribute { get; set; }
+
+    public INamedTypeSymbol RenderModeAttribute { get; set; }
 
     public override void VisitNamespace(INamespaceSymbol symbol)
     {
@@ -408,10 +411,7 @@ public class ComponentCollector : SymbolVisitor
         if (IsComponent(symbol, ComponentsInterface))
         {
             Components ??= new();
-            Components.Add(
-                new ComponentModel(
-                    symbol,
-                    symbol.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, RouteAttribute))));
+            Components.Add(ComponentModel.FromType(symbol, RouteAttribute, RenderModeAttribute));
         }
     }
 
@@ -438,7 +438,41 @@ public class ComponentCollector : SymbolVisitor
     }
 }
 
-public record ComponentModel(INamedTypeSymbol Component, AttributeData? RouteAttribute)
+public class ComponentModel
 {
-    public bool IsPage => RouteAttribute != null;
+    public ComponentModel(INamedTypeSymbol component, ImmutableArray<AttributeData> routes, AttributeData? renderMode)
+    {
+        Component = component;
+        Routes = routes;
+        RenderMode = renderMode;
+    }
+
+    public bool IsPage => Routes.Length > 0;
+
+    public INamedTypeSymbol Component { get; }
+    public ImmutableArray<AttributeData> Routes { get; }
+    public AttributeData? RenderMode { get; }
+
+    internal static ComponentModel FromType(INamedTypeSymbol component, INamedTypeSymbol routeAttribute, INamedTypeSymbol renderModeAttribute)
+    {
+        var attributes = component!.GetAttributes();
+
+        var routes = new List<AttributeData>();
+        AttributeData? renderMode = null;
+
+        for (var i = 0; i < attributes.Length; i++)
+        {
+            var attribute = attributes[i];
+            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, routeAttribute))
+            {
+                routes.Add(attribute);
+            }
+            else if (WellKnownTypes.IsSubClassOf(attribute.AttributeClass, renderModeAttribute))
+            {
+                renderMode = attribute;
+            }
+        }
+
+        return new ComponentModel(component, routes.ToImmutableArray(), renderMode);
+    }
 }

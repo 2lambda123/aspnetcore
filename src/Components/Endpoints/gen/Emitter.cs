@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -19,10 +21,53 @@ internal class Emitter
         codeWriter.StartBlock();
         codeWriter.WriteLine($"Source = source,");
         codeWriter.WriteLine($"ComponentType = typeof({cm.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}),");
+        if (cm.RenderMode != null)
+        {
+            codeWriter.Write($"RenderMode = ");
+            EmitAttributeInstance(codeWriter, cm.RenderMode);
+            codeWriter.WriteLine();
+        }
         codeWriter.EndBlockWithSemiColon(newLine: false);
         codeWriter.Flush();
         writer.Flush();
         return builder.ToString();
+    }
+
+    private static void EmitAttributeInstance(CodeWriter codeWriter, AttributeData renderMode)
+    {
+        codeWriter.Write($"new {renderMode.AttributeClass!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}");
+        if (renderMode.ConstructorArguments.Length > 0)
+        {
+            codeWriter.StartParameterListBlock();
+            for (var i = 0; i < renderMode.ConstructorArguments.Length - 1; i++)
+            {
+                var argument = renderMode.ConstructorArguments[i];
+                codeWriter.Write(argument.ToCSharpString());
+                codeWriter.WriteLine(",");
+            }
+
+            var lastArgument = renderMode.ConstructorArguments[renderMode.ConstructorArguments.Length - 1];
+            codeWriter.Write(lastArgument.ToCSharpString());
+            codeWriter.EndParameterListBlock();
+        }
+        if (renderMode.NamedArguments.Length > 0)
+        {
+            codeWriter.StartBlock();
+            for (var i = 0; i < renderMode.NamedArguments.Length - 1; i++)
+            {
+                var argument = renderMode.NamedArguments[i];
+                codeWriter.Write(argument.Key);
+                codeWriter.Write(" = ");
+                codeWriter.Write(argument.Value.ToCSharpString());
+                codeWriter.WriteLine(",");
+            }
+
+            var lastArgument = renderMode.NamedArguments[renderMode.ConstructorArguments.Length - 1];
+            codeWriter.Write(lastArgument.Key);
+            codeWriter.Write(" = ");
+            codeWriter.Write(lastArgument.Value.ToCSharpString());
+            codeWriter.EndBlock();
+        }
     }
 
     internal static string CreateGetComponentsMethodSignature(IAssemblySymbol assembly)
@@ -64,6 +109,7 @@ internal class Emitter
         //            PageType = typeof(Counter),
         //            RouteTemplates = new List<string> { "/counter" }
         //        };
+
         var builder = new StringBuilder();
         var writer = new StringWriter(builder);
         var codeWriter = new CodeWriter(writer, 2);
@@ -71,7 +117,14 @@ internal class Emitter
         codeWriter.StartBlock();
         codeWriter.WriteLine($"Source = source,");
         codeWriter.WriteLine($"PageType = typeof({cm.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}),");
-        codeWriter.WriteLine($$"""RouteTemplates = new global::System.Collections.Generic.List<string>{ {{cm.RouteAttribute!.ConstructorArguments[0].ToCSharpString()}} }""");
+        codeWriter.WriteLine($$"""RouteTemplates = new global::System.Collections.Generic.List<string>""");
+        codeWriter.StartBlock();
+        foreach (var route in cm.Routes)
+        {
+            codeWriter.Write(route.ConstructorArguments[0].ToCSharpString());
+            codeWriter.WriteLine(",");
+        }
+        codeWriter.EndBlock();
         codeWriter.EndBlockWithSemiColon(newLine: false);
         codeWriter.Flush();
         writer.Flush();

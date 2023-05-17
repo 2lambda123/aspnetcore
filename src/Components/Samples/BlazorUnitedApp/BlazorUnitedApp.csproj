@@ -8,8 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Microsoft.AspNetCore" />
     <Reference Include="Microsoft.AspNetCore.Components.Endpoints" />
+    <Reference Include="Microsoft.AspNetCore.Components.Server" />
     <Reference Include="Microsoft.AspNetCore.HttpsPolicy" />
     <Reference Include="Microsoft.Extensions.Hosting" />
     <Reference Include="Microsoft.AspNetCore.StaticFiles" />

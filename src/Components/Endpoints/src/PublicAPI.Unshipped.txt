@@ -1,7 +1,11 @@
+abstract Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.GetEndpointBuilders(Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode, Microsoft.AspNetCore.Builder.IApplicationBuilder! applicationBuilder) -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Routing.RouteEndpointBuilder!>!
+abstract Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.Supports(Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode) -> bool
 abstract Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute.GetBuilder() -> Microsoft.AspNetCore.Components.ComponentApplicationBuilder!
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.Add(System.Action<Microsoft.AspNetCore.Builder.EndpointBuilder!>! convention) -> void
+Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.ApplicationBuilder.get -> Microsoft.AspNetCore.Components.ComponentApplicationBuilder!
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.Finally(System.Action<Microsoft.AspNetCore.Builder.EndpointBuilder!>! finallyConvention) -> void
+Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.SetRenderModes(params Microsoft.AspNetCore.Components.IComponentRenderMode![]! renderModes) -> Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder!
 Microsoft.AspNetCore.Builder.RazorComponentsEndpointRouteBuilderExtensions
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.AddLibrary(Microsoft.AspNetCore.Components.ComponentLibraryBuilder! libraryBuilder) -> void
@@ -16,7 +20,7 @@ Microsoft.AspNetCore.Components.ComponentBuilder.ComponentBuilder() -> void
 Microsoft.AspNetCore.Components.ComponentBuilder.ComponentType.get -> System.Type!
 Microsoft.AspNetCore.Components.ComponentBuilder.ComponentType.set -> void
 Microsoft.AspNetCore.Components.ComponentBuilder.Equals(Microsoft.AspNetCore.Components.ComponentBuilder? other) -> bool
-Microsoft.AspNetCore.Components.ComponentBuilder.RenderMode.get -> Microsoft.AspNetCore.Components.IComponentRenderMode?
+Microsoft.AspNetCore.Components.ComponentBuilder.RenderMode.get -> Microsoft.AspNetCore.Components.RenderModeAttribute?
 Microsoft.AspNetCore.Components.ComponentBuilder.RenderMode.set -> void
 Microsoft.AspNetCore.Components.ComponentBuilder.Source.get -> string!
 Microsoft.AspNetCore.Components.ComponentBuilder.Source.set -> void
@@ -58,6 +62,8 @@ Microsoft.AspNetCore.Components.Endpoints.RazorComponentResult<TComponent>.Razor
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResult<TComponent>.RazorComponentResult(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> void
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor.RazorComponentResultExecutor() -> void
+Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider
+Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.RenderModeEndpointProvider() -> void
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.RootComponentMetadata(System.Type! rootComponentType) -> void
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.Type.get -> System.Type!

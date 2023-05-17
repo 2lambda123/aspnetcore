@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace Microsoft.AspNetCore.Components;
 
@@ -32,6 +33,29 @@ public class RazorComponentApplication
     /// Gets the list of <see cref="ComponentInfo"/> associated with the application.
     /// </summary>
     public IReadOnlyList<ComponentInfo> Components => _components;
+
+    internal IEnumerable<IComponentRenderMode> ResolveRenderModes()
+    {
+        var set = new HashSet<IComponentRenderMode>();
+        for (var i = 0; i < Components.Count; i++)
+        {
+            var component = Components[i];
+            if (component.RenderMode is ServerRenderMode)
+            {
+                set.Add(RenderMode.Server);
+            }
+            if (component.RenderMode is WebAssemblyRenderMode)
+            {
+                set.Add(RenderMode.WebAssembly);
+            }
+            if (component.RenderMode is AutoRenderMode)
+            {
+                set.Add(RenderMode.Auto);
+            }
+        }
+
+        return set;
+    }
 
     private string GetDebuggerDisplay()
     {

@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Linq;
@@ -53,17 +53,19 @@ internal class DefaultRazorComponentApplication<TComponent> : IRazorComponentApp
                 var candidate = exported[i];
                 if (candidate.IsAssignableTo(typeof(IComponent)))
                 {
-                    if (candidate.GetCustomAttributes<RouteAttribute>() is { } route)
+                    if (candidate.GetCustomAttributes<RouteAttribute>() is { } routes &&
+                        routes.Any())
                     {
                         pages.Add(new PageComponentBuilder()
                         {
-                            RouteTemplates = route.Select(r => r.Template).ToList(),
+                            RouteTemplates = routes.Select(r => r.Template).ToList(),
                             Source = name,
                             PageType = candidate
                         });
                     }
 
-                    components.Add(new ComponentBuilder() { Source = name, ComponentType = candidate });
+                    var renderMode = candidate.GetCustomAttribute<RenderModeAttribute>();
+                    components.Add(new ComponentBuilder() { Source = name, ComponentType = candidate, RenderMode = renderMode });
                 }
             }
 

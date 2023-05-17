@@ -22,6 +22,8 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         {
             Source = source,
             ComponentType = typeof(global::DirectDependency.Counter),
+            RenderMode = new global::Microsoft.AspNetCore.Components.Web.RenderModeServerAttribute(
+                true)
         };
     }
 
@@ -54,7 +56,10 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         {
             Source = source,
             PageType = typeof(global::DirectDependency.Counter),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/dependency" }
+            RouteTemplates = new global::System.Collections.Generic.List<string>
+            {
+                "/dependency",
+            }
         };
     }
 
@@ -69,7 +74,10 @@ file class AppRazorComponentApplicationAttribute : RazorComponentApplicationAttr
         {
             Source = source,
             PageType = typeof(global::MyApp.MyAppComponent),
-            RouteTemplates = new global::System.Collections.Generic.List<string>{ "/app" }
+            RouteTemplates = new global::System.Collections.Generic.List<string>
+            {
+                "/app",
+            }
         };
     }
 

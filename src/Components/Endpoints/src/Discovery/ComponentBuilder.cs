@@ -21,7 +21,7 @@ public class ComponentBuilder : IEquatable<ComponentBuilder?>
     /// <summary>
     /// Gets or sets the render mode for the component.
     /// </summary>
-    public IComponentRenderMode? RenderMode { get; set; }
+    public RenderModeAttribute? RenderMode { get; set; }
 
     /// <inheritdoc/>
     public override bool Equals(object? obj)

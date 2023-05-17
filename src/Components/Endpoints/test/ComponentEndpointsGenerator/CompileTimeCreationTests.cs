@@ -20,7 +20,11 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
 
         var (library, libraryBytes) = await CreateClassLibraryAsync(
             "DirectDependency",
-            TestComponent("DirectDependency", "Counter", "[Route(\"/dependency\")]"),
+            TestComponent(
+                "DirectDependency",
+                "Counter",
+                "[Route(\"/dependency\")]",
+                "[RenderModeServer(prerender: true)]"),
             new MetadataReference[] { transitive });
 
         var project = CreateProject("UnitedApp", new MetadataReference[] { library, transitive });
@@ -44,8 +48,12 @@ public class CompileTimeCreationTests : ComponentEndpointsGeneratorTestBase
         var server = GetTestServer(compilation, transitiveBytes, libraryBytes);
         Assert.NotNull(server);
         var client = server.CreateClient();
-        var response = await client.GetStringAsync("/dependency");
-        Assert.Contains("<h1>Counter</h1>", response);
+
+        var dependency = await client.GetStringAsync("/dependency");
+        Assert.Contains("<h1>Counter</h1>", dependency);
+
+        var app = await client.GetStringAsync("/app");
+        Assert.Contains("<h1>MyAppComponent</h1>", app);
     }
 
     private string GetProgram(string programNamespace)
@@ -80,6 +88,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddRazorComponents();
+        services.AddDataProtection();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
@@ -261,15 +270,17 @@ using {{componentNamespace}};
 """;
     }
 
-    private string TestComponent(string componentNamespace, string componentName, string route = null)
+    private string TestComponent(string componentNamespace, string componentName, string route = null, string renderMode = null)
     {
         return $$"""
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.Rendering;
 
 namespace {{componentNamespace}};
 
 {{(route == null ? "" : route)}}
+{{(renderMode == null ? "" : renderMode)}}
 public class {{componentName}} : ComponentBase
 {
     protected override void BuildRenderTree(global::Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder)
