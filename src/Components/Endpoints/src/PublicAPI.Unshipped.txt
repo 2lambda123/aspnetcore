@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-=======
 abstract Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute.GetBuilder() -> Microsoft.AspNetCore.Components.ComponentApplicationBuilder!
-Microsoft.AspNetCore.Builder.ComponentTypeMetadata
-Microsoft.AspNetCore.Builder.ComponentTypeMetadata.ComponentTypeMetadata(System.Type! componentType) -> void
-Microsoft.AspNetCore.Builder.ComponentTypeMetadata.Type.get -> System.Type!
->>>>>>> bb9a4fbb56 (Discovery working e2e with a test)
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.Add(System.Action<Microsoft.AspNetCore.Builder.EndpointBuilder!>! convention) -> void
 Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder.Finally(System.Action<Microsoft.AspNetCore.Builder.EndpointBuilder!>! finallyConvention) -> void
@@ -14,11 +8,6 @@ Microsoft.AspNetCore.Components.ComponentApplicationBuilder.AddLibrary(Microsoft
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Build() -> Microsoft.AspNetCore.Components.RazorComponentApplication!
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Combine(Microsoft.AspNetCore.Components.ComponentApplicationBuilder! other) -> void
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.ComponentApplicationBuilder() -> void
-<<<<<<< HEAD
-Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata
-Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.ComponentTypeMetadata(System.Type! componentType) -> void
-Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.Type.get -> System.Type!
-=======
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Components.get -> Microsoft.AspNetCore.Components.ComponentCollectionBuilder!
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.Exclude(Microsoft.AspNetCore.Components.ComponentApplicationBuilder! builder) -> void
 Microsoft.AspNetCore.Components.ComponentApplicationBuilder.HasAssembly(string! assemblyName) -> bool
@@ -41,7 +30,9 @@ Microsoft.AspNetCore.Components.ComponentLibraryBuilder.ComponentLibraryBuilder(
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder.Components.get -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.ComponentBuilder!>!
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder.Name.get -> string!
 Microsoft.AspNetCore.Components.ComponentLibraryBuilder.Pages.get -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.PageComponentBuilder!>!
->>>>>>> bb9a4fbb56 (Discovery working e2e with a test)
+Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata
+Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.ComponentTypeMetadata(System.Type! componentType) -> void
+Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.Type.get -> System.Type!
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer.Dispatcher.get -> Microsoft.AspNetCore.Components.Dispatcher!
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer.PrerenderComponentAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext, System.Type! componentType, Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode, Microsoft.AspNetCore.Components.ParameterView parameters) -> System.Threading.Tasks.ValueTask<Microsoft.AspNetCore.Html.IHtmlAsyncContent!>
@@ -67,18 +58,9 @@ Microsoft.AspNetCore.Components.Endpoints.RazorComponentResult<TComponent>.Razor
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResult<TComponent>.RazorComponentResult(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> void
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor.RazorComponentResultExecutor() -> void
-<<<<<<< HEAD
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.RootComponentMetadata(System.Type! rootComponentType) -> void
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.Type.get -> System.Type!
-Microsoft.AspNetCore.Components.IRazorComponentApplication<TComponent>
-Microsoft.AspNetCore.Components.IRazorComponentApplication<TComponent>.GetBuilder() -> Microsoft.AspNetCore.Components.ComponentApplicationBuilder!
-Microsoft.AspNetCore.Components.PageDefinition
-Microsoft.AspNetCore.Components.PageDefinition.DisplayName.get -> string!
-Microsoft.AspNetCore.Components.PageDefinition.Metadata.get -> System.Collections.Generic.IReadOnlyList<object!>!
-Microsoft.AspNetCore.Components.PageDefinition.Route.get -> string!
-Microsoft.AspNetCore.Components.PageDefinition.Type.get -> System.Type!
-=======
 Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute
 Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute.RazorComponentApplicationAttribute() -> void
 Microsoft.AspNetCore.Components.PageCollectionBuilder
@@ -98,24 +80,13 @@ Microsoft.AspNetCore.Components.PageComponentInfo.DisplayName.get -> string!
 Microsoft.AspNetCore.Components.PageComponentInfo.Metadata.get -> System.Collections.Generic.IReadOnlyList<object!>!
 Microsoft.AspNetCore.Components.PageComponentInfo.Route.get -> string!
 Microsoft.AspNetCore.Components.PageComponentInfo.Type.get -> System.Type!
->>>>>>> bb9a4fbb56 (Discovery working e2e with a test)
 Microsoft.AspNetCore.Components.PersistedStateSerializationMode
 Microsoft.AspNetCore.Components.PersistedStateSerializationMode.Infer = 1 -> Microsoft.AspNetCore.Components.PersistedStateSerializationMode
 Microsoft.AspNetCore.Components.PersistedStateSerializationMode.Server = 2 -> Microsoft.AspNetCore.Components.PersistedStateSerializationMode
 Microsoft.AspNetCore.Components.PersistedStateSerializationMode.WebAssembly = 3 -> Microsoft.AspNetCore.Components.PersistedStateSerializationMode
 Microsoft.AspNetCore.Components.RazorComponentApplication
-<<<<<<< HEAD
-Microsoft.AspNetCore.Components.RazorComponentApplication.Pages.get -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Components.PageDefinition!>!
-=======
 Microsoft.AspNetCore.Components.RazorComponentApplication.Components.get -> System.Collections.Generic.IReadOnlyList<Microsoft.AspNetCore.Components.ComponentInfo!>!
 Microsoft.AspNetCore.Components.RazorComponentApplication.Pages.get -> System.Collections.Generic.IReadOnlyList<Microsoft.AspNetCore.Components.PageComponentInfo!>!
-Microsoft.AspNetCore.Components.RenderMode
-Microsoft.AspNetCore.Components.RenderMode.Server = 2 -> Microsoft.AspNetCore.Components.RenderMode
-Microsoft.AspNetCore.Components.RenderMode.ServerPrerendered = 3 -> Microsoft.AspNetCore.Components.RenderMode
-Microsoft.AspNetCore.Components.RenderMode.Static = 1 -> Microsoft.AspNetCore.Components.RenderMode
-Microsoft.AspNetCore.Components.RenderMode.WebAssembly = 4 -> Microsoft.AspNetCore.Components.RenderMode
-Microsoft.AspNetCore.Components.RenderMode.WebAssemblyPrerendered = 5 -> Microsoft.AspNetCore.Components.RenderMode
->>>>>>> bb9a4fbb56 (Discovery working e2e with a test)
 Microsoft.Extensions.DependencyInjection.RazorComponentsServiceCollectionExtensions
 override Microsoft.AspNetCore.Components.ComponentBuilder.Equals(object? obj) -> bool
 override Microsoft.AspNetCore.Components.ComponentBuilder.GetHashCode() -> int
