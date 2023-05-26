@@ -80,7 +80,7 @@ public class EditForm : ComponentBase
     /// <summary>
     /// Gets the context associated with data bound to the EditContext in this form.
     /// </summary>
-    [CascadingParameter] public ModelBindingContext? BindingContext { get; set; }
+    [CascadingParameter] public FormParameterContext? BindingContext { get; set; }
 
     /// <summary>
     /// Gets or sets the form name.
@@ -135,9 +135,9 @@ public class EditForm : ComponentBase
 
         if (FormHandlerName != null)
         {
-            builder.OpenComponent<CascadingModelBinder>(0);
-            builder.AddComponentParameter(1, nameof(CascadingModelBinder.Name), FormHandlerName);
-            builder.AddComponentParameter(2, nameof(CascadingModelBinder.ChildContent), (RenderFragment<ModelBindingContext>)RenderWithNamedContext);
+            builder.OpenComponent<NamedFormFormParameterValue>(0);
+            builder.AddComponentParameter(1, nameof(NamedFormFormParameterValue.Name), FormHandlerName);
+            builder.AddComponentParameter(2, nameof(NamedFormFormParameterValue.ChildContent), (RenderFragment<FormParameterContext>)RenderWithNamedContext);
             builder.CloseComponent();
         }
         else
@@ -147,12 +147,12 @@ public class EditForm : ComponentBase
 
         builder.CloseRegion();
 
-        RenderFragment RenderWithNamedContext(ModelBindingContext context)
+        RenderFragment RenderWithNamedContext(FormParameterContext context)
         {
             return builder => RenderFormContents(builder, context);
         }
 
-        void RenderFormContents(RenderTreeBuilder builder, ModelBindingContext? bindingContext)
+        void RenderFormContents(RenderTreeBuilder builder, FormParameterContext? bindingContext)
         {
             builder.OpenElement(0, "form");
             if (!string.IsNullOrEmpty(bindingContext?.Name))
@@ -160,9 +160,9 @@ public class EditForm : ComponentBase
                 builder.AddAttribute(1, "name", bindingContext.Name);
             }
 
-            if (!string.IsNullOrEmpty(bindingContext?.BindingContextId))
+            if (!string.IsNullOrEmpty(bindingContext?.FormHandlerUrl))
             {
-                builder.AddAttribute(2, "action", bindingContext.BindingContextId);
+                builder.AddAttribute(2, "action", bindingContext.FormHandlerUrl);
             }
 
             builder.AddMultipleAttributes(3, AdditionalAttributes);
@@ -203,6 +203,14 @@ public class EditForm : ComponentBase
             {
                 await OnInvalidSubmit.InvokeAsync(_editContext);
             }
+        }
+    }
+
+    private class NamedFormFormParameterValue : BaseCascadingFormParameterValue
+    {
+        protected override bool TryBindValue(string formName, Type valueType, out object? value)
+        {
+            throw new NotImplementedException();
         }
     }
 }

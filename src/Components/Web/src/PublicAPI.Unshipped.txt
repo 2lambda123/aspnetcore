@@ -2,13 +2,18 @@
 *REMOVED*override Microsoft.AspNetCore.Components.Forms.InputFile.OnInitialized() -> void
 abstract Microsoft.AspNetCore.Components.Forms.FormDataProvider.Entries.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Microsoft.Extensions.Primitives.StringValues>!
 abstract Microsoft.AspNetCore.Components.Forms.FormDataProvider.Name.get -> string?
+Microsoft.AspNetCore.Components.Forms.CascadingFormParameterValue
+Microsoft.AspNetCore.Components.Forms.CascadingFormParameterValue.CascadingFormParameterValue() -> void
+Microsoft.AspNetCore.Components.Forms.EditForm.BindingContext.get -> Microsoft.AspNetCore.Components.FormDataContext?
 Microsoft.AspNetCore.Components.Forms.FormDataProvider
 Microsoft.AspNetCore.Components.Forms.FormDataProvider.FormDataProvider() -> void
 Microsoft.AspNetCore.Components.Forms.FormDataProvider.IsFormDataAvailable.get -> bool
+Microsoft.AspNetCore.Components.Forms.IFormValueSupplier
+Microsoft.AspNetCore.Components.Forms.IFormValueSupplier.CanBind(string! formName, System.Type! valueType) -> bool
+Microsoft.AspNetCore.Components.Forms.IFormValueSupplier.TryBind(string! formName, System.Type! valueType, out object? boundValue) -> bool
 Microsoft.AspNetCore.Components.Forms.IHostEnvironmentFormDataProvider
 Microsoft.AspNetCore.Components.Forms.IHostEnvironmentFormDataProvider.SetFormData(string! name, System.Collections.Generic.IReadOnlyDictionary<string!, Microsoft.Extensions.Primitives.StringValues>! formData) -> void
 Microsoft.AspNetCore.Components.Forms.InputBase<TValue>.NameAttributeValue.get -> string!
-Microsoft.AspNetCore.Components.Forms.EditForm.BindingContext.get -> Microsoft.AspNetCore.Components.ModelBindingContext?
 Microsoft.AspNetCore.Components.Forms.EditForm.BindingContext.set -> void
 Microsoft.AspNetCore.Components.Forms.EditForm.FormHandlerName.get -> string?
 Microsoft.AspNetCore.Components.Forms.EditForm.FormHandlerName.set -> void
@@ -58,6 +63,7 @@ Microsoft.AspNetCore.Components.Web.WebAssemblyRenderMode
 Microsoft.AspNetCore.Components.Web.WebAssemblyRenderMode.Prerender.get -> bool
 Microsoft.AspNetCore.Components.Web.WebAssemblyRenderMode.WebAssemblyRenderMode() -> void
 Microsoft.AspNetCore.Components.Web.WebAssemblyRenderMode.WebAssemblyRenderMode(bool prerender) -> void
+override Microsoft.AspNetCore.Components.Forms.CascadingFormParameterValue.TryBindValue(string! formName, System.Type! valueType, out object? value) -> bool
 override Microsoft.AspNetCore.Components.HtmlRendering.Infrastructure.StaticHtmlRenderer.Dispatcher.get -> Microsoft.AspNetCore.Components.Dispatcher!
 override Microsoft.AspNetCore.Components.HtmlRendering.Infrastructure.StaticHtmlRenderer.HandleException(System.Exception! exception) -> void
 override Microsoft.AspNetCore.Components.HtmlRendering.Infrastructure.StaticHtmlRenderer.UpdateDisplayAsync(in Microsoft.AspNetCore.Components.RenderTree.RenderBatch renderBatch) -> System.Threading.Tasks.Task!

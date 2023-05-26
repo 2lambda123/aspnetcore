@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Components.Test.Helpers;
@@ -118,7 +118,7 @@ public class EditFormTest
         {
             Model = model,
             FormName = "my-form",
-            BindingContext = new ModelBindingContext("", "")
+            BindingContext = new FormParameterContext("", "")
         };
 
         // Act
@@ -139,7 +139,7 @@ public class EditFormTest
         {
             Model = model,
             FormName = "my-form",
-            BindingContext = new ModelBindingContext("parent-context", "path?handler=parent-context")
+            BindingContext = new FormParameterContext("parent-context", "path?handler=parent-context")
         };
 
         // Act
@@ -164,7 +164,7 @@ public class EditFormTest
                 ["name"] = "my-explicit-name",
                 ["action"] = "/somewhere/else",
             },
-            BindingContext = new ModelBindingContext("parent-context", "path?handler=parent-context")
+            BindingContext = new FormParameterContext("parent-context", "path?handler=parent-context")
         };
 
         // Act
@@ -184,7 +184,7 @@ public class EditFormTest
         var rootComponent = new TestEditFormHostComponent
         {
             Model = model,
-            BindingContext = new ModelBindingContext("", ""),
+            BindingContext = new FormParameterContext("", ""),
             SubmitHandler = ctx => { }
         };
 
@@ -247,7 +247,7 @@ public class EditFormTest
         var rootComponent = new TestEditFormHostComponent
         {
             Model = model,
-            BindingContext = new ModelBindingContext("", "")
+            BindingContext = new FormParameterContext("", "")
         };
 
         // Act
@@ -287,7 +287,7 @@ public class EditFormTest
         {
             Model = model,
             FormName = "my-form",
-            BindingContext = new ModelBindingContext("", "")
+            BindingContext = new FormParameterContext("", "")
         };
 
         // Act
@@ -307,7 +307,7 @@ public class EditFormTest
         {
             Model = model,
             FormName = "my-form",
-            BindingContext = new ModelBindingContext("parent-context", "path?handler=parent-context")
+            BindingContext = new FormParameterContext("parent-context", "path?handler=parent-context")
         };
 
         // Act
@@ -391,7 +391,7 @@ public class EditFormTest
 
         public TestModel Model { get; set; }
 
-        public ModelBindingContext BindingContext { get; set; }
+        public FormParameterContext BindingContext { get; set; }
 
         public Action<EditContext> SubmitHandler { get; set; }
 
@@ -403,9 +403,9 @@ public class EditFormTest
         {
             if (BindingContext != null)
             {
-                builder.OpenComponent<CascadingModelBinder>(0);
-                builder.AddComponentParameter(1, nameof(CascadingModelBinder.Name), BindingContext.Name);
-                builder.AddComponentParameter(3, nameof(CascadingModelBinder.ChildContent), (RenderFragment<ModelBindingContext>)((_) => RenderForm));
+                builder.OpenComponent<CascadingFormParameterValue>(0);
+                builder.AddComponentParameter(1, nameof(CascadingFormParameterValue.Name), BindingContext.Name);
+                builder.AddComponentParameter(3, nameof(CascadingFormParameterValue.ChildContent), (RenderFragment<FormParameterContext>)((_) => RenderForm));
                 builder.CloseComponent();
             }
             else

@@ -77,26 +77,7 @@ public class RouteViewTest
         Assert.Collection(testLayoutFrames,
             frame => AssertFrame.Text(frame, "Layout starts here", sequence: 0),
             frame => AssertFrame.Region(frame, subtreeLength: 3),
-            frame => AssertFrame.Component<CascadingModelBinder>(frame, sequence: 0, subtreeLength: 2),
-            frame => AssertFrame.Attribute(frame, nameof(CascadingModelBinder.ChildContent), typeof(RenderFragment<ModelBindingContext>), sequence: 1),
             frame => AssertFrame.Text(frame, "Layout ends here", sequence: 2));
-
-        // Assert: Cascading model binder renders CascadingValue<ModelBindingContext>
-        var cascadingModelBinderComponentId = batch.GetComponentFrames<CascadingModelBinder>().Single().ComponentId;
-        var cascadingModelBinderFrames = _renderer.GetCurrentRenderTreeFrames(cascadingModelBinderComponentId).AsEnumerable();
-        Assert.Collection(cascadingModelBinderFrames,
-            frame => AssertFrame.Component<CascadingValue<ModelBindingContext>>(frame, sequence: 0, subtreeLength: 4),
-            frame => AssertFrame.Attribute(frame, nameof(CascadingValue<ModelBindingContext>.IsFixed), false, sequence: 1),
-            frame => AssertFrame.Attribute(frame, nameof(CascadingValue<ModelBindingContext>.Value), typeof(ModelBindingContext), sequence: 2),
-            frame => AssertFrame.Attribute(frame, nameof(CascadingValue<ModelBindingContext>.ChildContent), typeof(RenderFragment), sequence: 3));
-
-        // Assert: CascadingValue<ModelBindingContext> renders page
-        var cascadingValueComponentId = batch.GetComponentFrames<CascadingValue<ModelBindingContext>>().Single().ComponentId;
-        var cascadingValueFrames = _renderer.GetCurrentRenderTreeFrames(cascadingValueComponentId).AsEnumerable();
-        Assert.Collection(cascadingValueFrames,
-            frame => AssertFrame.Region(frame, sequence: 0, subtreeLength: 3),
-            frame => AssertFrame.Component<ComponentWithLayout>(frame, sequence: 0, subtreeLength: 2),
-            frame => AssertFrame.Attribute(frame, nameof(ComponentWithLayout.Message), "Test message", sequence: 1));
 
         // Assert: page itself is rendered, having received parameters from the original route data
         var pageComponentId = batch.GetComponentFrames<ComponentWithLayout>().Single().ComponentId;

@@ -9,7 +9,9 @@
             <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
         </div>
         <article class="content px-4">
-            @Body
+            <CascadingFormParameterValue>
+                @Body
+            </CascadingFormParameterValue>
         </article>
     </main>
 </div>
