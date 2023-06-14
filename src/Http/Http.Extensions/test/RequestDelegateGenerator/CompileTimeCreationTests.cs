@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.AspNetCore.Http.RequestDelegateGenerator;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.AspNetCore.Http.Generators.Tests;
 
@@ -36,5 +39,31 @@ app.MapGet("/hello", (HttpContext context) => Task.CompletedTask);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => endpoint.RequestDelegate(httpContext));
         Assert.Equal("'invalidName' is not a route parameter.", exception.Message);
+    }
+
+    [Fact]
+    public async Task SupportsSameInterceptorsFromDifferentFiles()
+    {
+        var project = CreateProject();
+        var source = GetMapActionString("""app.MapGet("/", (string name) => "Hello {name}!");""");
+        var otherSource = GetMapActionString("""app.MapGet("/", (string name) => "Hello {name}!");""", "OtherTestMapActions");
+        project = project.AddDocument("TestMapActions.cs", SourceText.From(source, Encoding.UTF8)).Project;
+        project = project.AddDocument("OtherTestMapActions.cs", SourceText.From(otherSource, Encoding.UTF8)).Project;
+        var compilation = await project.GetCompilationAsync();
+
+        var generator = new RequestDelegateGenerator.RequestDelegateGenerator().AsSourceGenerator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generators: new[]
+            {
+                generator
+            },
+            driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true),
+            parseOptions: ParseOptions);
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation,
+            out var _);
+
+        var diagnostics = updatedCompilation.GetDiagnostics();
+        Assert.Empty(diagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning));
+
+        await VerifyAgainstBaselineUsingFile(updatedCompilation);
     }
 }

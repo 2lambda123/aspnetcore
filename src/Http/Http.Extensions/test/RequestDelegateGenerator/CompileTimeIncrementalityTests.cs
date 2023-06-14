@@ -15,7 +15,7 @@ public class CompileTimeIncrementalityTests : RequestDelegateCreationTestBase
         var source = @"app.MapGet(""/hello"", () => ""Hello world!"");";
         var updatedSource = @"app.MapGet(""/hello"", () => ""Bye world!"");";
 
-        var (result, compilation) = await RunGeneratorAsync(source, updatedSource);
+        var (result, compilation) = await RunGeneratorAsync(source, false, updatedSource);
         var outputSteps = GetRunStepOutputs(result);
 
         Assert.All(outputSteps, (value) => Assert.Equal(IncrementalStepRunReason.Cached, value.Reason));
@@ -27,7 +27,7 @@ public class CompileTimeIncrementalityTests : RequestDelegateCreationTestBase
         var source = @"app.MapGet(""/hello"", () => ""Hello world!"");";
         var updatedSource = @"app.MapGet(""/hello-2"", () => ""Hello world!"");";
 
-        var (result, compilation) = await RunGeneratorAsync(source, updatedSource);
+        var (result, compilation) = await RunGeneratorAsync(source, false, updatedSource);
         var outputSteps = GetRunStepOutputs(result);
 
         Assert.All(outputSteps, (value) => Assert.Equal(IncrementalStepRunReason.Cached, value.Reason));
@@ -39,7 +39,7 @@ public class CompileTimeIncrementalityTests : RequestDelegateCreationTestBase
         var source = @"app.MapGet(""/hello"", () => ""Hello world!"");";
         var updatedSource = @"app.MapGet(""/hello"", () => Task.FromResult(""Hello world!""));";
 
-        var (result, compilation) = await RunGeneratorAsync(source, updatedSource);
+        var (result, compilation) = await RunGeneratorAsync(source, false, updatedSource);
         var outputSteps = GetRunStepOutputs(result);
 
         Assert.All(outputSteps, (value) => Assert.Equal(IncrementalStepRunReason.New, value.Reason));
@@ -55,7 +55,7 @@ app.MapGet("/", ([{typeof(FromBodyAttribute)}] {typeof(Todo)}? todo) => TypedRes
 #pragma warning disable CS8622
 """;
 
-        var (result, compilation) = await RunGeneratorAsync(source, updatedSource);
+        var (result, compilation) = await RunGeneratorAsync(source, false, updatedSource);
         var outputSteps = GetRunStepOutputs(result);
 
         Assert.All(outputSteps, (value) => Assert.Equal(IncrementalStepRunReason.New, value.Reason));

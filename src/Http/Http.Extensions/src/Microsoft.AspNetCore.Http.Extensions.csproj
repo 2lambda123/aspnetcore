@@ -48,4 +48,14 @@
     <InternalsVisibleTo Include="Microsoft.AspNetCore.Http.Extensions.Tests" />
   </ItemGroup>
 
+  <Target Name="ConfigureLinkAnalyzerMappings" BeforeTargets="GetAssemblyAttributes">
+    <ItemGroup>
+      <ILLinkAnalzyer Include="@(Analyzer->WithMetadataValue('Filename','ILLink.RoslynAnalyzer'))" />
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>ILLinkRoslynAnalyzerPath</_Parameter1>
+        <_Parameter2>%(ILLinkAnalzyer.FullPath)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
 </Project>

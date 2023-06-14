@@ -25,7 +25,7 @@ void TestAction(HttpContext context, [AsParameters] {{parameterType}}? args)
 app.MapGet("/", TestAction);
 """;
 
-        var (generatorRunResult, compilation) = await RunGeneratorAsync(source);
+        var (generatorRunResult, compilation) = await RunGeneratorAsync(source, expectLinkerDiagnostics: true);
 
         // Emits diagnostic but generates no source
         var result = Assert.IsType<GeneratorRunResult>(generatorRunResult);
@@ -76,7 +76,7 @@ void TestAction(HttpContext context, [AsParameters] {{parameterType}} args)
 app.MapGet("/", TestAction);
 """;
 
-        var (generatorRunResult, _) = await RunGeneratorAsync(source);
+        var (generatorRunResult, _) = await RunGeneratorAsync(source, expectLinkerDiagnostics: true);
 
         // Emits diagnostic but generates no source
         var result = Assert.IsType<GeneratorRunResult>(generatorRunResult);
@@ -95,7 +95,7 @@ app.MapGet("/", TestAction);
 void TestAction([AsParameters] {{parameterType}} req) { }
 app.MapGet("/", TestAction);
 """;
-        var (generatorRunResult, _) = await RunGeneratorAsync(source);
+        var (generatorRunResult, _) = await RunGeneratorAsync(source, expectLinkerDiagnostics: true);
 
         // Emits diagnostic but generates no source
         var result = Assert.IsType<GeneratorRunResult>(generatorRunResult);

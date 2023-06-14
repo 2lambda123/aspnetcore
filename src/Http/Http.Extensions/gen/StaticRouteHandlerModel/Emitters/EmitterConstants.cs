@@ -6,13 +6,13 @@ namespace Microsoft.AspNetCore.Http.RequestDelegateGenerator.StaticRouteHandlerM
 internal static class EmitterConstants
 {
     public static SymbolDisplayFormat DisplayFormat => new SymbolDisplayFormat(
-        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
+        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         miscellaneousOptions: SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
     public static SymbolDisplayFormat DisplayFormatWithoutNullability => new SymbolDisplayFormat(
-        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
+        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
 }
