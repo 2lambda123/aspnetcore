@@ -1,0 +1,25 @@
+﻿@page "/forms/default-form-naming-convention"
+@using Microsoft.AspNetCore.Components.Forms
+
+<h2>Default form post convention</h2>
+
+<form method="post" @onsubmit="OnPost" >
+    <AntiforgeryToken />
+    <input id="send" type="submit" value="Send" />
+</form>
+
+@if (_submitted)
+{
+    <p id="pass">Form submitted!</p>
+}
+
+@code{
+
+    public void OnPost()
+    {
+        _submitted = true;
+    }
+
+    bool _submitted = false;
+    EditContext _editContext = new EditContext(new object());
+}

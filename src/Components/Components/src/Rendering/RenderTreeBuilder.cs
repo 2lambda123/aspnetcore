@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components.RenderTree;
@@ -264,6 +265,13 @@ public sealed class RenderTreeBuilder : IDisposable
         if (value != null || _lastNonAttributeFrameType == RenderTreeFrameType.Component)
         {
             _entries.AppendAttribute(sequence, name, value);
+            if (TrackNamedEventHandlers &&
+                string.Equals("onsubmit", name, StringComparison.Ordinal) &&
+                _lastNonAttributeFrameType == RenderTreeFrameType.Element &&
+                TryGetEventHandlerName(value, out var handlerName))
+            {
+                SetEventHandlerName(handlerName);
+            }
         }
         else
         {
@@ -301,12 +309,22 @@ public sealed class RenderTreeBuilder : IDisposable
             // If we need to preserve the receiver, we just box the EventCallback
             // so we can get it out on the other side.
             _entries.AppendAttribute(sequence, name, value);
+            if (TrackNamedEventHandlers &&
+                TryGetEventHandlerName(value.Delegate, out var handlerName))
+            {
+                SetEventHandlerName(handlerName);
+            }
         }
         else if (value.HasDelegate)
         {
             // In the common case the receiver is also the delegate's target, so we
             // just need to retain the delegate. This allows us to avoid an allocation.
             _entries.AppendAttribute(sequence, name, value.Delegate);
+            if (TrackNamedEventHandlers &&
+                TryGetEventHandlerName(value.Delegate, out var handlerName))
+            {
+                SetEventHandlerName(handlerName);
+            }
         }
         else
         {
@@ -345,12 +363,22 @@ public sealed class RenderTreeBuilder : IDisposable
             // If we need to preserve the receiver - we convert this to an untyped EventCallback. We don't
             // need to preserve the type of an EventCallback<T> when it's invoked from the DOM.
             _entries.AppendAttribute(sequence, name, value.AsUntyped());
+            if (TrackNamedEventHandlers &&
+                TryGetEventHandlerName(value.Delegate, out var handlerName))
+            {
+                SetEventHandlerName(handlerName);
+            }
         }
         else if (value.HasDelegate)
         {
             // In the common case the receiver is also the delegate's target, so we
             // just need to retain the delegate. This allows us to avoid an allocation.
             _entries.AppendAttribute(sequence, name, value.Delegate);
+            if (TrackNamedEventHandlers &&
+                TryGetEventHandlerName(value.Delegate, out var handlerName))
+            {
+                SetEventHandlerName(handlerName);
+            }
         }
         else
         {
@@ -400,16 +428,27 @@ public sealed class RenderTreeBuilder : IDisposable
             {
                 if (callbackValue.HasDelegate)
                 {
-                    _entries.AppendAttribute(sequence, name, callbackValue.UnpackForRenderTree());
+                    var callback = callbackValue.UnpackForRenderTree();
+                    _entries.AppendAttribute(sequence, name, callbackValue);
+                    if (TrackNamedEventHandlers &&
+                        callback is EventCallback eventCallback &&
+                        TryGetEventHandlerName(eventCallback.Delegate, out var handlerName))
+                    {
+                        SetEventHandlerName(handlerName);
+                    }
                 }
                 else
                 {
                     TrackAttributeName(name);
                 }
             }
-            else if (value is MulticastDelegate)
+            else if (value is MulticastDelegate @delegate)
             {
                 _entries.AppendAttribute(sequence, name, value);
+                if (TrackNamedEventHandlers && TryGetEventHandlerName(@delegate, out var handlerName))
+                {
+                    SetEventHandlerName(handlerName);
+                }
             }
             else
             {
@@ -435,6 +474,22 @@ public sealed class RenderTreeBuilder : IDisposable
         {
             // This is going to throw. Calling it just to get a consistent exception message.
             AssertCanAddAttribute();
+        }
+    }
+
+    static bool TryGetEventHandlerName(Delegate? callback, [NotNullWhen(true)] out string? name)
+    {
+        // Cache this
+        var candidateName = callback?.Method.Name;
+        if (candidateName != null && candidateName.StartsWith("OnPost", StringComparison.Ordinal))
+        {
+            name = candidateName["OnPost".Length..];
+            return true;
+        }
+        else
+        {
+            name = null;
+            return false;
         }
     }
 
