@@ -7,6 +7,6 @@ namespace Microsoft.AspNetCore.Components.WebView.Services;
 
 internal class WebViewFormValueSupplier : IFormValueSupplier
 {
-    public bool CanBind(Type valueType, string formName = null) => false;
+    public bool CanBind(Type valueType, string formName = null, bool allowMultiple = false) => false;
     public void Bind(FormValueSupplierContext context) { }
 }

@@ -5,16 +5,34 @@ using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components.Rendering;
 
 namespace Microsoft.AspNetCore.Components.Forms;
+/// <summary>
+/// 
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public abstract class Editor<T> : ComponentBase
 {
-    private HtmlFieldPrefix _value;
+    private HtmlFieldPrefix? _value;
 
+    /// <summary>
+    /// 
+    /// </summary>
     [Parameter] public T Value { get; set; } = default!;
+
+    /// <summary>
+    /// 
+    /// </summary>
     [Parameter] public Expression<Func<T>> ValueExpression { get; set; } = default!;
+
+    /// <summary>
+    /// 
+    /// </summary>
     [Parameter] public EventCallback<T> ValueChanged { get; set; } = default!;
 
     [CascadingParameter] private HtmlFieldPrefix FieldPrefix { get; set; } = default!;
 
+    /// <summary>
+    /// 
+    /// </summary>
     protected override void OnParametersSet()
     {
         _value = FieldPrefix != null ? FieldPrefix.Combine(ValueExpression) : new HtmlFieldPrefix(ValueExpression);

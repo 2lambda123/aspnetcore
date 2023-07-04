@@ -13,6 +13,7 @@ public interface IFormValueSupplier
     /// </summary>
     /// <param name="valueType">The <see cref="Type"/> for the value to bind.</param>
     /// <param name="formName">The form name to bind data from or null to only validate the type can be bound.</param>
+    /// <param name="allowMultiple">Whether or not the parameter can bind to multiple candidate forms.</param>
     /// <returns><c>true</c> if the value type can be bound; otherwise, <c>false</c>.</returns>
     bool CanBind(Type valueType, string? formName = null, bool allowMultiple = false);
 

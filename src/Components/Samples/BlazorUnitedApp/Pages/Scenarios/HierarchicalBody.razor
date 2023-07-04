@@ -81,7 +81,7 @@
     public void UpdateRemainingItems()
     {
         _errors = BindingContext?.GetAllErrors();
-        if (!_errors.Any())
+        if (_errors?.Any() != true)
         {
             var remaining = _catalog.Products.SingleOrDefault(p => p.Id == ProductId);
             remaining!.RemainingUnits -= Ammount;

@@ -63,6 +63,10 @@ public class FormValueSupplierContext
     /// </summary>
     public object? Result { get; private set; }
 
+    /// <summary>
+    /// Gets or sets a value that determines whether or not the binding operation should
+    /// bind to nested form contexts.
+    /// </summary>
     public bool BindToNestedFormContexts { get; set; }
 
     /// <summary>

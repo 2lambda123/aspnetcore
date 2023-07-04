@@ -472,7 +472,7 @@ public class AuthorizeRouteViewTest
 
     private class TestFormValueSupplier : IFormValueSupplier
     {
-        public bool CanBind(Type valueType, string formName = null) => false;
+        public bool CanBind(Type valueType, string formName = null, bool allowMultiple = false) => false;
         public void Bind(FormValueSupplierContext context) { }
     }
 }

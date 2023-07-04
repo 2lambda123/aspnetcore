@@ -28,7 +28,7 @@ internal static class ExpressionFormatter
         return FormatLambda(expression, prefix: null);
     }
 
-    public static string FormatLambda(LambdaExpression expression, string prefix = null)
+    public static string FormatLambda(LambdaExpression expression, string? prefix = null)
     {
         var builder = new ReverseStringBuilder(stackalloc char[StackAllocBufferSize]);
         var node = expression.Body;

@@ -12,6 +12,8 @@ Microsoft.AspNetCore.Components.Binding.CascadingModelBindingProvider.CascadingM
 Microsoft.AspNetCore.Components.Binding.CascadingQueryModelBindingProvider
 Microsoft.AspNetCore.Components.Binding.CascadingQueryModelBindingProvider.CascadingQueryModelBindingProvider(Microsoft.AspNetCore.Components.NavigationManager! navigationManager) -> void
 Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext
+Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.BindToNestedFormContexts.get -> bool
+Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.BindToNestedFormContexts.set -> void
 Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.FormName.get -> string!
 Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.FormValueSupplierContext(string! formName, System.Type! valueType, string! parameterName) -> void
 Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.MapErrorToContainer.get -> System.Action<string!, object!>?
@@ -24,7 +26,7 @@ Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.SetResult(objec
 Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext.ValueType.get -> System.Type!
 Microsoft.AspNetCore.Components.Binding.IFormValueSupplier
 Microsoft.AspNetCore.Components.Binding.IFormValueSupplier.Bind(Microsoft.AspNetCore.Components.Binding.FormValueSupplierContext! context) -> void
-Microsoft.AspNetCore.Components.Binding.IFormValueSupplier.CanBind(System.Type! valueType, string? formName = null) -> bool
+Microsoft.AspNetCore.Components.Binding.IFormValueSupplier.CanBind(System.Type! valueType, string? formName = null, bool allowMultiple = false) -> bool
 Microsoft.AspNetCore.Components.BindingError
 Microsoft.AspNetCore.Components.BindingError.AttemptedValue.get -> string?
 Microsoft.AspNetCore.Components.BindingError.Container.get -> object!
@@ -37,7 +39,7 @@ Microsoft.AspNetCore.Components.CascadingModelBinder.ChildContent.get -> Microso
 Microsoft.AspNetCore.Components.CascadingModelBinder.ChildContent.set -> void
 Microsoft.AspNetCore.Components.CascadingModelBinder.IsFixed.get -> bool
 Microsoft.AspNetCore.Components.CascadingModelBinder.IsFixed.set -> void
-Microsoft.AspNetCore.Components.CascadingModelBinder.Name.get -> string!
+Microsoft.AspNetCore.Components.CascadingModelBinder.Name.get -> object!
 Microsoft.AspNetCore.Components.CascadingModelBinder.Name.set -> void
 Microsoft.AspNetCore.Components.CascadingParameterAttributeBase
 Microsoft.AspNetCore.Components.CascadingParameterAttributeBase.CascadingParameterAttributeBase() -> void

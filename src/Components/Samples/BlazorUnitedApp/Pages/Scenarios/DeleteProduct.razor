@@ -6,7 +6,7 @@
 
 @code {
 
-    [CascadingParameter] public ModelBindingContext BindingContext { get; set; }
+    [CascadingParameter] public ModelBindingContext BindingContext { get; set; } = null!;
 
     [Parameter] public Product Product { get; set; } = null!;
 
