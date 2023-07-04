@@ -12,7 +12,6 @@ namespace Microsoft.AspNetCore.Components.Forms;
 public class EditForm : ComponentBase
 {
     private readonly Func<Task> _handleSubmitDelegate; // Cache to avoid per-render allocations
-    private readonly RenderFragment _renderWithBindingValidator;
 
     private EditContext? _editContext;
     private bool _hasSetEditContextExplicitly;
@@ -23,7 +22,6 @@ public class EditForm : ComponentBase
     public EditForm()
     {
         _handleSubmitDelegate = HandleSubmitAsync;
-        _renderWithBindingValidator = RenderWithBindingValidator;
     }
 
     /// <summary>
@@ -183,7 +181,7 @@ public class EditForm : ComponentBase
             builder.AddComponentParameter(8, "Value", _editContext);
             if (bindingContext != null && !OperatingSystem.IsBrowser())
             {
-                builder.AddComponentParameter(9, "ChildContent", _renderWithBindingValidator);
+                builder.AddComponentParameter(9, "ChildContent", RenderWithBindingValidator(bindingContext));
             }
             else
             {
@@ -194,13 +192,21 @@ public class EditForm : ComponentBase
         }
     }
 
-    private void RenderWithBindingValidator(RenderTreeBuilder builder)
+    private RenderFragment RenderWithBindingValidator(ModelBindingContext bindingContext)
     {
-        builder.OpenComponent<ModelBindingContextValidator>(0);
-        builder.CloseComponent();
-        builder.OpenComponent<AntiforgeryToken>(1);
-        builder.CloseComponent();
-        builder.AddContent(2, ChildContent!, EditContext);
+        return builder =>
+        {
+            builder.OpenComponent<ModelBindingContextValidator>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<AntiforgeryToken>(1);
+            builder.CloseComponent();
+            builder.OpenElement(2, "input");
+            builder.AddAttribute(3, "type", "hidden");
+            builder.AddAttribute(4, "name", "handler");
+            builder.AddAttribute(5, "value", bindingContext.Name);
+            builder.CloseElement();
+            builder.AddContent(6, ChildContent!, EditContext);
+        };
     }
 
     private async Task HandleSubmitAsync()

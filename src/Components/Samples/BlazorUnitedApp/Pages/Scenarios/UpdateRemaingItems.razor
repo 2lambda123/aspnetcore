@@ -1,0 +1,31 @@
+﻿<form
+    method="post"
+    @onsubmit="() => OnUpdateRemainingItems.InvokeAsync(new(Product, Ammount))"
+    @onsubmit:name="@BindingContext.Name">
+        <AntiforgeryToken />
+        <input type="hidden" name="handler" value="@BindingContext.Name" />
+        <input type="text" name="Ammount" value="1" />
+    @{
+        var errors = BindingContext.GetAllErrors();
+    }
+    @if (errors?.Any() == true)
+    {
+        <input type="submit" value="Update remaining items" />
+    }
+    else
+    {
+        <input type="submit" value="Update remaining items" />
+    }
+</form>
+
+@code {
+    [CascadingParameter] public ModelBindingContext BindingContext { get; set; }
+
+    [Parameter] public Product Product { get; set; } = null!;
+
+    [SupplyParameterFromForm] public int Ammount { get; set; } = 1;
+
+    [Parameter] public EventCallback<RemainingItems> OnUpdateRemainingItems { get; set; }
+
+    public record RemainingItems(Product Product, int Ammount);
+}

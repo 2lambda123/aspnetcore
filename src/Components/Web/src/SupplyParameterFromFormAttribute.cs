@@ -22,4 +22,13 @@ public sealed class SupplyParameterFromFormAttribute : CascadingParameterAttribu
     /// the form data and decide whether or not the value needs to be bound.
     /// </summary>
     public string? Handler { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value that determines if the parameter must bind to multiple
+    /// candidate forms. Any form this parameter binds to must be a suffix of the current
+    /// handler name. For example if the handler is "MyForm" and the actual handler
+    /// name is MyForm.5, then the parameter will bind to that form. If false, the handler
+    /// name must match exactly the form name.
+    /// </summary>
+    public bool AllowMultiple { get; set; }
 }

@@ -20,11 +20,26 @@ public sealed class CascadingModelBinder : IComponent, ICascadingValueSupplier, 
     private RenderHandle _handle;
     private ModelBindingContext? _bindingContext;
     private bool _hasPendingQueuedRender;
+    private string _name = "";
 
     /// <summary>
     /// The binding context name.
     /// </summary>
-    [Parameter] public string Name { get; set; } = "";
+    [Parameter]
+    public object Name
+    {
+        get => _name;
+        set
+        {
+            _name = value switch
+            {
+                IFormattable formattable => formattable.ToString() ??
+                    throw new InvalidOperationException($"The value for {nameof(Name)} must not be null."),
+                string str => str,
+                _ => throw new InvalidOperationException($"The value for {nameof(Name)} must be a string or an IFormattable.")
+            };
+        }
+    }
 
     /// <summary>
     /// If true, indicates that <see cref="ModelBindingContext.BindingContextId"/> will not change.
@@ -61,7 +76,7 @@ public sealed class CascadingModelBinder : IComponent, ICascadingValueSupplier, 
         }
 
         parameters.SetParameterProperties(this);
-        if (ParentContext != null && string.IsNullOrEmpty(Name))
+        if (ParentContext != null && string.IsNullOrEmpty(_name))
         {
             throw new InvalidOperationException($"Nested binding contexts must define a Name. (Parent context) = '{ParentContext.Name}'.");
         }
@@ -113,7 +128,7 @@ public sealed class CascadingModelBinder : IComponent, ICascadingValueSupplier, 
         // 3) Parent has a name "parent-name"
         // Name = "parent-name.my-handler";
         // BindingContextId = <<base-relative-uri>>((<<existing-query>>&)|?)handler=my-handler
-        var name = ModelBindingContext.Combine(ParentContext, Name);
+        var name = ModelBindingContext.Combine(ParentContext, _name!);
         var bindingId = string.IsNullOrEmpty(name) ? "" : GenerateBindingContextId(name);
         var bindingContextDidChange =
             _bindingContext is null ||

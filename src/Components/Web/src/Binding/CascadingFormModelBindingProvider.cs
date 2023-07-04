@@ -36,7 +36,8 @@ public sealed class CascadingFormModelBindingProvider : CascadingModelBindingPro
     protected internal override bool CanSupplyValue(ModelBindingContext? bindingContext, in CascadingParameterInfo parameterInfo)
     {
         var (formName, valueType) = GetFormNameAndValueType(bindingContext, parameterInfo);
-        return _formValueSupplier.CanBind(valueType, formName);
+        var allowMultiple = ((SupplyParameterFromFormAttribute)parameterInfo.Attribute).AllowMultiple;
+        return _formValueSupplier.CanBind(valueType, formName, allowMultiple);
     }
 
     /// <inhertidoc/>
@@ -46,7 +47,8 @@ public sealed class CascadingFormModelBindingProvider : CascadingModelBindingPro
         var (formName, valueType) = GetFormNameAndValueType(bindingContext, parameterInfo);
 
         var parameterName = parameterInfo.Attribute.Name ?? parameterInfo.PropertyName;
-        var handler = ((SupplyParameterFromFormAttribute)parameterInfo.Attribute).Handler;
+        var attribute = ((SupplyParameterFromFormAttribute)parameterInfo.Attribute);
+        var handler = attribute.Handler;
         Action<string, FormattableString, string?> errorHandler = string.IsNullOrEmpty(handler) ?
             bindingContext.AddError :
             (name, message, value) => bindingContext.AddError(formName, parameterName, message, value);
@@ -54,7 +56,8 @@ public sealed class CascadingFormModelBindingProvider : CascadingModelBindingPro
         var context = new FormValueSupplierContext(formName!, valueType, parameterName)
         {
             OnError = errorHandler,
-            MapErrorToContainer = bindingContext.AttachParentValue
+            MapErrorToContainer = bindingContext.AttachParentValue,
+            BindToNestedFormContexts = attribute.AllowMultiple,
         };
 
         _formValueSupplier.Bind(context);

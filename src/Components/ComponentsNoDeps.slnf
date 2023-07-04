@@ -13,6 +13,8 @@
       "src\\Components\\Endpoints\\test\\Microsoft.AspNetCore.Components.Endpoints.Tests.csproj",
       "src\\Components\\Forms\\src\\Microsoft.AspNetCore.Components.Forms.csproj",
       "src\\Components\\Forms\\test\\Microsoft.AspNetCore.Components.Forms.Tests.csproj",
+      "src\\Components\\QuickGrid\\Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter\\src\\Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter.csproj",
+      "src\\Components\\QuickGrid\\Microsoft.AspNetCore.Components.QuickGrid\\src\\Microsoft.AspNetCore.Components.QuickGrid.csproj",
       "src\\Components\\Samples\\BlazorServerApp\\BlazorServerApp.csproj",
       "src\\Components\\Samples\\BlazorUnitedApp\\BlazorUnitedApp.csproj",
       "src\\Components\\Server\\src\\Microsoft.AspNetCore.Components.Server.csproj",
@@ -50,12 +52,12 @@
       "src\\Components\\benchmarkapps\\Wasm.Performance\\TestApp\\Wasm.Performance.TestApp.csproj",
       "src\\Components\\test\\E2ETest\\Microsoft.AspNetCore.Components.E2ETests.csproj",
       "src\\Components\\test\\testassets\\BasicTestApp\\BasicTestApp.csproj",
+      "src\\Components\\test\\testassets\\Components.TestServer\\Components.TestServer.csproj",
       "src\\Components\\test\\testassets\\ComponentsApp.App\\ComponentsApp.App.csproj",
       "src\\Components\\test\\testassets\\ComponentsApp.Server\\ComponentsApp.Server.csproj",
       "src\\Components\\test\\testassets\\GlobalizationWasmApp\\GlobalizationWasmApp.csproj",
       "src\\Components\\test\\testassets\\LazyTestContentPackage\\LazyTestContentPackage.csproj",
-      "src\\Components\\test\\testassets\\TestContentPackage\\TestContentPackage.csproj",
-      "src\\Components\\test\\testassets\\Components.TestServer\\Components.TestServer.csproj"
+      "src\\Components\\test\\testassets\\TestContentPackage\\TestContentPackage.csproj"
     ]
   }
 }

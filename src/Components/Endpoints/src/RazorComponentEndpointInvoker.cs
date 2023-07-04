@@ -3,7 +3,6 @@
 
 using System.Buffers;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Antiforgery;
@@ -116,32 +115,52 @@ internal class RazorComponentEndpointInvoker
             {
                 _context.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
-            var formValid = TrySetFormHandler(out var handler);
-            return new(valid && formValid, isPost, handler);
+            var handler = await TryGetFormHandler();
+            _renderer.SetFormHandlerName(handler!);
+
+            return new(valid && handler != null, isPost, handler);
         }
 
         return new(true, false, null);
     }
 
-    private bool TrySetFormHandler([NotNullWhen(true)] out string? handler)
+    private async Task<string?> TryGetFormHandler()
     {
-        handler = "";
+        var handler = "";
+        if (_context.Request.RouteValues.TryGetValue("handler", out var routeValue))
+        {
+            return routeValue?.ToString();
+        }
         if (_context.Request.Query.TryGetValue("handler", out var value))
         {
             if (value.Count != 1)
             {
                 _context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 handler = null;
-                return false;
+                return handler;
             }
             else
             {
-                handler = value[0]!;
+                return value[0]!;
             }
         }
 
-        _renderer.SetFormHandlerName(handler!);
-        return true;
+        var form = _context.Request.Form ?? await _context.Request.ReadFormAsync();
+        if (form.TryGetValue("handler", out var formValue))
+        {
+            if (formValue.Count != 1)
+            {
+                _context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                handler = null;
+                return handler;
+            }
+            else
+            {
+                return formValue[0]!;
+            }
+        }
+
+        return handler;
     }
 
     private static TextWriter CreateResponseWriter(Stream bodyStream)

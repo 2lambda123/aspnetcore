@@ -1,0 +1,64 @@
+﻿@page "/Products-Binding-Context"
+
+@using Microsoft.AspNetCore.Components.QuickGrid;
+@using System.Text;
+
+<h3>Hierarchical component</h3>
+
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Remaining Units</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in _catalog.Products)
+            {
+                <tr @key="product">
+                    <td>@product.Id</td>
+                    <td>@product.Name</td>
+                    <td>@product.Price</td>
+                    <td>@product.RemainingUnits</td>
+                    <td>
+                        <CascadingModelBinder Name="DeleteProduct(product.Id)">
+                            <DeleteProduct Product="@product" OnDeleteProduct="DeleteProduct" />
+                        </CascadingModelBinder>
+                    </td>
+                    <td>
+                        <CascadingModelBinder Name="UpdateRemainingItems(product.Id)">
+                            <UpdateRemaingItems Product="@product"
+                                                OnUpdateRemainingItems="(remaining => UpdateRemainingItems(remaining.Product, remaining.Ammount))" />
+                        </CascadingModelBinder>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    static Catalog _catalog = Catalog.Instance;
+
+    public string DeleteProduct(int id) => $"DeleteProduct({id})";
+
+    public string UpdateRemainingItems(int id) => $"UpdateRemainingItems({id})";
+
+    public void DeleteProduct(Product product)
+    {
+        _catalog.Products.RemoveAll(p => p == product);
+        StateHasChanged();
+    }
+
+    public void UpdateRemainingItems(Product product, int ammount)
+    {
+        var remaining = _catalog.Products.SingleOrDefault(p => p == product);
+        remaining!.RemainingUnits -= ammount;
+        StateHasChanged();
+    }
+}

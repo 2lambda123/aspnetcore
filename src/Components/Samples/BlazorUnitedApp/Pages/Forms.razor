@@ -1,0 +1,18 @@
+﻿@page "/forms"
+@using BlazorUnitedApp.Data;
+<PageTitle>Forms</PageTitle>
+
+<form method="post" @onsubmit="OnPost">
+    <AntiforgeryToken />
+    <input type="submit" value="send" />
+</form>
+
+@if (_submitted)
+{
+    <p>Sample form with default handler</p>
+}
+
+@code {
+    bool _submitted = false;
+    public void OnPost() => _submitted = true;
+}

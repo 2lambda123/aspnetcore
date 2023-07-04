@@ -1,0 +1,105 @@
+﻿@page "/Products"
+
+@using Microsoft.AspNetCore.Components.QuickGrid;
+@using System.Text;
+
+<h3>Hierarchical component</h3>
+
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Remaining Units</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in _catalog.Products)
+            {
+                <tr>
+                    <td>@product.Id</td>
+                    <td>@product.Name</td>
+                    <td>@product.Price</td>
+                    <td>@product.RemainingUnits</td>
+                    <td>
+                        <form method="post" @onsubmit="DeleteProduct" @onsubmit:name="DeleteProduct(@product.Id)">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="handler" value="DeleteProduct(@product.Id)" />
+                            <input type="hidden" name="ProductId" value="@(product.Id)" />
+                            <input type="submit" value="Delete" />
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" @onsubmit="UpdateRemainingItems" @onsubmit:name="UpdateRemainingItems(@product.Id)">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="handler" value="UpdateRemainingItems(@product.Id)" />
+                            <input type="hidden" name="ProductId" value="@(product.Id)" />
+                            <input type="text" name="Ammount" value="1" />
+                            @if (product.Id == ProductId && _errors?.Any() == true)
+                            {
+                                @_errorTooltip
+                                <input type="submit" value="Update remaining items" />
+                            }
+                            else
+                            {
+                                <input type="submit" value="Update remaining items" />
+                            }
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+</script>
+
+@code {
+    static Catalog _catalog = Catalog.Instance;
+    IEnumerable<BindingError>? _errors;
+    MarkupString? _errorTooltip;
+
+    [SupplyParameterFromForm(AllowMultiple = true)] public int ProductId { get; set; }
+    [SupplyParameterFromForm(AllowMultiple = true)] public int Ammount { get; set; }
+
+    [CascadingParameter] public ModelBindingContext? BindingContext { get; set; }
+
+    public void DeleteProduct()
+    {
+        _catalog.Products.RemoveAll(p => p.Id == ProductId);
+        StateHasChanged();
+    }
+
+    public void UpdateRemainingItems()
+    {
+        _errors = BindingContext?.GetAllErrors();
+        if (!_errors.Any())
+        {
+            var remaining = _catalog.Products.SingleOrDefault(p => p.Id == ProductId);
+            remaining!.RemainingUnits -= Ammount;
+            StateHasChanged();
+        }
+        else
+        {
+            var tooltip = new StringBuilder();
+            tooltip.AppendLine("<ul>");
+            foreach (var error in _errors)
+            {
+                foreach (var message in error.ErrorMessages)
+                {
+                    tooltip.AppendLine($"<li>{message}</li>");
+                }
+            }
+            tooltip.AppendLine("</ul>");
+            _errorTooltip = new MarkupString(tooltip.ToString());
+        }
+    }
+}

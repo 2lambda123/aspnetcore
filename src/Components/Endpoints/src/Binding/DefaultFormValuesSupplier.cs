@@ -23,7 +23,7 @@ internal sealed class DefaultFormValuesSupplier : IFormValueSupplier
         _formData = (HttpContextFormDataProvider)formData;
     }
 
-    public bool CanBind(Type valueType, string? formName = null)
+    public bool CanBind(Type valueType, string? formName = null, bool allowMultiple = false)
     {
         if (formName == null)
         {
@@ -32,7 +32,9 @@ internal sealed class DefaultFormValuesSupplier : IFormValueSupplier
         else
         {
             var result = _formData.IsFormDataAvailable &&
-                string.Equals(formName, _formData.Name, StringComparison.Ordinal) &&
+                (!allowMultiple ?
+                    string.Equals(formName, _formData.Name, StringComparison.Ordinal) :
+                    _formData.Name!.StartsWith(formName, StringComparison.Ordinal)) &&
                 _options.ResolveConverter(valueType) != null;
 
             return result;
@@ -42,7 +44,7 @@ internal sealed class DefaultFormValuesSupplier : IFormValueSupplier
     public void Bind(FormValueSupplierContext context)
     {
         // This will func to a proper binder
-        if (!CanBind(context.ValueType, context.FormName))
+        if (!CanBind(context.ValueType, context.FormName, context.BindToNestedFormContexts))
         {
             context.SetResult(null);
         }

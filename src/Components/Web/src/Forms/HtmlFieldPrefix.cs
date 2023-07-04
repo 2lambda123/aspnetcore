@@ -15,11 +15,6 @@ internal class HtmlFieldPrefix(LambdaExpression initial)
         _rest = rest;
     }
 
-    public string GetPrefix()
-    {
-        return "prefix";
-    }
-
     public HtmlFieldPrefix Combine(LambdaExpression other)
     {
         var restLength = _rest?.Length ?? 0;

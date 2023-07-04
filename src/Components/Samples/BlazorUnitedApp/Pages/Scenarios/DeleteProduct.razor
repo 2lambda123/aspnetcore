@@ -1,0 +1,14 @@
+﻿<form method="post" @onsubmit="() => OnDeleteProduct.InvokeAsync(Product)" @onsubmit:name="@BindingContext.Name" >
+    <AntiforgeryToken />
+    <input type="hidden" name="handler" value="@BindingContext.Name" />
+    <input type="submit" value="Delete" />
+</form>
+
+@code {
+
+    [CascadingParameter] public ModelBindingContext BindingContext { get; set; }
+
+    [Parameter] public Product Product { get; set; } = null!;
+
+    [Parameter] public EventCallback<Product> OnDeleteProduct { get; set; }
+}

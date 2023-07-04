@@ -63,6 +63,8 @@ public class FormValueSupplierContext
     /// </summary>
     public object? Result { get; private set; }
 
+    public bool BindToNestedFormContexts { get; set; }
+
     /// <summary>
     /// Sets the result of the binding operation.
     /// </summary>
