@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Components.Infrastructure;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
@@ -65,7 +66,12 @@ public static class RazorComponentsServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<CascadingModelBindingProvider, CascadingQueryModelBindingProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<CascadingModelBindingProvider, CascadingFormModelBindingProvider>());
         services.TryAddScoped<AntiforgeryStateProvider, EndpointAntiforgeryStateProvider>();
+
+        // Dynamic routing
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<MatcherPolicy, DynamicRazorComponentEndpointMatcherPolicy>());
+
         return new DefaultRazorComponentsBuilder(services);
+
     }
 
     private sealed class DefaultRazorComponentsBuilder : IRazorComponentsBuilder

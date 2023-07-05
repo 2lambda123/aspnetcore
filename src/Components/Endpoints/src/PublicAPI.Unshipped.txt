@@ -1,3 +1,4 @@
+abstract Microsoft.AspNetCore.Components.Endpoints.DynamicComponentResolver<TState>.ResolveComponentAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext, Microsoft.AspNetCore.Routing.RouteValueDictionary! values, TState? state) -> System.Threading.Tasks.ValueTask<Microsoft.AspNetCore.Components.Endpoints.ResolverResult>
 abstract Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.GetEndpointBuilders(Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode, Microsoft.AspNetCore.Builder.IApplicationBuilder! applicationBuilder) -> System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Routing.RouteEndpointBuilder!>!
 abstract Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.Supports(Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode) -> bool
 abstract Microsoft.AspNetCore.Components.Infrastructure.RazorComponentApplicationAttribute.GetBuilder() -> Microsoft.AspNetCore.Components.Discovery.ComponentApplicationBuilder!
@@ -42,6 +43,8 @@ Microsoft.AspNetCore.Components.Discovery.PageComponentBuilder.RouteTemplates.se
 Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata
 Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.ComponentTypeMetadata(System.Type! componentType) -> void
 Microsoft.AspNetCore.Components.Endpoints.ComponentTypeMetadata.Type.get -> System.Type!
+Microsoft.AspNetCore.Components.Endpoints.DynamicComponentResolver<TState>
+Microsoft.AspNetCore.Components.Endpoints.DynamicComponentResolver<TState>.DynamicComponentResolver() -> void
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer.Dispatcher.get -> Microsoft.AspNetCore.Components.Dispatcher!
 Microsoft.AspNetCore.Components.Endpoints.IComponentPrerenderer.PrerenderComponentAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext, System.Type! componentType, Microsoft.AspNetCore.Components.IComponentRenderMode! renderMode, Microsoft.AspNetCore.Components.ParameterView parameters) -> System.Threading.Tasks.ValueTask<Microsoft.AspNetCore.Html.IHtmlAsyncContent!>
@@ -73,6 +76,12 @@ Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor
 Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor.RazorComponentResultExecutor() -> void
 Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider
 Microsoft.AspNetCore.Components.Endpoints.RenderModeEndpointProvider.RenderModeEndpointProvider() -> void
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult.Equals(Microsoft.AspNetCore.Components.Endpoints.ResolverResult other) -> bool
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult.PageComponent.get -> System.Type!
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult.ResolverResult() -> void
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult.ResolverResult(System.Type! rootComponent, System.Type! pageComponent, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! updatedRouteValues) -> void
+Microsoft.AspNetCore.Components.Endpoints.ResolverResult.RootComponent.get -> System.Type!
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.RootComponentMetadata(System.Type! rootComponentType) -> void
 Microsoft.AspNetCore.Components.Endpoints.RootComponentMetadata.Type.get -> System.Type!
@@ -91,8 +100,14 @@ override Microsoft.AspNetCore.Components.Discovery.ComponentBuilder.Equals(objec
 override Microsoft.AspNetCore.Components.Discovery.ComponentBuilder.GetHashCode() -> int
 override Microsoft.AspNetCore.Components.Discovery.PageComponentBuilder.Equals(object? obj) -> bool
 override Microsoft.AspNetCore.Components.Discovery.PageComponentBuilder.GetHashCode() -> int
+override Microsoft.AspNetCore.Components.Endpoints.ResolverResult.Equals(object? obj) -> bool
+override Microsoft.AspNetCore.Components.Endpoints.ResolverResult.GetHashCode() -> int
+static Microsoft.AspNetCore.Builder.RazorComponentsEndpointRouteBuilderExtensions.MapDynamicRazorComponentEndpoints<TComponentResolver, TState>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern, TState? state = default(TState?)) -> void
 static Microsoft.AspNetCore.Builder.RazorComponentsEndpointRouteBuilderExtensions.MapRazorComponents<TRootComponent>(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.RazorComponentEndpointConventionBuilder!
 static Microsoft.AspNetCore.Components.Discovery.ComponentApplicationBuilder.GetBuilder<TComponent>() -> Microsoft.AspNetCore.Components.Discovery.ComponentApplicationBuilder?
+static Microsoft.AspNetCore.Components.Endpoints.ResolverResult.operator !=(Microsoft.AspNetCore.Components.Endpoints.ResolverResult left, Microsoft.AspNetCore.Components.Endpoints.ResolverResult right) -> bool
+static Microsoft.AspNetCore.Components.Endpoints.ResolverResult.operator ==(Microsoft.AspNetCore.Components.Endpoints.ResolverResult left, Microsoft.AspNetCore.Components.Endpoints.ResolverResult right) -> bool
 static Microsoft.Extensions.DependencyInjection.RazorComponentsServiceCollectionExtensions.AddRazorComponents(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.AspNetCore.Components.Endpoints.IRazorComponentsBuilder!
 static readonly Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor.DefaultContentType -> string!
+static readonly Microsoft.AspNetCore.Components.Endpoints.ResolverResult.Empty -> Microsoft.AspNetCore.Components.Endpoints.ResolverResult
 virtual Microsoft.AspNetCore.Components.Endpoints.RazorComponentResultExecutor.ExecuteAsync(Microsoft.AspNetCore.Http.HttpContext! httpContext, Microsoft.AspNetCore.Components.Endpoints.RazorComponentResult! result) -> System.Threading.Tasks.Task!

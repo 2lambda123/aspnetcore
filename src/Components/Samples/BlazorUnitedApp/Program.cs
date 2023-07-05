@@ -3,12 +3,14 @@
 
 using BlazorUnitedApp;
 using BlazorUnitedApp.Data;
+using BlazorUnitedApp.Pages;
+using Microsoft.AspNetCore.Components.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents();
-
+builder.Services.AddSingleton<DynamicComponentResolver<object>, CustomResolver>();
 builder.Services.AddSingleton<WeatherForecastService>();
 
 var app = builder.Build();
@@ -27,6 +29,18 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.MapRazorComponents<App>();
+app.MapDynamicRazorComponentEndpoints<CustomResolver, object>("{**path:nonfile}", null);
+//app.MapRazorComponents<App>();
 
 app.Run();
+
+public class CustomResolver : DynamicComponentResolver<object>
+{
+    public override ValueTask<ResolverResult> ResolveComponentAsync(
+        HttpContext httpContext,
+        RouteValueDictionary values,
+        object? state)
+    {
+        return new ValueTask<ResolverResult>(new ResolverResult(typeof(App), typeof(Counter), new RouteValueDictionary()));
+    }
+}
