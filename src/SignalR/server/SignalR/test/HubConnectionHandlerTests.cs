@@ -5186,7 +5186,7 @@ public partial class HubConnectionHandlerTests : VerifiableLoggedTest
 
         using (var client = new TestClient())
         {
-            client.Connection.Features.Set<IReconnectFeature>(new EmptyReconnectFeature());
+            client.Connection.Features.Set<IStatefulReconnectFeature>(new EmptyReconnectFeature());
             var connectionHandlerTask = await client.ConnectAsync(connectionHandler).DefaultTimeout();
 
             await client.InvokeAsync(nameof(MethodHub.Echo), new object[] { new string('x', 500) }).DefaultTimeout();
@@ -5206,7 +5206,7 @@ public partial class HubConnectionHandlerTests : VerifiableLoggedTest
         }
     }
 
-    private class EmptyReconnectFeature : IReconnectFeature
+    private class EmptyReconnectFeature : IStatefulReconnectFeature
     {
         public Action NotifyOnReconnect { get; set; }
     }

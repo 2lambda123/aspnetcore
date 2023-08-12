@@ -2279,13 +2279,13 @@ public class HttpConnectionDispatcherTests : VerifiableLoggedTest
             context.Request.Method = "POST";
             context.Response.Body = ms;
             context.Request.QueryString = new QueryString("?negotiateVersion=1&UseAck=true");
-            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowAcks = false });
+            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowStatefulReconnects = false });
 
             var negotiateResponse = JsonConvert.DeserializeObject<JObject>(Encoding.UTF8.GetString(ms.ToArray()));
             Assert.False(negotiateResponse.TryGetValue("useAck", out _));
 
             Assert.True(manager.TryGetConnection(negotiateResponse["connectionToken"].ToString(), out var connection));
-            Assert.Null(connection.Features.Get<IReconnectFeature>());
+            Assert.Null(connection.Features.Get<IStatefulReconnectFeature>());
         }
     }
 
@@ -2306,13 +2306,13 @@ public class HttpConnectionDispatcherTests : VerifiableLoggedTest
             context.Request.Method = "POST";
             context.Response.Body = ms;
             context.Request.QueryString = new QueryString("?negotiateVersion=1");
-            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowAcks = true });
+            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowStatefulReconnects = true });
 
             var negotiateResponse = JsonConvert.DeserializeObject<JObject>(Encoding.UTF8.GetString(ms.ToArray()));
             Assert.False(negotiateResponse.TryGetValue("useAck", out _));
 
             Assert.True(manager.TryGetConnection(negotiateResponse["connectionToken"].ToString(), out var connection));
-            Assert.Null(connection.Features.Get<IReconnectFeature>());
+            Assert.Null(connection.Features.Get<IStatefulReconnectFeature>());
         }
     }
 
@@ -2333,13 +2333,13 @@ public class HttpConnectionDispatcherTests : VerifiableLoggedTest
             context.Request.Method = "POST";
             context.Response.Body = ms;
             context.Request.QueryString = new QueryString("?negotiateVersion=1&UseAck=true");
-            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowAcks = true });
+            await dispatcher.ExecuteNegotiateAsync(context, new HttpConnectionDispatcherOptions { AllowStatefulReconnects = true });
 
             var negotiateResponse = JsonConvert.DeserializeObject<JObject>(Encoding.UTF8.GetString(ms.ToArray()));
             Assert.True((bool)negotiateResponse["useAck"]);
 
             Assert.True(manager.TryGetConnection(negotiateResponse["connectionToken"].ToString(), out var connection));
-            Assert.NotNull(connection.Features.Get<IReconnectFeature>());
+            Assert.NotNull(connection.Features.Get<IStatefulReconnectFeature>());
         }
     }
 

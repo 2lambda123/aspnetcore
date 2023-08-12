@@ -51,10 +51,10 @@ public partial class HubConnectionContext
     private TimeSpan _receivedMessageElapsed;
     private long _receivedMessageTick;
     private ClaimsPrincipal? _user;
-    private bool _useAcks;
+    private bool _useStatefulReconnect;
 
     [MemberNotNullWhen(true, nameof(_messageBuffer))]
-    internal bool UsingAcks() => _useAcks;
+    internal bool UsingStatefulReconnect() => _useStatefulReconnect;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HubConnectionContext"/> class.
@@ -69,7 +69,7 @@ public partial class HubConnectionContext
         _clientTimeoutInterval = contextOptions.ClientTimeoutInterval;
         _streamBufferCapacity = contextOptions.StreamBufferCapacity;
         _maxMessageSize = contextOptions.MaximumReceiveMessageSize;
-        _messageBufferSize = contextOptions.MessageBufferSize;
+        _messageBufferSize = contextOptions.StatefulReconnectBufferSize;
 
         _connectionContext = connectionContext;
         _logger = loggerFactory.CreateLogger<HubConnectionContext>();
@@ -264,7 +264,7 @@ public partial class HubConnectionContext
     {
         try
         {
-            if (UsingAcks())
+            if (UsingStatefulReconnect())
             {
                 return _messageBuffer.WriteAsync(new SerializedHubMessage(message), cancellationToken);
             }
@@ -292,7 +292,7 @@ public partial class HubConnectionContext
     {
         try
         {
-            if (UsingAcks())
+            if (UsingStatefulReconnect())
             {
                 Debug.Assert(_messageBuffer is not null);
                 return _messageBuffer.WriteAsync(message, cancellationToken);
@@ -576,9 +576,9 @@ public partial class HubConnectionContext
 
                                 await WriteHandshakeResponseAsync(HandshakeResponseMessage.Empty);
 
-                                if (_connectionContext.Features.Get<IReconnectFeature>() is IReconnectFeature feature)
+                                if (_connectionContext.Features.Get<IStatefulReconnectFeature>() is IStatefulReconnectFeature feature)
                                 {
-                                    _useAcks = true;
+                                    _useStatefulReconnect = true;
                                     _messageBuffer = new MessageBuffer(_connectionContext, Protocol, _messageBufferSize);
                                     feature.NotifyOnReconnect = _messageBuffer.Resend;
                                 }
@@ -768,7 +768,7 @@ public partial class HubConnectionContext
 
     internal void Ack(AckMessage ackMessage)
     {
-        if (UsingAcks())
+        if (UsingStatefulReconnect())
         {
             _messageBuffer.Ack(ackMessage);
         }
@@ -776,7 +776,7 @@ public partial class HubConnectionContext
 
     internal bool ShouldProcessMessage(HubMessage message)
     {
-        if (UsingAcks())
+        if (UsingStatefulReconnect())
         {
             return _messageBuffer.ShouldProcessMessage(message);
         }
@@ -785,7 +785,7 @@ public partial class HubConnectionContext
 
     internal void ResetSequence(SequenceMessage sequenceMessage)
     {
-        if (UsingAcks())
+        if (UsingStatefulReconnect())
         {
             _messageBuffer.ResetSequence(sequenceMessage);
         }

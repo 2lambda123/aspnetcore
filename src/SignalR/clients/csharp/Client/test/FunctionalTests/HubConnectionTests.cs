@@ -2560,7 +2560,7 @@ public class HubConnectionTests : FunctionalTestBase
                         tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                         return websocket;
                     };
-                    o.UseAcks = true;
+                    o.UseStatefulReconnect = true;
                 });
             connectionBuilder.Services.AddSingleton(protocol);
             var connection = connectionBuilder.Build();
@@ -2617,7 +2617,7 @@ public class HubConnectionTests : FunctionalTestBase
                         tcs.SetResult();
                         return websocket;
                     };
-                    o.UseAcks = true;
+                    o.UseStatefulReconnect = true;
                 })
                 .WithAutomaticReconnect();
             connectionBuilder.Services.AddSingleton(protocol);
@@ -2684,7 +2684,7 @@ public class HubConnectionTests : FunctionalTestBase
                         await ws.ConnectAsync(context.Uri, token);
                         return ws;
                     };
-                    o.UseAcks = true;
+                    o.UseStatefulReconnect = true;
                 });
             connectionBuilder.Services.AddSingleton(protocol);
             var connection = connectionBuilder.Build();
@@ -2727,10 +2727,10 @@ public class HubConnectionTests : FunctionalTestBase
             const string originalMessage = "SignalR";
             var connectionBuilder = new HubConnectionBuilder()
                 .WithLoggerFactory(LoggerFactory)
-                .WithMessageBufferSize(500)
+                .WithStatefulReconnect(new StatefulReconnectOptions() { StatefulReconnectBufferSize = 500 })
                 .WithUrl(server.Url + "/default", HttpTransportType.WebSockets, o =>
                 {
-                    o.UseAcks = true;
+                    o.UseStatefulReconnect = true;
                 });
             connectionBuilder.Services.AddSingleton(protocol);
             var connection = connectionBuilder.Build();

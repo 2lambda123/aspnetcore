@@ -130,7 +130,7 @@ public class HttpConnectionDispatcherOptions
     /// <remarks>
     /// Keeps messages in memory until acked (up to a limit), and keeps connections around for a short time to allow stateful reconnects.
     /// </remarks>
-    public bool AllowAcks { get; set; }
+    public bool AllowStatefulReconnects { get; set; }
 
     internal long TransportSendTimeoutTicks { get; private set; }
     internal bool TransportSendTimeoutEnabled => _transportSendTimeout != Timeout.InfiniteTimeSpan;

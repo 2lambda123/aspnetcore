@@ -1897,10 +1897,10 @@ public partial class HubConnection : IAsyncDisposable
             _logger = _hubConnection._logger;
             _hasInherentKeepAlive = connection.Features.Get<IConnectionInherentKeepAliveFeature>()?.HasInherentKeepAlive ?? false;
 
-            if (Connection.Features.Get<IReconnectFeature>() is IReconnectFeature feature)
+            if (Connection.Features.Get<IStatefulReconnectFeature>() is IStatefulReconnectFeature feature)
             {
                 _messageBuffer = new MessageBuffer(connection, hubConnection._protocol,
-                    _hubConnection._serviceProvider.GetService<IOptions<HubConnectionOptions>>()?.Value.MessageBufferSize ?? HubConnectionOptions.DefaultMessageBufferSize);
+                    _hubConnection._serviceProvider.GetService<IOptions<HubConnectionOptions>>()?.Value.StatefulReconnectBufferSize ?? HubConnectionOptions.DefaultMessageBufferSize);
 
                 feature.NotifyOnReconnect = _messageBuffer.Resend;
             }

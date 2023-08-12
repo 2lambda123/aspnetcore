@@ -10,23 +10,25 @@ using System.Threading.Tasks;
 namespace Microsoft.AspNetCore.SignalR.Client;
 
 /// <summary>
-/// Configures timeouts for the <see cref="HubConnection" />.
+/// Configures settings for the <see cref="HubConnection" />.
 /// </summary>
-internal sealed class HubConnectionOptions
+public sealed class HubConnectionOptions
 {
     /// <summary>
     /// Configures ServerTimeout for the <see cref="HubConnection" />.
     /// </summary>
-    public TimeSpan? ServerTimeout { get; set; }
+    internal TimeSpan? ServerTimeout { get; set; }
 
     /// <summary>
     /// Configures KeepAliveInterval for the <see cref="HubConnection" />.
     /// </summary>
-    public TimeSpan? KeepAliveInterval { get; set; }
+    internal TimeSpan? KeepAliveInterval { get; set; }
 
-    public const int DefaultMessageBufferSize = 100_000;
+    internal const int DefaultMessageBufferSize = 100_000;
 
-    // Used for Stateful reconnect feature.
-    public long MessageBufferSize { get; set; } = DefaultMessageBufferSize;
+    /// <summary>
+    /// Gets or sets the maximum bytes to buffer on the client when using stateful reconnect.
+    /// </summary>
+    public long StatefulReconnectBufferSize { get; set; } = DefaultMessageBufferSize;
 
 }

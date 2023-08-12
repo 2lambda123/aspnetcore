@@ -97,8 +97,6 @@ public class HubConnectionHandler<THub> : ConnectionHandler where THub : Hub
             new HubContext<THub>(lifetimeManager),
             _enableDetailedErrors,
             disableImplicitFromServiceParameters,
-            // TODO
-            useAcks: true,
             new Logger<DefaultHubDispatcher<THub>>(loggerFactory),
             hubFilters,
             lifetimeManager);
@@ -126,7 +124,7 @@ public class HubConnectionHandler<THub> : ConnectionHandler where THub : Hub
             MaximumReceiveMessageSize = _maximumMessageSize,
             TimeProvider = TimeProvider,
             MaximumParallelInvocations = _maxParallelInvokes,
-            MessageBufferSize = _messageBufferSize,
+            StatefulReconnectBufferSize = _messageBufferSize,
         };
 
         Log.ConnectedStarting(_logger);

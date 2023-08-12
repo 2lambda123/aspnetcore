@@ -20,6 +20,24 @@ namespace Microsoft.AspNetCore.SignalR.Client;
 public static class HubConnectionBuilderHttpExtensions
 {
     /// <summary>
+    /// Configures the <see cref="HttpConnectionOptions"/> to negotiate stateful reconnect with the server, and optionally sets values from <see cref="StatefulReconnectOptions"/>.
+    /// </summary>
+    /// <param name="hubConnectionBuilder">The <see cref="IHubConnectionBuilder" /> to configure.</param>
+    /// <param name="statefulReconnectOptions">Optional options to configure how stateful reconnect works.</param>
+    /// <returns>The same instance of the <see cref="IHubConnectionBuilder"/> for chaining.</returns>
+    public static IHubConnectionBuilder WithStatefulReconnect(this IHubConnectionBuilder hubConnectionBuilder, StatefulReconnectOptions? statefulReconnectOptions = null)
+    {
+        hubConnectionBuilder.Services.Configure<HttpConnectionOptions>(options => options.UseStatefulReconnect = true);
+
+        if (statefulReconnectOptions != null)
+        {
+            hubConnectionBuilder.Services.Configure<HubConnectionOptions>(o => o.StatefulReconnectBufferSize = statefulReconnectOptions.StatefulReconnectBufferSize);
+        }
+
+        return hubConnectionBuilder;
+    }
+
+    /// <summary>
     /// Configures the <see cref="HubConnection" /> to use HTTP-based transports to connect to the specified URL.
     /// </summary>
     /// <param name="hubConnectionBuilder">The <see cref="IHubConnectionBuilder" /> to configure.</param>

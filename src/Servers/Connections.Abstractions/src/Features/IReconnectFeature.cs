@@ -12,7 +12,7 @@ namespace Microsoft.AspNetCore.Connections.Abstractions;
 /// <summary>
 /// 
 /// </summary>
-public interface IReconnectFeature
+public interface IStatefulReconnectFeature
 {
     /// <summary>
     /// 

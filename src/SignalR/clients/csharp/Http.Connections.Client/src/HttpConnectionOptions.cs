@@ -283,7 +283,7 @@ public class HttpConnectionOptions
     /// Only works with WebSockets transport currently.
     /// API likely to change in future previews.
     /// </remarks>
-    public bool UseAcks { get; set; }
+    public bool UseStatefulReconnect { get; set; }
 
     private static void ThrowIfUnsupportedPlatform()
     {
