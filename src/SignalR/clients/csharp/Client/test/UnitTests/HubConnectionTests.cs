@@ -1037,7 +1037,7 @@ public partial class HubConnectionTests : VerifiableLoggedTest
         public Task DisableReconnectCalled => _disableReconnect.Task;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
-        public void OnReconnected(Func<PipeWriter, Task> notifyOnReconnected) { }
+        public void OnReconnected(Func<Task> notifyOnReconnected) { }
 #pragma warning restore CA2252 // This API requires opting into preview features
 
 #pragma warning disable CA2252 // This API requires opting into preview features

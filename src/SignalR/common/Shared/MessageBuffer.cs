@@ -33,6 +33,7 @@ internal sealed class MessageBuffer : IDisposable
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     private PipeWriter _writer;
+    private ConnectionContext _connection;
 
     private long _totalMessageCount;
     private bool _waitForSequenceMessage;
@@ -59,6 +60,7 @@ internal sealed class MessageBuffer : IDisposable
         // TODO: pool
         _buffer = new LinkedBuffer();
 
+        _connection = connection;
         _writer = connection.Transport.Output;
         _protocol = protocol;
         _bufferLimit = bufferLimit;
@@ -226,7 +228,7 @@ internal sealed class MessageBuffer : IDisposable
         _currentReceivingSequenceId = sequenceMessage.SequenceId;
     }
 
-    internal async Task ResendAsync(PipeWriter writer)
+    internal async Task ResendAsync()
     {
         _waitForSequenceMessage = true;
 
@@ -240,7 +242,7 @@ internal sealed class MessageBuffer : IDisposable
             // Complete previous pipe so transport reader can cleanup
             _writer.Complete();
             // Replace writer with new pipe that the transport will be reading from
-            _writer = writer;
+            _writer = _connection.Transport.Output;
 
             _sequenceMessage.SequenceId = _totalMessageCount + 1;
 

@@ -59,7 +59,7 @@ internal sealed partial class HttpConnectionContext : ConnectionContext,
     // on the same task
     private readonly TaskCompletionSource _disposeTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    internal Func<PipeWriter, Task>? NotifyOnReconnect { get; set; }
+    internal Func<Task>? NotifyOnReconnect { get; set; }
 
     /// <summary>
     /// Creates the DefaultConnectionContext without Pipes to avoid upfront allocations.
@@ -700,7 +700,7 @@ internal sealed partial class HttpConnectionContext : ConnectionContext,
     }
 
 #pragma warning disable CA2252 // This API requires opting into preview features
-    public void OnReconnected(Func<PipeWriter, Task> notifyOnReconnect)
+    public void OnReconnected(Func<Task> notifyOnReconnect)
 #pragma warning restore CA2252 // This API requires opting into preview features
     {
         if (NotifyOnReconnect is null)
@@ -710,10 +710,10 @@ internal sealed partial class HttpConnectionContext : ConnectionContext,
         else
         {
             var localOnReconnect = NotifyOnReconnect;
-            NotifyOnReconnect = async (writer) =>
+            NotifyOnReconnect = async () =>
             {
-                await localOnReconnect(writer);
-                await notifyOnReconnect(writer);
+                await localOnReconnect();
+                await notifyOnReconnect();
             };
         }
     }

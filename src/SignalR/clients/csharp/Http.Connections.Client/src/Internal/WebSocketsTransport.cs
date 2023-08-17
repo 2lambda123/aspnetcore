@@ -44,7 +44,7 @@ internal sealed partial class WebSocketsTransport : ITransport, IStatefulReconne
     // Used for reconnect (when enabled) to determine if the close was ungraceful or not, reconnect only happens on ungraceful disconnect
     // The assumption is that a graceful close was triggered purposefully by either the client or server and a reconnect shouldn't occur 
     private bool _gracefulClose;
-    private Func<PipeWriter, Task>? _notifyOnReconnect;
+    private Func<Task>? _notifyOnReconnect;
 
     internal Task Running { get; private set; } = Task.CompletedTask;
 
@@ -53,7 +53,7 @@ internal sealed partial class WebSocketsTransport : ITransport, IStatefulReconne
     public PipeWriter Output => _transport!.Output;
 
 #pragma warning disable CA2252 // This API requires opting into preview features
-    public void OnReconnected(Func<PipeWriter, Task> notifyOnReconnect)
+    public void OnReconnected(Func<Task> notifyOnReconnect)
     {
         if (_notifyOnReconnect is null)
         {
@@ -62,10 +62,10 @@ internal sealed partial class WebSocketsTransport : ITransport, IStatefulReconne
         else
         {
             var localNotifyOnReconnect = _notifyOnReconnect;
-            _notifyOnReconnect = async writer =>
+            _notifyOnReconnect = async () =>
             {
-                await localNotifyOnReconnect(writer).ConfigureAwait(false);
-                await notifyOnReconnect(writer).ConfigureAwait(false);
+                await localNotifyOnReconnect().ConfigureAwait(false);
+                await notifyOnReconnect().ConfigureAwait(false);
             };
         }
     }
@@ -347,7 +347,7 @@ internal sealed partial class WebSocketsTransport : ITransport, IStatefulReconne
             if (isReconnect)
             {
                 Debug.Assert(_notifyOnReconnect is not null);
-                await _notifyOnReconnect.Invoke(_transport!.Output).ConfigureAwait(false);
+                await _notifyOnReconnect.Invoke().ConfigureAwait(false);
             }
 
             // Wait for send or receive to complete

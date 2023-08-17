@@ -5211,7 +5211,7 @@ public partial class HubConnectionHandlerTests : VerifiableLoggedTest
 #pragma warning disable CA2252 // This API requires opting into preview features
     private class EmptyReconnectFeature : IStatefulReconnectFeature
     {
-        public void OnReconnected(Func<PipeWriter, Task> notifyOnReconnect) { }
+        public void OnReconnected(Func<Task> notifyOnReconnect) { }
 
         public void DisableReconnect()
         {
@@ -5238,7 +5238,7 @@ public partial class HubConnectionHandlerTests : VerifiableLoggedTest
             var connectionHandlerTask = await client.ConnectAsync(connectionHandler);
             UpdateConnectionPair(client.Connection);
 
-            await reconnectFeature.NotifyOnReconnect(client.Connection.Transport.Output);
+            await reconnectFeature.NotifyOnReconnect();
 
             var seqMessage = Assert.IsType<SequenceMessage>(await client.ReadAsync().DefaultTimeout());
             Assert.Equal(1, seqMessage.SequenceId);
@@ -5319,17 +5319,17 @@ public partial class HubConnectionHandlerTests : VerifiableLoggedTest
 #pragma warning restore CA2252 // This API requires opting into preview features
     {
         private TaskCompletionSource _reconnectDisabled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        private Func<PipeWriter, Task> _notifyOnReconnect;
+        private Func<Task> _notifyOnReconnect;
 
         public Task ReconnectDisabled => _reconnectDisabled.Task;
 
-        public Task NotifyOnReconnect(PipeWriter writer)
+        public Task NotifyOnReconnect()
         {
-            return _notifyOnReconnect(writer);
+            return _notifyOnReconnect();
         }
 
 #pragma warning disable CA2252 // This API requires opting into preview features
-        public void OnReconnected(Func<PipeWriter, Task> notifyOnReconnect)
+        public void OnReconnected(Func<Task> notifyOnReconnect)
         {
             _notifyOnReconnect = notifyOnReconnect;
         }

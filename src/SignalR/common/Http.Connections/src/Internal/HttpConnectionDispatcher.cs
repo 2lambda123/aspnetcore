@@ -218,7 +218,7 @@ internal sealed partial class HttpConnectionDispatcher
                     if (connection.UseStatefulReconnect && isReconnect)
                     {
                         // Should call this after the transport has started, otherwise we'll be writing to a Pipe that isn't being read from
-                        reconnectTask = connection.NotifyOnReconnect?.Invoke(connection.Transport.Output) ?? Task.CompletedTask;
+                        reconnectTask = connection.NotifyOnReconnect?.Invoke() ?? Task.CompletedTask;
                     }
                     break;
                 case HttpTransportType.LongPolling:

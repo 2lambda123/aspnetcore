@@ -2390,7 +2390,7 @@ public class HttpConnectionDispatcherTests : VerifiableLoggedTest
 
             var calledOnReconnectedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 #pragma warning disable CA2252 // This API requires opting into preview features
-            reconnectFeature.OnReconnected((writer) =>
+            reconnectFeature.OnReconnected(() =>
             {
                 calledOnReconnectedTcs.SetResult();
                 return Task.CompletedTask;
@@ -2465,7 +2465,7 @@ public class HttpConnectionDispatcherTests : VerifiableLoggedTest
 
             var called = false;
 #pragma warning disable CA2252 // This API requires opting into preview features
-            reconnectFeature.OnReconnected((writer) =>
+            reconnectFeature.OnReconnected(() =>
             {
                 called = true;
                 return Task.CompletedTask;
@@ -3942,10 +3942,12 @@ public class ReconnectConnectionHandler : ConnectionHandler
 {
     private TaskCompletionSource<bool> _pause;
 
+    private ConnectionContext _connection;
     private PipeWriter _writer;
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
     {
+        _connection = connection;
         _writer = connection.Transport.Output;
 
         connection.ConnectionClosed.Register(() =>
@@ -3986,10 +3988,10 @@ public class ReconnectConnectionHandler : ConnectionHandler
         } while (await _pause.Task);
     }
 
-    private Task NotifyReconnect(PipeWriter writer)
+    private Task NotifyReconnect()
     {
         _writer.Complete();
-        _writer = writer;
+        _writer = _connection.Transport.Output;
         _pause.SetResult(true);
         return Task.CompletedTask;
     }
