@@ -20,6 +20,7 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
+        app.UseFileServer();
         app.UseRouting();
 
         app.UseAuthentication();
