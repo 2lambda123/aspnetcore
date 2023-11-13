@@ -22,6 +22,9 @@ namespace Microsoft.AspNetCore.OutputCaching.StackExchangeRedis;
 internal partial class RedisOutputCacheStore : IOutputCacheStore, IOutputCacheBufferStore, IDisposable
 {
     private readonly RedisOutputCacheOptions _options;
+
+    internal RedisOutputCacheOptions Options => _options; // for testing
+
     private readonly ILogger _logger;
     private readonly RedisKey _valueKeyPrefix;
     private readonly RedisKey _tagKeyPrefix;
