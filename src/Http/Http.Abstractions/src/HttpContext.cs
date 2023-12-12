@@ -108,12 +108,6 @@ public abstract class HttpContext
         private readonly IFeatureCollection _features = features;
 
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-        public DictionaryItemDebugView<Type, object>[] Items
-        {
-            get
-            {
-                return _features.Select(pair => new DictionaryItemDebugView<Type, object>(pair)).ToArray();
-            }
-        }
+        public DictionaryItemDebugView<Type, object>[] Items => _features.Select(pair => new DictionaryItemDebugView<Type, object>(pair)).ToArray();
     }
 }

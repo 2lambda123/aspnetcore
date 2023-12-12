@@ -931,12 +931,4 @@ internal class RouteValueDictionary : IDictionary<string, object?>, IReadOnlyDic
         }
     }
 #endif
-
-    private sealed class RouteValueDictionaryDebugView(RouteValueDictionary dictionary)
-    {
-        private readonly RouteValueDictionary _dictionary = dictionary;
-
-        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-        public KeyValuePair<string, object?>[] Items => _dictionary.ToArray();
-    }
 }
