@@ -241,7 +241,7 @@ public sealed class DefaultHttpContext : HttpContext
         throw new ObjectDisposedException(nameof(HttpContext), $"Request has finished and {nameof(HttpContext)} disposed.");
     }
 
-    private string DebuggerToString()
+    internal string DebuggerToString()
     {
         // DebuggerToString is also on this type because this project has access to ReasonPhrases.
         return HttpContextDebugFormatter.ContextToString(this, ReasonPhrases.GetReasonPhrase(Response.StatusCode));

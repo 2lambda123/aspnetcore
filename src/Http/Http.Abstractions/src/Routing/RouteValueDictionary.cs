@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Shared;
+
 #if !COMPONENTS
 using System.Collections.Concurrent;
 using System.Reflection.Metadata;
@@ -29,7 +31,7 @@ namespace Microsoft.AspNetCore.Routing;
 /// An <see cref="IDictionary{String, Object}"/> type for route values.
 /// </summary>
 #endif
-[DebuggerTypeProxy(typeof(RouteValueDictionaryDebugView))]
+[DebuggerTypeProxy(typeof(IDictionaryDebugView<string, object?>))]
 [DebuggerDisplay("Count = {Count}")]
 #if !COMPONENTS
 public class RouteValueDictionary : IDictionary<string, object?>, IReadOnlyDictionary<string, object?>
